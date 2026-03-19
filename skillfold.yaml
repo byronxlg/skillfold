@@ -7,10 +7,14 @@ skills:
   code-generation: ./skills/code-generation
   code-review: ./skills/code-review
   testing: ./skills/testing
+  product-strategy: ./skills/product-strategy
   skillfold-context: ./skills/skillfold-context
   agent-invocation: ./skills/agent-invocation
 
   # Composed agents
+  strategist:
+    compose: [skillfold-context, product-strategy, task-decomposition]
+
   architect:
     compose: [skillfold-context, architecture, task-decomposition]
 
@@ -31,6 +35,9 @@ state:
     approved: bool
     feedback: string
 
+  direction:
+    type: string
+
   plan:
     type: string
 
@@ -41,7 +48,12 @@ state:
     type: Review
 
 graph:
+  - strategist:
+      writes: [state.direction]
+    then: architect
+
   - architect:
+      reads: [state.direction]
       writes: [state.plan]
     then: engineer
 
