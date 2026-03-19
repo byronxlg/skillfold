@@ -13,15 +13,17 @@ Skillfold compiles YAML config into standard SKILL.md files per the Agent Skills
 
 ## Architecture
 
-The compiler pipeline is: parse config -> resolve skill paths -> compile compositions -> validate state -> validate graph -> generate orchestrator.
+The compiler pipeline is: parse config -> resolve skill paths (local + remote) -> compile compositions -> validate state -> validate graph -> generate orchestrator.
 
 The codebase is TypeScript (strict, ESM modules). Key modules:
 - `src/config.ts` - YAML parsing, config types, validation
 - `src/state.ts` - State schema parsing, type system, location validation
 - `src/graph.ts` - Graph parsing, validation (skills, state, conflicts, cycles)
 - `src/orchestrator.ts` - Orchestrator SKILL.md generation from graph
-- `src/resolver.ts` - Reads SKILL.md files from skill directories
+- `src/resolver.ts` - Reads SKILL.md files from skill directories and GitHub URLs
+- `src/remote.ts` - GitHub URL parsing and remote skill fetching
 - `src/compiler.ts` - Recursive composition, orchestrator integration
+- `src/init.ts` - skillfold init scaffolding
 - `src/errors.ts` - ConfigError, ResolveError, CompileError, GraphError
 - `src/cli.ts` - CLI entry point
 
@@ -35,8 +37,8 @@ The codebase is TypeScript (strict, ESM modules). Key modules:
 
 ## What's Implemented
 
-All core compiler features are working with spec-compliant output: skill composition, state schema parsing, graph parsing and validation, orchestrator generation, YAML frontmatter, and directory-structured output per the Agent Skills specification. 142 tests, all passing. The project self-hosts its own dev team via `skillfold.yaml`.
+All compiler features are working: skill composition, state schema, graph validation, map subgraph validation, when-clause parsing, orchestrator generation, spec-compliant output, URL-based skill references (GitHub), and `skillfold init`. Published on npm as `skillfold`. 175 tests, CI on GitHub Actions. The project self-hosts its own dev team via `skillfold.yaml`.
 
 ## What's Next
 
-Remaining work: deep map subgraph state validation against custom type fields, when-clause expression parsing, npm publish, and improving the agent experience for wider adoption.
+Pipeline imports/extends, private repo auth, package registry for shared skills.

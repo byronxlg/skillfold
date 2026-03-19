@@ -21,10 +21,12 @@ src/
   cli.ts          - CLI entry point, arg parsing
   config.ts       - YAML parsing, config types, validation (cycles, references)
   state.ts        - State schema parsing, type system, location validation
-  resolver.ts     - Reads SKILL.md files from skill directories
+  resolver.ts     - Reads SKILL.md files from skill directories (local + remote)
+  remote.ts       - GitHub URL parsing and remote skill fetching
   compiler.ts     - Recursive composition, body concatenation, orchestrator integration
   graph.ts        - Graph parsing, validation (skills, state, conflicts, cycles)
   orchestrator.ts - Orchestrator SKILL.md generation from graph definition
+  init.ts         - skillfold init scaffolding
   errors.ts       - ConfigError, ResolveError, CompileError, GraphError
 skills/           - Atomic skill definitions (each has a SKILL.md)
 dist/             - tsc compiled JS (npm package, gitignored)
@@ -58,18 +60,25 @@ Read BRIEF.md for full context. Key points:
 ## What's Implemented
 
 - Config parsing with cycle detection and reference validation
-- Skill path resolution and SKILL.md reading
-- Recursive skill composition and compilation to dist/
+- Skill path resolution and SKILL.md reading (local paths + GitHub URLs)
+- Recursive skill composition and compilation to build/
 - State schema parsing and validation (custom types, primitive/list/custom type refs, location validation)
 - Graph parsing and validation (skill refs, transition targets, state paths, write conflicts, map validation, cycle exit conditions, reachability)
-- When-clause expression parsing and validation (parses `<path> == <value>` / `<path> != <value>`, validates paths against state schema and map variable types)
+- Map subgraph state validation against custom type fields
+- When-clause expression parsing and validation
 - Orchestrator SKILL.md generation (execution plan with steps, state table, conditionals, map/parallel)
 - Optional `orchestrator` config key to append generated plan to a composed skill
-- End-to-end test with the brief's full example config (dev-pipeline with map, external locations, conditionals)
-- Test suite (162 tests) covering config, resolver, compiler, state, graph, orchestrator, and e2e modules
+- Spec-compliant output per Agent Skills standard (directory structure + YAML frontmatter)
+- `skillfold init` command to scaffold starter pipeline projects
+- URL-based skill references (GitHub tree URLs fetched via raw.githubusercontent.com)
+- End-to-end test with the brief's full example config
+- CI via GitHub Actions (Node 20 + 22)
+- Test suite (175 tests) covering config, resolver, compiler, state, graph, orchestrator, remote, init, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next
 
-See BRIEF.md "Compiler Responsibilities" and "Open Questions" sections. Remaining work:
-1. Map/parallel support (deep subgraph state validation against custom type fields)
+See BRIEF.md "Open Questions" section. Potential next work:
+1. Pipeline imports/extends (import configs from GitHub URLs)
+2. Private repo authentication
+3. Package registry for shared skills
