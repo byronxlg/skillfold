@@ -362,6 +362,30 @@ function validateNodes(
             `Graph node "${label}": when clause references "${clause.path}" but type "${mapCtx.typeName}" has no field "${fieldName}"`
           );
         }
+      } else if (state) {
+        // Handle paths like "review.approved" where "review" is a state field of custom type
+        const dotIndex = clause.path.indexOf(".");
+        if (dotIndex === -1) {
+          throw new GraphError(
+            `Graph node "${label}": when clause references "${clause.path}" which is not a valid state path`
+          );
+        }
+        const fieldName = clause.path.slice(0, dotIndex);
+        const subField = clause.path.slice(dotIndex + 1);
+        if (!(fieldName in state.fields)) {
+          throw new GraphError(
+            `Graph node "${label}": when clause references "${clause.path}" but "${fieldName}" is not a declared state field`
+          );
+        }
+        const field = state.fields[fieldName];
+        if (field.type.kind === "custom" && field.type.name in state.types) {
+          const customType = state.types[field.type.name];
+          if (!(subField in customType.fields)) {
+            throw new GraphError(
+              `Graph node "${label}": when clause references "${clause.path}" but type "${field.type.name}" has no field "${subField}"`
+            );
+          }
+        }
       } else {
         throw new GraphError(
           `Graph node "${label}": when clause references "${clause.path}" which is not a state or map variable path`
