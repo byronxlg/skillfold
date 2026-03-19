@@ -2,6 +2,11 @@
 
 Configuration language and compiler for multi-agent AI pipelines. Compiles YAML config into standard SKILL.md files.
 
+## GitHub
+
+- **Repo**: https://github.com/byronxlg/skillfold
+- Issues, PRs, releases, actions, and all other GitHub features are available for use
+
 ## Quick Reference
 
 - **Run compiler**: `npx tsx src/cli.ts`
