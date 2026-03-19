@@ -1,6 +1,6 @@
 # Skillfold Project Context
 
-You are working on Skillfold, a configuration language and compiler for building multi-agent AI pipelines.
+You are working on Skillfold, a configuration language and compiler for building multi-agent AI pipelines. The vision is a widely adopted, agent-first tool where agents author the config, agents consume the output, and humans provide direction.
 
 ## What Skillfold Does
 
@@ -9,6 +9,7 @@ Skillfold compiles YAML config into standard SKILL.md files per the Agent Skills
 1. **Skill Composition** - Atomic skills (referenced by path) are combined into composed skills by concatenating their SKILL.md bodies. Composition is recursive.
 2. **Skill Graphing** - Agents are wired into typed execution graphs with conditional routing, loops, and parallel map. The graph compiles into an orchestrator skill.
 3. **State Validation** - A typed state schema validates that reads/writes are consistent across the graph.
+4. **Orchestrator Generation** - The compiler generates a structured execution plan from the graph definition and appends it to the orchestrator skill.
 
 ## Architecture
 
@@ -16,9 +17,12 @@ The compiler pipeline is: parse config -> resolve skill paths -> compile composi
 
 The codebase is TypeScript (strict, ESM modules). Key modules:
 - `src/config.ts` - YAML parsing, config types, validation
+- `src/state.ts` - State schema parsing, type system, location validation
+- `src/graph.ts` - Graph parsing, validation (skills, state, conflicts, cycles)
+- `src/orchestrator.ts` - Orchestrator SKILL.md generation from graph
 - `src/resolver.ts` - Reads SKILL.md files from skill directories
-- `src/compiler.ts` - Recursive composition and concatenation
-- `src/errors.ts` - Structured error types
+- `src/compiler.ts` - Recursive composition, orchestrator integration
+- `src/errors.ts` - ConfigError, ResolveError, CompileError, GraphError
 - `src/cli.ts` - CLI entry point
 
 ## Key Design Principles
@@ -29,6 +33,10 @@ The codebase is TypeScript (strict, ESM modules). Key modules:
 - Separation of concerns - capability in skills, topology in graph, state in schema
 - Validated at compile time - type mismatches and broken references are compiler errors
 
-## Current State
+## What's Implemented
 
-The compiler handles skill composition. State validation, graph validation, orchestrator generation, and map support are not yet implemented.
+All core compiler features are working: skill composition, state schema parsing, graph parsing and validation, and orchestrator generation. 121 tests, all passing.
+
+## What's Next
+
+Remaining work: deep map subgraph state validation, when-clause expression parsing, end-to-end integration testing, and improving the developer/agent experience for wider adoption.

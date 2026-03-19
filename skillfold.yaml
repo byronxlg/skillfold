@@ -1,7 +1,7 @@
 name: skillfold-team
 
 skills:
-  # Atomic skills - reusable fragments of behaviour
+  # Atomic skills
   architecture: ./skills/architecture
   task-decomposition: ./skills/task-decomposition
   code-generation: ./skills/code-generation
@@ -9,7 +9,7 @@ skills:
   testing: ./skills/testing
   skillfold-context: ./skills/skillfold-context
 
-  # Composed agents - built from atomic skills
+  # Composed agents
   architect:
     compose: [skillfold-context, architecture, task-decomposition]
 
@@ -18,3 +18,42 @@ skills:
 
   reviewer:
     compose: [skillfold-context, code-review, testing]
+
+  # Orchestrator gets composed context + generated execution plan
+  orchestrator:
+    compose: [skillfold-context]
+
+orchestrator: orchestrator
+
+state:
+  Review:
+    approved: bool
+    feedback: string
+
+  plan:
+    type: string
+
+  implementation:
+    type: string
+
+  review:
+    type: Review
+
+graph:
+  - architect:
+      writes: [state.plan]
+    then: engineer
+
+  - engineer:
+      reads: [state.plan]
+      writes: [state.implementation]
+    then: reviewer
+
+  - reviewer:
+      reads: [state.implementation]
+      writes: [state.review]
+    then:
+      - when: review.approved == false
+        to: engineer
+      - when: review.approved == true
+        to: end
