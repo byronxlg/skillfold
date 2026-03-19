@@ -5,9 +5,10 @@
   "bin": {
     "skillfold": "./dist/cli.js"
   },
+  "files": ["dist"],
   "scripts": {
     "dev": "tsx src/cli.ts",
-    "build": "tsc",
+    "build": "tsc -p tsconfig.build.json",
     "test": "tsx --test 'src/**/*.test.ts'",
     "start": "node dist/cli.js"
   },

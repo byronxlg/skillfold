@@ -10,7 +10,7 @@ Configuration language and compiler for multi-agent AI pipelines. Compiles YAML 
 ## Quick Reference
 
 - **Run compiler**: `npx tsx src/cli.ts`
-- **Run with custom config**: `npx tsx src/cli.ts --config path.yaml --out-dir build/`
+- **Run with custom config**: `npx tsx src/cli.ts --config path.yaml --out-dir out/`
 - **Build**: `npm run build`
 - **Type check**: `npx tsc --noEmit`
 
@@ -27,10 +27,15 @@ src/
   orchestrator.ts - Orchestrator SKILL.md generation from graph definition
   errors.ts       - ConfigError, ResolveError, CompileError, GraphError
 skills/           - Atomic skill definitions (each has a SKILL.md)
-dist/             - Compiler output (gitignored)
+dist/             - tsc compiled JS (npm package, gitignored)
+build/            - Compiled skill output (default --out-dir, gitignored)
 skillfold.yaml    - Pipeline config for the dev team itself
 BRIEF.md          - Full design brief
 ```
+
+## Workflow
+
+- Push commits to GitHub frequently to maintain visibility of progress. Don't let work accumulate locally.
 
 ## Code Conventions
 

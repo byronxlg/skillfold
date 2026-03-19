@@ -35,8 +35,8 @@ The codebase is TypeScript (strict, ESM modules). Key modules:
 
 ## What's Implemented
 
-All core compiler features are working: skill composition, state schema parsing, graph parsing and validation, and orchestrator generation. 121 tests, all passing.
+All core compiler features are working: skill composition, state schema parsing, graph parsing and validation, and orchestrator generation. 133 tests (including e2e with the brief's full example config), all passing. The project self-hosts its own dev team via `skillfold.yaml`.
 
 ## What's Next
 
-Remaining work: deep map subgraph state validation, when-clause expression parsing, end-to-end integration testing, and improving the developer/agent experience for wider adoption.
+Remaining work: deep map subgraph state validation against custom type fields, when-clause expression parsing, and improving the agent experience for wider adoption.
