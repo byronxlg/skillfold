@@ -24,7 +24,7 @@ describe("resolveSkills", () => {
     }
   });
 
-  it("resolves atomic skills, returns trimmed body content", () => {
+  it("resolves atomic skills, returns trimmed body content", async () => {
     tmpDir = makeTmpDir();
 
     const skillDir = join(tmpDir, "skills", "review");
@@ -38,12 +38,12 @@ describe("resolveSkills", () => {
       },
     };
 
-    const bodies = resolveSkills(config, tmpDir);
+    const bodies = await resolveSkills(config, tmpDir);
     assert.equal(bodies.size, 1);
     assert.equal(bodies.get("review"), "Review the code carefully.");
   });
 
-  it("skips composed skills", () => {
+  it("skips composed skills", async () => {
     tmpDir = makeTmpDir();
 
     const skillDir = join(tmpDir, "skills", "lint");
@@ -58,13 +58,13 @@ describe("resolveSkills", () => {
       },
     };
 
-    const bodies = resolveSkills(config, tmpDir);
+    const bodies = await resolveSkills(config, tmpDir);
     assert.equal(bodies.size, 1);
     assert.ok(bodies.has("lint"));
     assert.ok(!bodies.has("quality"));
   });
 
-  it("throws ResolveError for missing directory", () => {
+  it("throws ResolveError for missing directory", async () => {
     tmpDir = makeTmpDir();
 
     const config: Config = {
@@ -74,7 +74,7 @@ describe("resolveSkills", () => {
       },
     };
 
-    assert.throws(() => resolveSkills(config, tmpDir!), (err: unknown) => {
+    await assert.rejects(() => resolveSkills(config, tmpDir!), (err: unknown) => {
       assert.ok(err instanceof ResolveError);
       assert.match(err.message, /Directory not found/);
       assert.match(err.message, /ghost/);
@@ -82,7 +82,7 @@ describe("resolveSkills", () => {
     });
   });
 
-  it("throws ResolveError for missing SKILL.md", () => {
+  it("throws ResolveError for missing SKILL.md", async () => {
     tmpDir = makeTmpDir();
 
     const skillDir = join(tmpDir, "skills", "empty");
@@ -95,7 +95,7 @@ describe("resolveSkills", () => {
       },
     };
 
-    assert.throws(() => resolveSkills(config, tmpDir!), (err: unknown) => {
+    await assert.rejects(() => resolveSkills(config, tmpDir!), (err: unknown) => {
       assert.ok(err instanceof ResolveError);
       assert.match(err.message, /SKILL\.md not found/);
       assert.match(err.message, /empty/);
@@ -103,7 +103,7 @@ describe("resolveSkills", () => {
     });
   });
 
-  it("strips YAML frontmatter from skill body", () => {
+  it("strips YAML frontmatter from skill body", async () => {
     tmpDir = makeTmpDir();
 
     const skillDir = join(tmpDir, "skills", "review");
@@ -129,7 +129,7 @@ Review the code carefully.
       },
     };
 
-    const bodies = resolveSkills(config, tmpDir);
+    const bodies = await resolveSkills(config, tmpDir);
     assert.equal(bodies.size, 1);
     const body = bodies.get("review")!;
     assert.ok(!body.includes("---"), "Body should not contain frontmatter delimiters");
@@ -138,7 +138,7 @@ Review the code carefully.
     assert.ok(body.includes("Review the code carefully."), "Body should contain the body text");
   });
 
-  it("preserves body when no frontmatter present", () => {
+  it("preserves body when no frontmatter present", async () => {
     tmpDir = makeTmpDir();
 
     const skillDir = join(tmpDir, "skills", "lint");
@@ -152,7 +152,26 @@ Review the code carefully.
       },
     };
 
-    const bodies = resolveSkills(config, tmpDir);
+    const bodies = await resolveSkills(config, tmpDir);
     assert.equal(bodies.get("lint"), "# Lint\n\nRun the linter.");
+  });
+
+  it("resolves a remote skill from a real GitHub URL, stripping frontmatter", async () => {
+    const config: Config = {
+      name: "test",
+      skills: {
+        "code-review": {
+          path: "https://github.com/byronxlg/skillfold/tree/main/skills/code-review",
+        },
+      },
+    };
+
+    const bodies = await resolveSkills(config, "/unused");
+    assert.equal(bodies.size, 1);
+    const body = bodies.get("code-review")!;
+    assert.ok(
+      body.includes("Code Review"),
+      "Remote skill body should contain Code Review"
+    );
   });
 });

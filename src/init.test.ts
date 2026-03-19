@@ -48,7 +48,7 @@ describe("initProject", () => {
     assert.ok(execute.includes("# Execute"));
   });
 
-  it("generated config compiles", () => {
+  it("generated config compiles", async () => {
     tmpDir = makeTmpDir();
     initProject(tmpDir);
 
@@ -56,7 +56,7 @@ describe("initProject", () => {
     const outDir = join(tmpDir, "build");
 
     const config = readConfig(configPath);
-    const bodies = resolveSkills(config, tmpDir);
+    const bodies = await resolveSkills(config, tmpDir);
     const results = compile(config, bodies, outDir);
 
     assert.ok(results.length > 0);

@@ -48,23 +48,23 @@ describe("e2e: dev-pipeline", () => {
     }
   });
 
-  it("reads config, resolves skills, and compiles without errors", () => {
+  it("reads config, resolves skills, and compiles without errors", async () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
     const config = readConfig(configPath);
-    const bodies = resolveSkills(config, fixtureDir);
+    const bodies = await resolveSkills(config, fixtureDir);
     const results = compile(config, bodies, outDir);
 
     assert.ok(results.length > 0);
   });
 
-  it("produces output directories for all composed skills", () => {
+  it("produces output directories for all composed skills", async () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
     const config = readConfig(configPath);
-    const bodies = resolveSkills(config, fixtureDir);
+    const bodies = await resolveSkills(config, fixtureDir);
     compile(config, bodies, outDir);
 
     const expected = [
@@ -83,12 +83,12 @@ describe("e2e: dev-pipeline", () => {
     }
   });
 
-  it("strategy/SKILL.md contains frontmatter and Strategic Thinking then Slack Integration", () => {
+  it("strategy/SKILL.md contains frontmatter and Strategic Thinking then Slack Integration", async () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
     const config = readConfig(configPath);
-    const bodies = resolveSkills(config, fixtureDir);
+    const bodies = await resolveSkills(config, fixtureDir);
     compile(config, bodies, outDir);
 
     const content = readFileSync(join(outDir, "strategy", "SKILL.md"), "utf-8");
@@ -101,12 +101,12 @@ describe("e2e: dev-pipeline", () => {
     ]);
   });
 
-  it("tech-lead/SKILL.md contains all four skills in order", () => {
+  it("tech-lead/SKILL.md contains all four skills in order", async () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
     const config = readConfig(configPath);
-    const bodies = resolveSkills(config, fixtureDir);
+    const bodies = await resolveSkills(config, fixtureDir);
     compile(config, bodies, outDir);
 
     const content = readFileSync(join(outDir, "tech-lead", "SKILL.md"), "utf-8");
@@ -118,12 +118,12 @@ describe("e2e: dev-pipeline", () => {
     ]);
   });
 
-  it("senior-engineer/SKILL.md contains Task Decomposition then Code Generation", () => {
+  it("senior-engineer/SKILL.md contains Task Decomposition then Code Generation", async () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
     const config = readConfig(configPath);
-    const bodies = resolveSkills(config, fixtureDir);
+    const bodies = await resolveSkills(config, fixtureDir);
     compile(config, bodies, outDir);
 
     const content = readFileSync(join(outDir, "senior-engineer", "SKILL.md"), "utf-8");
@@ -133,12 +133,12 @@ describe("e2e: dev-pipeline", () => {
     ]);
   });
 
-  it("reviewer/SKILL.md contains Code Review", () => {
+  it("reviewer/SKILL.md contains Code Review", async () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
     const config = readConfig(configPath);
-    const bodies = resolveSkills(config, fixtureDir);
+    const bodies = await resolveSkills(config, fixtureDir);
     compile(config, bodies, outDir);
 
     const content = readFileSync(join(outDir, "reviewer", "SKILL.md"), "utf-8");
@@ -148,12 +148,12 @@ describe("e2e: dev-pipeline", () => {
     );
   });
 
-  it("orchestrator/SKILL.md contains composed bodies before orchestrator plan", () => {
+  it("orchestrator/SKILL.md contains composed bodies before orchestrator plan", async () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
     const config = readConfig(configPath);
-    const bodies = resolveSkills(config, fixtureDir);
+    const bodies = await resolveSkills(config, fixtureDir);
     compile(config, bodies, outDir);
 
     const content = readFileSync(join(outDir, "orchestrator", "SKILL.md"), "utf-8");
@@ -167,12 +167,12 @@ describe("e2e: dev-pipeline", () => {
     ]);
   });
 
-  it("orchestrator/SKILL.md contains pipeline header and description", () => {
+  it("orchestrator/SKILL.md contains pipeline header and description", async () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
     const config = readConfig(configPath);
-    const bodies = resolveSkills(config, fixtureDir);
+    const bodies = await resolveSkills(config, fixtureDir);
     compile(config, bodies, outDir);
 
     const content = readFileSync(join(outDir, "orchestrator", "SKILL.md"), "utf-8");
@@ -181,12 +181,12 @@ describe("e2e: dev-pipeline", () => {
     assert.ok(content.includes("**dev-pipeline** pipeline"));
   });
 
-  it("orchestrator/SKILL.md contains state table with correct fields and locations", () => {
+  it("orchestrator/SKILL.md contains state table with correct fields and locations", async () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
     const config = readConfig(configPath);
-    const bodies = resolveSkills(config, fixtureDir);
+    const bodies = await resolveSkills(config, fixtureDir);
     compile(config, bodies, outDir);
 
     const content = readFileSync(join(outDir, "orchestrator", "SKILL.md"), "utf-8");
@@ -206,12 +206,12 @@ describe("e2e: dev-pipeline", () => {
     );
   });
 
-  it("orchestrator/SKILL.md contains execution plan with correct steps", () => {
+  it("orchestrator/SKILL.md contains execution plan with correct steps", async () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
     const config = readConfig(configPath);
-    const bodies = resolveSkills(config, fixtureDir);
+    const bodies = await resolveSkills(config, fixtureDir);
     compile(config, bodies, outDir);
 
     const content = readFileSync(join(outDir, "orchestrator", "SKILL.md"), "utf-8");
@@ -240,12 +240,12 @@ describe("e2e: dev-pipeline", () => {
     );
   });
 
-  it("orchestrator/SKILL.md contains map subgraph steps with correct sub-numbering", () => {
+  it("orchestrator/SKILL.md contains map subgraph steps with correct sub-numbering", async () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
     const config = readConfig(configPath);
-    const bodies = resolveSkills(config, fixtureDir);
+    const bodies = await resolveSkills(config, fixtureDir);
     compile(config, bodies, outDir);
 
     const content = readFileSync(join(outDir, "orchestrator", "SKILL.md"), "utf-8");
@@ -264,12 +264,12 @@ describe("e2e: dev-pipeline", () => {
     assert.ok(content.includes("Writes: `task.approved`"));
   });
 
-  it("orchestrator/SKILL.md contains conditional branches for reviewer", () => {
+  it("orchestrator/SKILL.md contains conditional branches for reviewer", async () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
     const config = readConfig(configPath);
-    const bodies = resolveSkills(config, fixtureDir);
+    const bodies = await resolveSkills(config, fixtureDir);
     compile(config, bodies, outDir);
 
     const content = readFileSync(join(outDir, "orchestrator", "SKILL.md"), "utf-8");

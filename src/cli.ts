@@ -80,7 +80,7 @@ function parseArgs(argv: string[]): Args {
   };
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
 
   if (args.help) {
@@ -113,7 +113,7 @@ function main(): void {
   try {
     const config = readConfig(args.configPath);
     const baseDir = dirname(args.configPath);
-    const bodies = resolveSkills(config, baseDir);
+    const bodies = await resolveSkills(config, baseDir);
     const results = compile(config, bodies, args.outDir);
 
     console.log(`skillfold: compiled ${config.name}`);
