@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { readConfig } from "./config.js";
+import { loadConfig } from "./config.js";
 import { compile } from "./compiler.js";
 import { ConfigError, CompileError, ResolveError } from "./errors.js";
 import { initProject } from "./init.js";
@@ -111,7 +111,7 @@ async function main(): Promise<void> {
   }
 
   try {
-    const config = readConfig(args.configPath);
+    const config = await loadConfig(args.configPath);
     const baseDir = dirname(args.configPath);
     const bodies = await resolveSkills(config, baseDir);
     const results = compile(config, bodies, args.outDir);

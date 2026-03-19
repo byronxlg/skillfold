@@ -1,0 +1,9 @@
+imports:
+  - ../shared/skillfold.yaml
+
+name: main-pipeline
+skills:
+  local-skill: ./skills/local
+  combined:
+    compose: [common-skill, local-skill]
+    description: "Uses both imported and local skills."

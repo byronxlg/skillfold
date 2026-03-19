@@ -1,0 +1,8 @@
+name: shared
+skills:
+  common-skill: ./skills/common
+state:
+  SharedType:
+    value: string
+  shared-field:
+    type: string
