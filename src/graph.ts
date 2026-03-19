@@ -2,6 +2,12 @@ import { SkillEntry } from "./config.js";
 import { GraphError } from "./errors.js";
 import { CustomType, StateSchema } from "./state.js";
 
+export interface WhenClause {
+  path: string;
+  operator: "==" | "!=";
+  value: string | boolean | number;
+}
+
 export interface ConditionalBranch {
   when: string;
   to: string;
@@ -35,6 +41,49 @@ export function isMapNode(node: GraphNode): node is MapNode {
 
 export function isConditionalThen(then: Then): then is ConditionalBranch[] {
   return Array.isArray(then);
+}
+
+function parseWhenValue(raw: string): string | boolean | number {
+  if (raw === "true") return true;
+  if (raw === "false") return false;
+
+  // Quoted string: "value"
+  if (raw.startsWith('"') && raw.endsWith('"') && raw.length >= 2) {
+    return raw.slice(1, -1);
+  }
+
+  // Number
+  const num = Number(raw);
+  if (!Number.isNaN(num) && raw.length > 0) {
+    return num;
+  }
+
+  // Treat as unquoted string
+  return raw;
+}
+
+export function parseWhenClause(when: string, context: string): WhenClause {
+  // Try splitting on " == " first, then " != "
+  for (const operator of ["==", "!="] as const) {
+    const separator = ` ${operator} `;
+    const idx = when.indexOf(separator);
+    if (idx !== -1) {
+      const path = when.slice(0, idx);
+      const rawValue = when.slice(idx + separator.length);
+      if (path.length === 0 || rawValue.length === 0) {
+        break;
+      }
+      return {
+        path,
+        operator,
+        value: parseWhenValue(rawValue),
+      };
+    }
+  }
+
+  throw new GraphError(
+    `${context}: invalid when clause "${when}" (expected: <path> == <value> or <path> != <value>)`
+  );
 }
 
 function parseThen(raw: unknown, context: string): Then | undefined {
@@ -282,6 +331,41 @@ function validateNodes(
             `Map subgraph node "${label}": writes "${path}" but type "${mapCtx.typeName}" has no field "${fieldName}"`
           );
         }
+      }
+    }
+  }
+
+  // When-clause validation: parse and validate paths
+  for (const node of nodes) {
+    if (!node.then || !isConditionalThen(node.then)) continue;
+    const label = nodeLabel(node);
+
+    for (const branch of node.then) {
+      const clause = parseWhenClause(branch.when, `Graph node "${label}"`);
+
+      if (clause.path.startsWith("state.")) {
+        if (!state) {
+          throw new GraphError(
+            `Graph node "${label}": when clause references state field "${clause.path}" but no state is declared`
+          );
+        }
+        const fieldName = clause.path.slice("state.".length);
+        if (!(fieldName in state.fields)) {
+          throw new GraphError(
+            `Graph node "${label}": when clause references state field "${clause.path}" which is not declared`
+          );
+        }
+      } else if (mapCtx && clause.path.startsWith(mapCtx.as + ".")) {
+        const fieldName = clause.path.slice(mapCtx.as.length + 1);
+        if (!(fieldName in mapCtx.type.fields)) {
+          throw new GraphError(
+            `Graph node "${label}": when clause references "${clause.path}" but type "${mapCtx.typeName}" has no field "${fieldName}"`
+          );
+        }
+      } else {
+        throw new GraphError(
+          `Graph node "${label}": when clause references "${clause.path}" which is not a state or map variable path`
+        );
       }
     }
   }

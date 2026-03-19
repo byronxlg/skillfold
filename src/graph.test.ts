@@ -8,8 +8,10 @@ import {
   isConditionalThen,
   isMapNode,
   parseGraph,
+  parseWhenClause,
   StepNode,
   validateGraph,
+  WhenClause,
 } from "./graph.js";
 import { StateSchema } from "./state.js";
 
@@ -357,15 +359,16 @@ describe("validateGraph", () => {
             reads: [],
             writes: [],
             then: [
-              { when: "approved", to: "end" },
-              { when: "rejected", to: "ghost" },
+              { when: "state.approved == true", to: "end" },
+              { when: "state.approved == false", to: "ghost" },
             ],
           },
         ],
       };
       const skills = makeSkills("reviewer");
+      const state = makeState({ approved: { kind: "primitive", value: "bool" } });
       assert.throws(
-        () => validateGraph(graph, skills, undefined),
+        () => validateGraph(graph, skills, state),
         (err: unknown) => {
           assert.ok(err instanceof GraphError);
           assert.match(err.message, /transition target "ghost"/);
@@ -759,14 +762,15 @@ describe("validateGraph", () => {
             reads: [],
             writes: [],
             then: [
-              { when: "rejected", to: "engineer" },
-              { when: "approved", to: "end" },
+              { when: "state.approved == false", to: "engineer" },
+              { when: "state.approved == true", to: "end" },
             ],
           },
         ],
       };
       const skills = makeSkills("engineer", "reviewer");
-      assert.doesNotThrow(() => validateGraph(graph, skills, undefined));
+      const state = makeState({ approved: { kind: "primitive", value: "bool" } });
+      assert.doesNotThrow(() => validateGraph(graph, skills, state));
     });
 
     it("conditional cycle without exit condition errors", () => {
@@ -778,15 +782,19 @@ describe("validateGraph", () => {
             reads: [],
             writes: [],
             then: [
-              { when: "rejected", to: "engineer" },
-              { when: "needs-revision", to: "engineer" },
+              { when: "state.approved == false", to: "engineer" },
+              { when: "state.status == \"revision\"", to: "engineer" },
             ],
           },
         ],
       };
       const skills = makeSkills("engineer", "reviewer");
+      const state = makeState({
+        approved: { kind: "primitive", value: "bool" },
+        status: { kind: "primitive", value: "string" },
+      });
       assert.throws(
-        () => validateGraph(graph, skills, undefined),
+        () => validateGraph(graph, skills, state),
         (err: unknown) => {
           assert.ok(err instanceof GraphError);
           assert.match(err.message, /conditional cycle has no exit condition/);
@@ -861,8 +869,8 @@ describe("validateGraph", () => {
             reads: [],
             writes: [],
             then: [
-              { when: "x", to: "b" },
-              { when: "y", to: "c" },
+              { when: "state.flag == true", to: "b" },
+              { when: "state.flag == false", to: "c" },
             ],
           },
           { skill: "b", reads: [], writes: [], then: "end" },
@@ -870,7 +878,8 @@ describe("validateGraph", () => {
         ],
       };
       const skills = makeSkills("a", "b", "c");
-      assert.doesNotThrow(() => validateGraph(graph, skills, undefined));
+      const state = makeState({ flag: { kind: "primitive", value: "bool" } });
+      assert.doesNotThrow(() => validateGraph(graph, skills, state));
     });
 
     it("node reachable only through cycle is still reachable", () => {
@@ -882,15 +891,292 @@ describe("validateGraph", () => {
             reads: [],
             writes: [],
             then: [
-              { when: "retry", to: "a" },
-              { when: "done", to: "end" },
+              { when: "state.done == false", to: "a" },
+              { when: "state.done == true", to: "end" },
             ],
           },
         ],
       };
       const skills = makeSkills("a", "b");
-      assert.doesNotThrow(() => validateGraph(graph, skills, undefined));
+      const state = makeState({ done: { kind: "primitive", value: "bool" } });
+      assert.doesNotThrow(() => validateGraph(graph, skills, state));
     });
+  });
+});
+
+describe("parseWhenClause", () => {
+  it("parses == with boolean value", () => {
+    const clause = parseWhenClause("task.approved == false", 'Graph node "reviewer"');
+    assert.deepEqual(clause, { path: "task.approved", operator: "==", value: false });
+  });
+
+  it("parses == with true value", () => {
+    const clause = parseWhenClause("task.approved == true", 'Graph node "reviewer"');
+    assert.deepEqual(clause, { path: "task.approved", operator: "==", value: true });
+  });
+
+  it("parses != with quoted string value", () => {
+    const clause = parseWhenClause('state.status != "pending"', 'Graph node "check"');
+    assert.deepEqual(clause, { path: "state.status", operator: "!=", value: "pending" });
+  });
+
+  it("parses == with quoted string value", () => {
+    const clause = parseWhenClause('state.status == "done"', 'Graph node "check"');
+    assert.deepEqual(clause, { path: "state.status", operator: "==", value: "done" });
+  });
+
+  it("parses == with numeric value", () => {
+    const clause = parseWhenClause("state.retries == 3", 'Graph node "retry"');
+    assert.deepEqual(clause, { path: "state.retries", operator: "==", value: 3 });
+  });
+
+  it("throws on malformed when clause with no operator", () => {
+    assert.throws(
+      () => parseWhenClause("just a string", 'Graph node "a"'),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /invalid when clause "just a string"/);
+        assert.match(err.message, /expected: <path> == <value> or <path> != <value>/);
+        return true;
+      },
+    );
+  });
+
+  it("throws on empty expression", () => {
+    assert.throws(
+      () => parseWhenClause("", 'Graph node "a"'),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /invalid when clause/);
+        return true;
+      },
+    );
+  });
+});
+
+describe("validateGraph when-clause validation", () => {
+  // Helper: state schema with Task type
+  function makeMapState(): StateSchema {
+    return {
+      types: {
+        Task: {
+          fields: {
+            description: "string",
+            output: "string",
+            approved: "bool",
+          },
+        },
+      },
+      fields: {
+        tasks: { type: { kind: "list", element: "Task" } },
+      },
+    };
+  }
+
+  it("valid when-clause with map variable path passes", () => {
+    const graph: Graph = {
+      nodes: [
+        {
+          over: "state.tasks",
+          as: "task",
+          graph: [
+            {
+              skill: "engineer",
+              reads: ["task.description"],
+              writes: ["task.output"],
+              then: "reviewer",
+            },
+            {
+              skill: "reviewer",
+              reads: ["task.output"],
+              writes: ["task.approved"],
+              then: [
+                { when: "task.approved == false", to: "engineer" },
+                { when: "task.approved == true", to: "end" },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const skills = makeSkills("engineer", "reviewer");
+    assert.doesNotThrow(() => validateGraph(graph, skills, makeMapState()));
+  });
+
+  it("invalid path in when-clause errors", () => {
+    const graph: Graph = {
+      nodes: [
+        {
+          over: "state.tasks",
+          as: "task",
+          graph: [
+            {
+              skill: "engineer",
+              reads: ["task.description"],
+              writes: ["task.output"],
+              then: "reviewer",
+            },
+            {
+              skill: "reviewer",
+              reads: ["task.output"],
+              writes: ["task.approved"],
+              then: [
+                { when: "task.nonexistent == true", to: "engineer" },
+                { when: "task.approved == true", to: "end" },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+    const skills = makeSkills("engineer", "reviewer");
+    assert.throws(
+      () => validateGraph(graph, skills, makeMapState()),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /when clause references "task.nonexistent"/);
+        assert.match(err.message, /type "Task" has no field "nonexistent"/);
+        return true;
+      },
+    );
+  });
+
+  it("valid state path in when-clause passes", () => {
+    const graph: Graph = {
+      nodes: [
+        {
+          skill: "checker",
+          reads: [],
+          writes: [],
+          then: [
+            { when: 'state.status == "done"', to: "end" },
+            { when: 'state.status != "done"', to: "checker" },
+          ],
+        },
+      ],
+    };
+    const skills = makeSkills("checker");
+    const state = makeState({ status: { kind: "primitive", value: "string" } });
+    assert.doesNotThrow(() => validateGraph(graph, skills, state));
+  });
+
+  it("invalid state path in when-clause errors", () => {
+    const graph: Graph = {
+      nodes: [
+        {
+          skill: "checker",
+          reads: [],
+          writes: [],
+          then: [
+            { when: "state.missing == true", to: "end" },
+            { when: "state.missing == false", to: "checker" },
+          ],
+        },
+      ],
+    };
+    const skills = makeSkills("checker");
+    const state = makeState({ status: { kind: "primitive", value: "string" } });
+    assert.throws(
+      () => validateGraph(graph, skills, state),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /when clause references state field "state.missing" which is not declared/);
+        return true;
+      },
+    );
+  });
+
+  it("malformed when-clause errors during validation", () => {
+    const graph: Graph = {
+      nodes: [
+        {
+          skill: "checker",
+          reads: [],
+          writes: [],
+          then: [
+            { when: "just a string", to: "end" },
+          ],
+        },
+      ],
+    };
+    const skills = makeSkills("checker");
+    const state = makeState({ status: { kind: "primitive", value: "string" } });
+    assert.throws(
+      () => validateGraph(graph, skills, state),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /invalid when clause "just a string"/);
+        return true;
+      },
+    );
+  });
+
+  it("!= operator works in validation", () => {
+    const graph: Graph = {
+      nodes: [
+        {
+          skill: "checker",
+          reads: [],
+          writes: [],
+          then: [
+            { when: 'state.status != "pending"', to: "end" },
+            { when: 'state.status == "pending"', to: "checker" },
+          ],
+        },
+      ],
+    };
+    const skills = makeSkills("checker");
+    const state = makeState({ status: { kind: "primitive", value: "string" } });
+    assert.doesNotThrow(() => validateGraph(graph, skills, state));
+  });
+
+  it("when-clause with unknown prefix errors", () => {
+    const graph: Graph = {
+      nodes: [
+        {
+          skill: "checker",
+          reads: [],
+          writes: [],
+          then: [
+            { when: "unknown.field == true", to: "end" },
+          ],
+        },
+      ],
+    };
+    const skills = makeSkills("checker");
+    const state = makeState({ field: { kind: "primitive", value: "bool" } });
+    assert.throws(
+      () => validateGraph(graph, skills, state),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /when clause references "unknown.field" which is not a state or map variable path/);
+        return true;
+      },
+    );
+  });
+
+  it("when-clause referencing state without state declared errors", () => {
+    const graph: Graph = {
+      nodes: [
+        {
+          skill: "checker",
+          reads: [],
+          writes: [],
+          then: [
+            { when: "state.status == true", to: "end" },
+          ],
+        },
+      ],
+    };
+    const skills = makeSkills("checker");
+    assert.throws(
+      () => validateGraph(graph, skills, undefined),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /when clause references state field "state.status" but no state is declared/);
+        return true;
+      },
+    );
   });
 });
 
