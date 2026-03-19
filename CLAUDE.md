@@ -20,6 +20,7 @@ Configuration language and compiler for multi-agent AI pipelines. Compiles YAML 
 src/
   cli.ts          - CLI entry point, arg parsing
   config.ts       - YAML parsing, config types, validation (cycles, references)
+  state.ts        - State schema parsing, type system, location validation
   resolver.ts     - Reads SKILL.md files from skill directories
   compiler.ts     - Recursive composition and body concatenation
   errors.ts       - ConfigError, ResolveError, CompileError
@@ -44,7 +45,7 @@ Read BRIEF.md for full context. Key points:
 
 - **Skill composition**: Atomic skills define reusable fragments. Composed skills concatenate atomic skill bodies in declared order. Composition is recursive.
 - **Skill graphing** (not yet implemented): Agents wired into typed execution graphs with conditional routing, loops, and parallel map.
-- **State validation** (not yet implemented): Typed state schema, reads/writes validation, write conflict detection.
+- **State schema**: Typed state schema with custom types, primitives, lists, and external locations. Reads/writes validation not yet implemented.
 - **Orchestrator generation** (not yet implemented): Generated from the graph definition.
 
 ## What's Implemented
@@ -52,13 +53,13 @@ Read BRIEF.md for full context. Key points:
 - Config parsing with cycle detection and reference validation
 - Skill path resolution and SKILL.md reading
 - Recursive skill composition and compilation to dist/
-- Test suite (28 tests) covering config, resolver, and compiler modules
+- State schema parsing and validation (custom types, primitive/list/custom type refs, location validation)
+- Test suite (57 tests) covering config, resolver, compiler, and state modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next
 
 See BRIEF.md "Compiler Responsibilities" and "Open Questions" sections. Major remaining work:
-1. State schema parsing and type system
-2. Graph parsing and validation
-3. Orchestrator SKILL.md generation
-4. Map/parallel support
+1. Graph parsing and validation (reads/writes checked against state schema)
+2. Orchestrator SKILL.md generation
+3. Map/parallel support

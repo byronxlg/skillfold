@@ -247,6 +247,99 @@ skills:
   });
 });
 
+describe("readConfig state integration", () => {
+  let tmpDir: string | undefined;
+
+  afterEach(() => {
+    if (tmpDir) {
+      rmSync(tmpDir, { recursive: true, force: true });
+      tmpDir = undefined;
+    }
+  });
+
+  it("config without state section has undefined state", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  review: ./skills/review
+`);
+    const config = readConfig(configPath);
+    assert.equal(config.state, undefined);
+  });
+
+  it("config with valid state section parses types and fields", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  review: ./skills/review
+  lint: ./skills/lint
+state:
+  Issue:
+    title: string
+    priority: number
+  issues:
+    type: "list<Issue>"
+  status:
+    type: string
+  report:
+    type: string
+    location:
+      skill: review
+      path: report.md
+`);
+    const config = readConfig(configPath);
+    assert.ok(config.state);
+    assert.deepEqual(Object.keys(config.state.types), ["Issue"]);
+    assert.deepEqual(Object.keys(config.state.fields).sort(), [
+      "issues",
+      "report",
+      "status",
+    ]);
+    assert.deepEqual(config.state.fields["issues"].type, {
+      kind: "list",
+      element: "Issue",
+    });
+    assert.deepEqual(config.state.fields["report"].location, {
+      skill: "review",
+      path: "report.md",
+    });
+  });
+
+  it("config with non-object state throws ConfigError", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  review: ./skills/review
+state: not-an-object
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /State must be a YAML object/);
+      return true;
+    });
+  });
+
+  it("config with invalid state field type throws ConfigError", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  review: ./skills/review
+state:
+  items:
+    type: "list<Unknown>"
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /unknown type "Unknown"/);
+      return true;
+    });
+  });
+});
+
 describe("type guards", () => {
   it("isAtomic returns true for AtomicSkill", () => {
     assert.equal(isAtomic({ path: "./skills/review" }), true);

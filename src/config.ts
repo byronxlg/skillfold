@@ -1,6 +1,9 @@
 import { readFileSync } from "node:fs";
+
 import { parse } from "yaml";
+
 import { ConfigError } from "./errors.js";
+import { parseState, StateSchema } from "./state.js";
 
 export interface AtomicSkill {
   path: string;
@@ -15,6 +18,7 @@ export type SkillEntry = AtomicSkill | ComposedSkill;
 export interface Config {
   name: string;
   skills: Record<string, SkillEntry>;
+  state?: StateSchema;
 }
 
 export function isAtomic(skill: SkillEntry): skill is AtomicSkill {
@@ -137,5 +141,15 @@ export function readConfig(configPath: string): Config {
   validateReferences(skills);
   detectCycles(skills);
 
-  return { name: raw.name, skills };
+  const config: Config = { name: raw.name, skills };
+
+  if (raw.state !== undefined) {
+    if (typeof raw.state !== "object" || raw.state === null) {
+      throw new ConfigError("State must be a YAML object");
+    }
+    const skillNames = new Set(Object.keys(skills));
+    config.state = parseState(raw.state as Record<string, unknown>, skillNames);
+  }
+
+  return config;
 }
