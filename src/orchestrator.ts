@@ -181,10 +181,6 @@ export function generateOrchestrator(config: Config): string {
   lines.push(
     `You are the orchestrator for the **${config.name}** pipeline. You have full visibility into the execution topology. Individual agents do not know about each other or the pipeline structure - you manage all coordination.`
   );
-  lines.push("");
-  lines.push(
-    "To invoke an agent, read its compiled skill from `dist/{name}.md` and spawn a subagent with that content as its instructions. Give each agent the inputs the plan says it reads, and collect the outputs it writes."
-  );
 
   // State section
   if (config.state) {
