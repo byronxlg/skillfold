@@ -1,6 +1,4 @@
-Read `dist/orchestrator.md` and follow its execution plan. That file is your compiled skill - it contains your context, your state schema, and your step-by-step plan.
-
-To invoke each agent, read its compiled skill from `dist/{name}.md` and spawn a subagent with that content as its instructions. Give each agent the inputs the plan says it reads, and collect the outputs it writes.
+Read `dist/orchestrator.md` and follow it. That file is your compiled skill.
 
 If `dist/` is stale or missing, recompile first: `npx tsx src/cli.ts`
 
