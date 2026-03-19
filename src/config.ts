@@ -12,6 +12,7 @@ export interface AtomicSkill {
 
 export interface ComposedSkill {
   compose: string[];
+  description: string;
 }
 
 export type SkillEntry = AtomicSkill | ComposedSkill;
@@ -52,7 +53,13 @@ function normalizeSkills(
           `Skill "${name}": compose must be an array of skill names`
         );
       }
-      skills[name] = { compose };
+      const description = (value as { description?: unknown }).description;
+      if (typeof description !== "string" || description.length === 0 || description.length > 1024) {
+        throw new ConfigError(
+          `Skill "${name}": composed skills must have a description`
+        );
+      }
+      skills[name] = { compose, description };
     } else if (
       typeof value === "object" &&
       value !== null &&
@@ -71,6 +78,22 @@ function normalizeSkills(
   }
 
   return skills;
+}
+
+const SKILL_NAME_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
+
+function validateNames(skills: Record<string, SkillEntry>): void {
+  for (const name of Object.keys(skills)) {
+    if (
+      name.length > 64 ||
+      !SKILL_NAME_RE.test(name) ||
+      name.includes("--")
+    ) {
+      throw new ConfigError(
+        `Skill "${name}": name must be lowercase alphanumeric with hyphens, 1-64 characters`
+      );
+    }
+  }
 }
 
 function validateReferences(skills: Record<string, SkillEntry>): void {
@@ -141,6 +164,7 @@ export function readConfig(configPath: string): Config {
   }
 
   const skills = normalizeSkills(raw.skills);
+  validateNames(skills);
   validateReferences(skills);
   detectCycles(skills);
 

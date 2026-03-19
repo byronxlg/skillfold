@@ -59,7 +59,7 @@ describe("e2e: dev-pipeline", () => {
     assert.ok(results.length > 0);
   });
 
-  it("produces output files for all composed skills", () => {
+  it("produces output directories for all composed skills", () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
@@ -68,11 +68,11 @@ describe("e2e: dev-pipeline", () => {
     compile(config, bodies, outDir);
 
     const expected = [
-      "strategy.md",
-      "tech-lead.md",
-      "senior-engineer.md",
-      "reviewer.md",
-      "orchestrator.md",
+      "strategy/SKILL.md",
+      "tech-lead/SKILL.md",
+      "senior-engineer/SKILL.md",
+      "reviewer/SKILL.md",
+      "orchestrator/SKILL.md",
     ];
 
     for (const file of expected) {
@@ -83,7 +83,7 @@ describe("e2e: dev-pipeline", () => {
     }
   });
 
-  it("strategy.md contains Strategic Thinking then Slack Integration", () => {
+  it("strategy/SKILL.md contains frontmatter and Strategic Thinking then Slack Integration", () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
@@ -91,14 +91,17 @@ describe("e2e: dev-pipeline", () => {
     const bodies = resolveSkills(config, fixtureDir);
     compile(config, bodies, outDir);
 
-    const content = readFileSync(join(outDir, "strategy.md"), "utf-8");
+    const content = readFileSync(join(outDir, "strategy", "SKILL.md"), "utf-8");
+    assert.ok(content.startsWith("---\n"));
+    assert.ok(content.includes("name: strategy"));
+    assert.ok(content.includes("description: Defines the strategic goal"));
     assertOrderedSubstrings(content, [
       "Strategic Thinking",
       "Slack Integration",
     ]);
   });
 
-  it("tech-lead.md contains all four skills in order", () => {
+  it("tech-lead/SKILL.md contains all four skills in order", () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
@@ -106,7 +109,7 @@ describe("e2e: dev-pipeline", () => {
     const bodies = resolveSkills(config, fixtureDir);
     compile(config, bodies, outDir);
 
-    const content = readFileSync(join(outDir, "tech-lead.md"), "utf-8");
+    const content = readFileSync(join(outDir, "tech-lead", "SKILL.md"), "utf-8");
     assertOrderedSubstrings(content, [
       "Strategic Thinking",
       "Task Decomposition",
@@ -115,7 +118,7 @@ describe("e2e: dev-pipeline", () => {
     ]);
   });
 
-  it("senior-engineer.md contains Task Decomposition then Code Generation", () => {
+  it("senior-engineer/SKILL.md contains Task Decomposition then Code Generation", () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
@@ -123,14 +126,14 @@ describe("e2e: dev-pipeline", () => {
     const bodies = resolveSkills(config, fixtureDir);
     compile(config, bodies, outDir);
 
-    const content = readFileSync(join(outDir, "senior-engineer.md"), "utf-8");
+    const content = readFileSync(join(outDir, "senior-engineer", "SKILL.md"), "utf-8");
     assertOrderedSubstrings(content, [
       "Task Decomposition",
       "Code Generation",
     ]);
   });
 
-  it("reviewer.md contains Code Review", () => {
+  it("reviewer/SKILL.md contains Code Review", () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
@@ -138,14 +141,14 @@ describe("e2e: dev-pipeline", () => {
     const bodies = resolveSkills(config, fixtureDir);
     compile(config, bodies, outDir);
 
-    const content = readFileSync(join(outDir, "reviewer.md"), "utf-8");
+    const content = readFileSync(join(outDir, "reviewer", "SKILL.md"), "utf-8");
     assert.ok(
       content.includes("Code Review"),
-      "reviewer.md should contain Code Review"
+      "reviewer/SKILL.md should contain Code Review"
     );
   });
 
-  it("orchestrator.md contains composed bodies before orchestrator plan", () => {
+  it("orchestrator/SKILL.md contains composed bodies before orchestrator plan", () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
@@ -153,7 +156,7 @@ describe("e2e: dev-pipeline", () => {
     const bodies = resolveSkills(config, fixtureDir);
     compile(config, bodies, outDir);
 
-    const content = readFileSync(join(outDir, "orchestrator.md"), "utf-8");
+    const content = readFileSync(join(outDir, "orchestrator", "SKILL.md"), "utf-8");
 
     // Composed bodies (Slack, Confluence, Jira) should appear before the orchestrator header
     assertOrderedSubstrings(content, [
@@ -164,7 +167,7 @@ describe("e2e: dev-pipeline", () => {
     ]);
   });
 
-  it("orchestrator.md contains pipeline header and description", () => {
+  it("orchestrator/SKILL.md contains pipeline header and description", () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
@@ -172,13 +175,13 @@ describe("e2e: dev-pipeline", () => {
     const bodies = resolveSkills(config, fixtureDir);
     compile(config, bodies, outDir);
 
-    const content = readFileSync(join(outDir, "orchestrator.md"), "utf-8");
+    const content = readFileSync(join(outDir, "orchestrator", "SKILL.md"), "utf-8");
 
     assert.ok(content.includes("# Orchestrator: dev-pipeline"));
     assert.ok(content.includes("**dev-pipeline** pipeline"));
   });
 
-  it("orchestrator.md contains state table with correct fields and locations", () => {
+  it("orchestrator/SKILL.md contains state table with correct fields and locations", () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
@@ -186,7 +189,7 @@ describe("e2e: dev-pipeline", () => {
     const bodies = resolveSkills(config, fixtureDir);
     compile(config, bodies, outDir);
 
-    const content = readFileSync(join(outDir, "orchestrator.md"), "utf-8");
+    const content = readFileSync(join(outDir, "orchestrator", "SKILL.md"), "utf-8");
 
     assert.ok(content.includes("## State"));
     assert.ok(content.includes("| Field | Type | Location |"));
@@ -203,7 +206,7 @@ describe("e2e: dev-pipeline", () => {
     );
   });
 
-  it("orchestrator.md contains execution plan with correct steps", () => {
+  it("orchestrator/SKILL.md contains execution plan with correct steps", () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
@@ -211,7 +214,7 @@ describe("e2e: dev-pipeline", () => {
     const bodies = resolveSkills(config, fixtureDir);
     compile(config, bodies, outDir);
 
-    const content = readFileSync(join(outDir, "orchestrator.md"), "utf-8");
+    const content = readFileSync(join(outDir, "orchestrator", "SKILL.md"), "utf-8");
 
     assert.ok(content.includes("## Execution Plan"));
 
@@ -237,7 +240,7 @@ describe("e2e: dev-pipeline", () => {
     );
   });
 
-  it("orchestrator.md contains map subgraph steps with correct sub-numbering", () => {
+  it("orchestrator/SKILL.md contains map subgraph steps with correct sub-numbering", () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
@@ -245,7 +248,7 @@ describe("e2e: dev-pipeline", () => {
     const bodies = resolveSkills(config, fixtureDir);
     compile(config, bodies, outDir);
 
-    const content = readFileSync(join(outDir, "orchestrator.md"), "utf-8");
+    const content = readFileSync(join(outDir, "orchestrator", "SKILL.md"), "utf-8");
 
     // Step 3.1: senior-engineer
     assert.ok(content.includes("#### Step 3.1: senior-engineer"));
@@ -261,7 +264,7 @@ describe("e2e: dev-pipeline", () => {
     assert.ok(content.includes("Writes: `task.approved`"));
   });
 
-  it("orchestrator.md contains conditional branches for reviewer", () => {
+  it("orchestrator/SKILL.md contains conditional branches for reviewer", () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
@@ -269,7 +272,7 @@ describe("e2e: dev-pipeline", () => {
     const bodies = resolveSkills(config, fixtureDir);
     compile(config, bodies, outDir);
 
-    const content = readFileSync(join(outDir, "orchestrator.md"), "utf-8");
+    const content = readFileSync(join(outDir, "orchestrator", "SKILL.md"), "utf-8");
 
     assert.ok(
       content.includes("- If `task.approved == false`: go to step 3.1")

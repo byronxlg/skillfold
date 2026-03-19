@@ -26,7 +26,7 @@ describe("compile", () => {
     }
   });
 
-  it("single composed skill produces file with bodies joined by double newline", () => {
+  it("single composed skill produces file with frontmatter and bodies joined by double newline", () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
@@ -35,7 +35,7 @@ describe("compile", () => {
       skills: {
         lint: { path: "./skills/lint" },
         format: { path: "./skills/format" },
-        quality: { compose: ["lint", "format"] },
+        quality: { compose: ["lint", "format"], description: "Runs quality checks." },
       },
     };
 
@@ -49,7 +49,10 @@ describe("compile", () => {
     assert.equal(results[0].name, "quality");
 
     const content = readFileSync(results[0].path, "utf-8");
-    assert.equal(content, "Run the linter.\n\nFormat the code.\n");
+    assert.ok(content.startsWith("---\n"));
+    assert.ok(content.includes("name: quality"));
+    assert.ok(content.includes("description: Runs quality checks."));
+    assert.ok(content.includes("Run the linter.\n\nFormat the code.\n"));
   });
 
   it("recursive composition flattens to all leaf bodies in correct order", () => {
@@ -62,8 +65,8 @@ describe("compile", () => {
         a: { path: "./skills/a" },
         b: { path: "./skills/b" },
         c: { path: "./skills/c" },
-        inner: { compose: ["a", "b"] },
-        outer: { compose: ["inner", "c"] },
+        inner: { compose: ["a", "b"], description: "Inner skill." },
+        outer: { compose: ["inner", "c"], description: "Outer skill." },
       },
     };
 
@@ -78,10 +81,10 @@ describe("compile", () => {
     assert.ok(outerResult);
 
     const content = readFileSync(outerResult.path, "utf-8");
-    assert.equal(content, "Body A\n\nBody B\n\nBody C\n");
+    assert.ok(content.includes("Body A\n\nBody B\n\nBody C\n"));
   });
 
-  it("output files named {skill-name}.md", () => {
+  it("output files at {skill-name}/SKILL.md", () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
@@ -89,7 +92,7 @@ describe("compile", () => {
       name: "test",
       skills: {
         leaf: { path: "./skills/leaf" },
-        bundle: { compose: ["leaf"] },
+        bundle: { compose: ["leaf"], description: "A bundle skill." },
       },
     };
 
@@ -98,8 +101,8 @@ describe("compile", () => {
 
     const results = compile(config, bodies, outDir);
 
-    assert.equal(results[0].path, join(outDir, "bundle.md"));
-    assert.ok(existsSync(join(outDir, "bundle.md")));
+    assert.equal(results[0].path, join(outDir, "bundle", "SKILL.md"));
+    assert.ok(existsSync(join(outDir, "bundle", "SKILL.md")));
   });
 
   it("atomic skills do not produce output files", () => {
@@ -110,7 +113,7 @@ describe("compile", () => {
       name: "test",
       skills: {
         leaf: { path: "./skills/leaf" },
-        bundle: { compose: ["leaf"] },
+        bundle: { compose: ["leaf"], description: "A bundle skill." },
       },
     };
 
@@ -119,7 +122,7 @@ describe("compile", () => {
 
     compile(config, bodies, outDir);
 
-    assert.ok(!existsSync(join(outDir, "leaf.md")));
+    assert.ok(!existsSync(join(outDir, "leaf")));
   });
 
   it("unknown skill reference throws CompileError", () => {
@@ -129,7 +132,7 @@ describe("compile", () => {
     const config: Config = {
       name: "test",
       skills: {
-        broken: { compose: ["nonexistent"] },
+        broken: { compose: ["nonexistent"], description: "Broken skill." },
       },
     };
 
@@ -150,7 +153,7 @@ describe("compile", () => {
       name: "test",
       skills: {
         leaf: { path: "./skills/leaf" },
-        bundle: { compose: ["leaf"] },
+        bundle: { compose: ["leaf"], description: "A bundle skill." },
       },
     };
 
@@ -187,7 +190,7 @@ describe("compile", () => {
       skills: {
         strategy: { path: "./skills/strategy" },
         lead: { path: "./skills/lead" },
-        pipeline: { compose: ["strategy", "lead"] },
+        pipeline: { compose: ["strategy", "lead"], description: "Runs the pipeline." },
       },
       state,
       graph,
@@ -200,11 +203,16 @@ describe("compile", () => {
 
     const results = compile(config, bodies, outDir);
 
-    // The pipeline.md should exist (from composed skill output)
+    // The pipeline/SKILL.md should exist (from composed skill output)
     const pipelineResult = results.find((r) => r.name === "pipeline");
     assert.ok(pipelineResult);
+    assert.equal(pipelineResult.path, join(outDir, "pipeline", "SKILL.md"));
 
     const content = readFileSync(pipelineResult.path, "utf-8");
+    // Should contain frontmatter
+    assert.ok(content.startsWith("---\n"));
+    assert.ok(content.includes("name: pipeline"));
+    assert.ok(content.includes("description: Runs the pipeline."));
     // Should contain the composed bodies
     assert.ok(content.includes("Strategy body."));
     assert.ok(content.includes("Lead body."));
@@ -213,11 +221,11 @@ describe("compile", () => {
     assert.ok(content.includes("## Execution Plan"));
     assert.ok(content.includes("### Step 1: strategy"));
 
-    // No standalone orchestrator.md should exist
-    assert.ok(!existsSync(join(outDir, "orchestrator.md")));
+    // No standalone orchestrator directory should exist
+    assert.ok(!existsSync(join(outDir, "orchestrator")));
   });
 
-  it("config with graph but no orchestrator key generates standalone orchestrator.md", () => {
+  it("config with graph but no orchestrator key generates standalone orchestrator/SKILL.md", () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
@@ -241,10 +249,36 @@ describe("compile", () => {
 
     const orchResult = results.find((r) => r.name === "orchestrator");
     assert.ok(orchResult);
-    assert.equal(orchResult.path, join(outDir, "orchestrator.md"));
+    assert.equal(orchResult.path, join(outDir, "orchestrator", "SKILL.md"));
 
     const content = readFileSync(orchResult.path, "utf-8");
     assert.ok(content.includes("# Orchestrator: standalone-test"));
     assert.ok(content.includes("### Step 1: worker"));
+  });
+
+  it("frontmatter contains correct name and description", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        leaf: { path: "./skills/leaf" },
+        agent: { compose: ["leaf"], description: "An agent that does things." },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("leaf", "Leaf content.");
+
+    const results = compile(config, bodies, outDir);
+    const content = readFileSync(results[0].path, "utf-8");
+
+    // Verify frontmatter structure
+    const lines = content.split("\n");
+    assert.equal(lines[0], "---");
+    assert.equal(lines[1], "name: agent");
+    assert.equal(lines[2], "description: An agent that does things.");
+    assert.equal(lines[3], "---");
   });
 });

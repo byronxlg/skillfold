@@ -11,18 +11,23 @@ skills:
 
   strategy:
     compose: [strategic-thinking, slack]
+    description: "Defines the strategic goal for the pipeline by analyzing the problem space."
 
   tech-lead:
     compose: [strategic-thinking, task-decomposition, slack, jira]
+    description: "Produces a technical plan and breaks it into tasks."
 
   senior-engineer:
     compose: [task-decomposition, code-generation]
+    description: "Implements individual tasks from the plan."
 
   reviewer:
     compose: [code-review]
+    description: "Reviews implementation output for correctness."
 
   orchestrator:
     compose: [slack, confluence, jira]
+    description: "Coordinates the dev pipeline execution."
 
 orchestrator: orchestrator
 

@@ -36,6 +36,10 @@ function expand(
   return parts;
 }
 
+function formatFrontmatter(name: string, description: string): string {
+  return `---\nname: ${name}\ndescription: ${description}\n---\n`;
+}
+
 export interface CompileResult {
   name: string;
   path: string;
@@ -54,10 +58,13 @@ export function compile(
     if (!isComposed(skill)) continue;
 
     const parts = expand(name, config, bodies, new Set());
-    const output = parts.join("\n\n");
-    const outPath = join(outDir, `${name}.md`);
+    const body = parts.join("\n\n");
+    const skillDir = join(outDir, name);
+    mkdirSync(skillDir, { recursive: true });
+    const outPath = join(skillDir, "SKILL.md");
 
-    writeFileSync(outPath, output + "\n", "utf-8");
+    const output = formatFrontmatter(name, skill.description) + "\n" + body + "\n";
+    writeFileSync(outPath, output, "utf-8");
     results.push({ name, path: outPath });
   }
 
@@ -65,11 +72,13 @@ export function compile(
     const orchestratorMd = generateOrchestrator(config);
 
     if (config.orchestrator) {
-      const targetPath = join(outDir, `${config.orchestrator}.md`);
+      const targetPath = join(outDir, config.orchestrator, "SKILL.md");
       const existing = readFileSync(targetPath, "utf-8");
       writeFileSync(targetPath, existing + "\n" + orchestratorMd, "utf-8");
     } else {
-      const outPath = join(outDir, "orchestrator.md");
+      const orchDir = join(outDir, "orchestrator");
+      mkdirSync(orchDir, { recursive: true });
+      const outPath = join(orchDir, "SKILL.md");
       writeFileSync(outPath, orchestratorMd, "utf-8");
       results.push({ name: "orchestrator", path: outPath });
     }

@@ -54,7 +54,7 @@ describe("resolveSkills", () => {
       name: "test",
       skills: {
         lint: { path: "./skills/lint" },
-        quality: { compose: ["lint"] },
+        quality: { compose: ["lint"], description: "Quality checks." },
       },
     };
 
@@ -101,5 +101,58 @@ describe("resolveSkills", () => {
       assert.match(err.message, /empty/);
       return true;
     });
+  });
+
+  it("strips YAML frontmatter from skill body", () => {
+    tmpDir = makeTmpDir();
+
+    const skillDir = join(tmpDir, "skills", "review");
+    mkdirSync(skillDir, { recursive: true });
+    writeFileSync(
+      join(skillDir, "SKILL.md"),
+      `---
+name: review
+description: Reviews code.
+---
+
+# Code Review
+
+Review the code carefully.
+`,
+      "utf-8"
+    );
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        review: { path: "./skills/review" },
+      },
+    };
+
+    const bodies = resolveSkills(config, tmpDir);
+    assert.equal(bodies.size, 1);
+    const body = bodies.get("review")!;
+    assert.ok(!body.includes("---"), "Body should not contain frontmatter delimiters");
+    assert.ok(!body.includes("name: review"), "Body should not contain frontmatter fields");
+    assert.ok(body.includes("# Code Review"), "Body should contain the markdown content");
+    assert.ok(body.includes("Review the code carefully."), "Body should contain the body text");
+  });
+
+  it("preserves body when no frontmatter present", () => {
+    tmpDir = makeTmpDir();
+
+    const skillDir = join(tmpDir, "skills", "lint");
+    mkdirSync(skillDir, { recursive: true });
+    writeFileSync(join(skillDir, "SKILL.md"), "# Lint\n\nRun the linter.", "utf-8");
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        lint: { path: "./skills/lint" },
+      },
+    };
+
+    const bodies = resolveSkills(config, tmpDir);
+    assert.equal(bodies.get("lint"), "# Lint\n\nRun the linter.");
   });
 });

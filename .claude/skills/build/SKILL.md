@@ -2,7 +2,7 @@
 description: Advance the project by running the compiled orchestrator plan. Use when the user wants to build, iterate, or move the project forward.
 ---
 
-Read `build/orchestrator.md` and follow it. That file is your compiled skill.
+Read `build/orchestrator/SKILL.md` and follow it. That file is your compiled skill.
 
 If `build/` is stale or missing, recompile first: `npx tsx src/cli.ts`
 

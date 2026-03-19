@@ -14,19 +14,24 @@ skills:
   # Composed agents
   strategist:
     compose: [skillfold-context, product-strategy, task-decomposition]
+    description: "Assesses what the project needs and sets direction for the next increment."
 
   architect:
     compose: [skillfold-context, architecture, task-decomposition]
+    description: "Designs systems and decomposes work into tasks."
 
   engineer:
     compose: [skillfold-context, code-generation, testing]
+    description: "Writes production-quality TypeScript code and tests."
 
   reviewer:
     compose: [skillfold-context, code-review, testing]
+    description: "Reviews code for correctness, clarity, and maintainability."
 
   # Orchestrator gets composed context + generated execution plan
   orchestrator:
     compose: [skillfold-context, agent-invocation]
+    description: "Coordinates the skillfold-team pipeline execution."
 
 orchestrator: orchestrator
 

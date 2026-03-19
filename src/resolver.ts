@@ -30,7 +30,14 @@ export function resolveSkills(
       throw new ResolveError(name, `Cannot read ${skillFile}`);
     }
 
-    bodies.set(name, content.trim());
+    let body = content.trim();
+    if (body.startsWith("---\n") || body.startsWith("---\r\n")) {
+      const endIndex = body.indexOf("\n---", 3);
+      if (endIndex !== -1) {
+        body = body.slice(endIndex + 4).trim();
+      }
+    }
+    bodies.set(name, body);
   }
 
   return bodies;

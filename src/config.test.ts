@@ -67,11 +67,13 @@ skills:
     compose:
       - lint
       - format
+    description: "Runs lint and format checks."
 `);
     const config = readConfig(configPath);
     const skill = config.skills["quality"];
     assert.ok(isComposed(skill));
     assert.deepEqual(skill.compose, ["lint", "format"]);
+    assert.equal(skill.description, "Runs lint and format checks.");
   });
 
   it("rejects compose with non-string elements", () => {
@@ -82,10 +84,28 @@ skills:
   quality:
     compose:
       - 42
+    description: "A quality skill."
 `);
     assert.throws(() => readConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
       assert.match(err.message, /compose must be an array of skill names/);
+      return true;
+    });
+  });
+
+  it("rejects composed skill without description", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  lint: ./skills/lint
+  quality:
+    compose:
+      - lint
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /composed skills must have a description/);
       return true;
     });
   });
@@ -113,6 +133,7 @@ skills:
   quality:
     compose:
       - nonexistent
+    description: "A quality skill."
 `);
     assert.throws(() => readConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
@@ -129,6 +150,7 @@ skills:
   loop:
     compose:
       - loop
+    description: "A looping skill."
 `);
     assert.throws(() => readConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
@@ -146,12 +168,15 @@ skills:
   a:
     compose:
       - b
+    description: "Skill a."
   b:
     compose:
       - c
+    description: "Skill b."
   c:
     compose:
       - a
+    description: "Skill c."
 `);
     assert.throws(() => readConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
@@ -170,13 +195,16 @@ skills:
   mid1:
     compose:
       - leaf
+    description: "Mid 1."
   mid2:
     compose:
       - leaf
+    description: "Mid 2."
   top:
     compose:
       - mid1
       - mid2
+    description: "Top skill."
 `);
     const config = readConfig(configPath);
     assert.ok(isComposed(config.skills["top"]));
@@ -237,6 +265,7 @@ skills:
     compose:
       - review
       - lint
+    description: "Runs quality checks."
 `);
     const config = readConfig(configPath);
     assert.equal(config.name, "my-pipeline");
@@ -244,6 +273,82 @@ skills:
     assert.ok(isAtomic(config.skills["review"]));
     assert.ok(isAtomic(config.skills["lint"]));
     assert.ok(isComposed(config.skills["quality"]));
+  });
+});
+
+describe("readConfig name validation", () => {
+  let tmpDir: string | undefined;
+
+  afterEach(() => {
+    if (tmpDir) {
+      rmSync(tmpDir, { recursive: true, force: true });
+      tmpDir = undefined;
+    }
+  });
+
+  it("rejects uppercase characters in skill name", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  MySkill: ./skills/my-skill
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /name must be lowercase alphanumeric with hyphens/);
+      return true;
+    });
+  });
+
+  it("rejects consecutive hyphens in skill name", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  my--skill: ./skills/my-skill
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /name must be lowercase alphanumeric with hyphens/);
+      return true;
+    });
+  });
+
+  it("rejects skill name longer than 64 characters", () => {
+    tmpDir = makeTmpDir();
+    const longName = "a".repeat(65);
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  ${longName}: ./skills/long
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /name must be lowercase alphanumeric with hyphens/);
+      return true;
+    });
+  });
+
+  it("accepts single character name", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  a: ./skills/a
+`);
+    const config = readConfig(configPath);
+    assert.ok(isAtomic(config.skills["a"]));
+  });
+
+  it("accepts valid hyphenated name", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  my-cool-skill: ./skills/my-cool-skill
+`);
+    const config = readConfig(configPath);
+    assert.ok(isAtomic(config.skills["my-cool-skill"]));
   });
 });
 
@@ -424,6 +529,7 @@ skills:
     compose:
       - strategy
       - lead
+    description: "Runs the pipeline."
 state:
   goal:
     type: string
@@ -471,11 +577,11 @@ describe("type guards", () => {
   });
 
   it("isAtomic returns false for ComposedSkill", () => {
-    assert.equal(isAtomic({ compose: ["a", "b"] }), false);
+    assert.equal(isAtomic({ compose: ["a", "b"], description: "desc" }), false);
   });
 
   it("isComposed returns true for ComposedSkill", () => {
-    assert.equal(isComposed({ compose: ["a", "b"] }), true);
+    assert.equal(isComposed({ compose: ["a", "b"], description: "desc" }), true);
   });
 
   it("isComposed returns false for AtomicSkill", () => {
