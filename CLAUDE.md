@@ -59,12 +59,12 @@ Read BRIEF.md for full context. Key points:
 - Graph parsing and validation (skill refs, transition targets, state paths, write conflicts, map validation, cycle exit conditions, reachability)
 - Orchestrator SKILL.md generation (execution plan with steps, state table, conditionals, map/parallel)
 - Optional `orchestrator` config key to append generated plan to a composed skill
-- Test suite (121 tests) covering config, resolver, compiler, state, graph, and orchestrator modules
+- End-to-end test with the brief's full example config (dev-pipeline with map, external locations, conditionals)
+- Test suite (133 tests) covering config, resolver, compiler, state, graph, orchestrator, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next
 
 See BRIEF.md "Compiler Responsibilities" and "Open Questions" sections. Remaining work:
-1. Map/parallel support (deep subgraph state validation)
+1. Map/parallel support (deep subgraph state validation against custom type fields)
 2. When-clause expression parsing
-3. End-to-end test with full pipeline config (state + graph + orchestrator)

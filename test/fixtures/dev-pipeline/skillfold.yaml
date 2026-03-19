@@ -1,0 +1,80 @@
+name: dev-pipeline
+
+skills:
+  strategic-thinking: ./skills/strategic-thinking
+  task-decomposition: ./skills/task-decomposition
+  code-generation: ./skills/code-generation
+  code-review: ./skills/code-review
+  slack: ./skills/slack
+  confluence: ./skills/confluence
+  jira: ./skills/jira
+
+  strategy:
+    compose: [strategic-thinking, slack]
+
+  tech-lead:
+    compose: [strategic-thinking, task-decomposition, slack, jira]
+
+  senior-engineer:
+    compose: [task-decomposition, code-generation]
+
+  reviewer:
+    compose: [code-review]
+
+  orchestrator:
+    compose: [slack, confluence, jira]
+
+orchestrator: orchestrator
+
+state:
+  Task:
+    description: string
+    output: string
+    approved: bool
+
+  goal:
+    type: string
+    location:
+      skill: slack
+      path: dev-pipeline-channel
+
+  plan:
+    type: string
+    location:
+      skill: slack
+      path: dev-pipeline-channel
+      kind: reply
+
+  tasks:
+    type: "list<Task>"
+    location:
+      skill: jira
+      path: DEV/dev-board
+
+graph:
+  - strategy:
+      writes: [state.goal]
+    then: tech-lead
+
+  - tech-lead:
+      reads: [state.goal]
+      writes: [state.plan, state.tasks]
+    then: map
+
+  - map:
+      over: state.tasks
+      as: task
+      graph:
+        - senior-engineer:
+            reads: [task.description]
+            writes: [task.output]
+          then: reviewer
+
+        - reviewer:
+            reads: [task.output]
+            writes: [task.approved]
+          then:
+            - when: task.approved == false
+              to: senior-engineer
+            - when: task.approved == true
+              to: end
