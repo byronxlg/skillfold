@@ -2,3 +2,4 @@ node_modules/
 dist/
 *.tsbuildinfo
 .claude/logs/
+.claude/scheduled_tasks.lock
