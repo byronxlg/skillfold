@@ -22,8 +22,9 @@ src/
   config.ts       - YAML parsing, config types, validation (cycles, references)
   state.ts        - State schema parsing, type system, location validation
   resolver.ts     - Reads SKILL.md files from skill directories
-  compiler.ts     - Recursive composition and body concatenation
+  compiler.ts     - Recursive composition, body concatenation, orchestrator integration
   graph.ts        - Graph parsing, validation (skills, state, conflicts, cycles)
+  orchestrator.ts - Orchestrator SKILL.md generation from graph definition
   errors.ts       - ConfigError, ResolveError, CompileError, GraphError
 skills/           - Atomic skill definitions (each has a SKILL.md)
 dist/             - Compiler output (gitignored)
@@ -47,7 +48,7 @@ Read BRIEF.md for full context. Key points:
 - **Skill composition**: Atomic skills define reusable fragments. Composed skills concatenate atomic skill bodies in declared order. Composition is recursive.
 - **Skill graphing**: Agents wired into typed execution graphs with conditional routing, loops, and parallel map. Parsed and validated.
 - **State schema**: Typed state schema with custom types, primitives, lists, and external locations. Reads/writes validated against graph.
-- **Orchestrator generation** (not yet implemented): Generated from the graph definition.
+- **Orchestrator generation**: Generated from the graph definition. Produces structured execution plan with step numbering, state table, and conditional/map rendering.
 
 ## What's Implemented
 
@@ -56,12 +57,14 @@ Read BRIEF.md for full context. Key points:
 - Recursive skill composition and compilation to dist/
 - State schema parsing and validation (custom types, primitive/list/custom type refs, location validation)
 - Graph parsing and validation (skill refs, transition targets, state paths, write conflicts, map validation, cycle exit conditions, reachability)
-- Test suite (108 tests) covering config, resolver, compiler, state, and graph modules
+- Orchestrator SKILL.md generation (execution plan with steps, state table, conditionals, map/parallel)
+- Optional `orchestrator` config key to append generated plan to a composed skill
+- Test suite (121 tests) covering config, resolver, compiler, state, graph, and orchestrator modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next
 
-See BRIEF.md "Compiler Responsibilities" and "Open Questions" sections. Major remaining work:
-1. Orchestrator SKILL.md generation (from graph definition)
-2. Map/parallel support (deep subgraph validation)
-3. When-clause expression parsing
+See BRIEF.md "Compiler Responsibilities" and "Open Questions" sections. Remaining work:
+1. Map/parallel support (deep subgraph state validation)
+2. When-clause expression parsing
+3. End-to-end test with full pipeline config (state + graph + orchestrator)

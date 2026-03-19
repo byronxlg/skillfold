@@ -21,6 +21,7 @@ export interface Config {
   skills: Record<string, SkillEntry>;
   state?: StateSchema;
   graph?: Graph;
+  orchestrator?: string;
 }
 
 export function isAtomic(skill: SkillEntry): skill is AtomicSkill {
@@ -160,6 +161,18 @@ export function readConfig(configPath: string): Config {
     const graph = parseGraph(raw.graph);
     validateGraph(graph, skills, config.state);
     config.graph = graph;
+  }
+
+  if (raw.orchestrator !== undefined) {
+    if (typeof raw.orchestrator !== "string") {
+      throw new ConfigError("Orchestrator must be a string (skill name)");
+    }
+    if (!(raw.orchestrator in skills)) {
+      throw new ConfigError(
+        `Orchestrator references unknown skill "${raw.orchestrator}"`
+      );
+    }
+    config.orchestrator = raw.orchestrator;
   }
 
   return config;

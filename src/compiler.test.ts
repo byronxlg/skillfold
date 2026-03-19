@@ -7,6 +7,8 @@ import { tmpdir } from "node:os";
 import type { Config } from "./config.js";
 import { CompileError } from "./errors.js";
 import { compile } from "./compiler.js";
+import type { Graph } from "./graph.js";
+import type { StateSchema } from "./state.js";
 
 function makeTmpDir(): string {
   const dir = join(tmpdir(), `skillfold-compiler-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -160,5 +162,89 @@ describe("compile", () => {
       assert.match(err.message, /No resolved body for atomic skill/);
       return true;
     });
+  });
+
+  it("config with graph and orchestrator key appends orchestrator to composed skill output", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const state: StateSchema = {
+      types: {},
+      fields: {
+        goal: { type: { kind: "primitive", value: "string" } },
+      },
+    };
+
+    const graph: Graph = {
+      nodes: [
+        { skill: "strategy", reads: [], writes: ["state.goal"], then: "lead" },
+        { skill: "lead", reads: ["state.goal"], writes: [] },
+      ],
+    };
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        strategy: { path: "./skills/strategy" },
+        lead: { path: "./skills/lead" },
+        pipeline: { compose: ["strategy", "lead"] },
+      },
+      state,
+      graph,
+      orchestrator: "pipeline",
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("strategy", "Strategy body.");
+    bodies.set("lead", "Lead body.");
+
+    const results = compile(config, bodies, outDir);
+
+    // The pipeline.md should exist (from composed skill output)
+    const pipelineResult = results.find((r) => r.name === "pipeline");
+    assert.ok(pipelineResult);
+
+    const content = readFileSync(pipelineResult.path, "utf-8");
+    // Should contain the composed bodies
+    assert.ok(content.includes("Strategy body."));
+    assert.ok(content.includes("Lead body."));
+    // Should also contain orchestrator content
+    assert.ok(content.includes("# Orchestrator: test"));
+    assert.ok(content.includes("## Execution Plan"));
+    assert.ok(content.includes("### Step 1: strategy"));
+
+    // No standalone orchestrator.md should exist
+    assert.ok(!existsSync(join(outDir, "orchestrator.md")));
+  });
+
+  it("config with graph but no orchestrator key generates standalone orchestrator.md", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const graph: Graph = {
+      nodes: [
+        { skill: "worker", reads: [], writes: [] },
+      ],
+    };
+
+    const config: Config = {
+      name: "standalone-test",
+      skills: {
+        worker: { path: "./skills/worker" },
+      },
+      graph,
+    };
+
+    const bodies = new Map<string, string>();
+
+    const results = compile(config, bodies, outDir);
+
+    const orchResult = results.find((r) => r.name === "orchestrator");
+    assert.ok(orchResult);
+    assert.equal(orchResult.path, join(outDir, "orchestrator.md"));
+
+    const content = readFileSync(orchResult.path, "utf-8");
+    assert.ok(content.includes("# Orchestrator: standalone-test"));
+    assert.ok(content.includes("### Step 1: worker"));
   });
 });

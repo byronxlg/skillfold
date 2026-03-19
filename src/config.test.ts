@@ -403,6 +403,68 @@ graph: not-an-array
   });
 });
 
+describe("readConfig orchestrator integration", () => {
+  let tmpDir: string | undefined;
+
+  afterEach(() => {
+    if (tmpDir) {
+      rmSync(tmpDir, { recursive: true, force: true });
+      tmpDir = undefined;
+    }
+  });
+
+  it("config with valid orchestrator key parses correctly", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  strategy: ./skills/strategy
+  lead: ./skills/lead
+  pipeline:
+    compose:
+      - strategy
+      - lead
+state:
+  goal:
+    type: string
+graph:
+  - strategy:
+      writes: [state.goal]
+    then: lead
+  - lead:
+      reads: [state.goal]
+orchestrator: pipeline
+`);
+    const config = readConfig(configPath);
+    assert.equal(config.orchestrator, "pipeline");
+  });
+
+  it("orchestrator referencing nonexistent skill throws ConfigError", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  strategy: ./skills/strategy
+  lead: ./skills/lead
+state:
+  goal:
+    type: string
+graph:
+  - strategy:
+      writes: [state.goal]
+    then: lead
+  - lead:
+      reads: [state.goal]
+orchestrator: nonexistent
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /Orchestrator references unknown skill "nonexistent"/);
+      return true;
+    });
+  });
+});
+
 describe("type guards", () => {
   it("isAtomic returns true for AtomicSkill", () => {
     assert.equal(isAtomic({ path: "./skills/review" }), true);

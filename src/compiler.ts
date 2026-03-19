@@ -1,7 +1,9 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+
 import { type Config, isComposed } from "./config.js";
 import { CompileError } from "./errors.js";
+import { generateOrchestrator } from "./orchestrator.js";
 
 function expand(
   name: string,
@@ -57,6 +59,20 @@ export function compile(
 
     writeFileSync(outPath, output + "\n", "utf-8");
     results.push({ name, path: outPath });
+  }
+
+  if (config.graph) {
+    const orchestratorMd = generateOrchestrator(config);
+
+    if (config.orchestrator) {
+      const targetPath = join(outDir, `${config.orchestrator}.md`);
+      const existing = readFileSync(targetPath, "utf-8");
+      writeFileSync(targetPath, existing + "\n" + orchestratorMd, "utf-8");
+    } else {
+      const outPath = join(outDir, "orchestrator.md");
+      writeFileSync(outPath, orchestratorMd, "utf-8");
+      results.push({ name: "orchestrator", path: outPath });
+    }
   }
 
   return results;
