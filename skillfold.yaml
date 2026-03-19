@@ -1,0 +1,20 @@
+name: skillfold-team
+
+skills:
+  # Atomic skills - reusable fragments of behaviour
+  architecture: ./skills/architecture
+  task-decomposition: ./skills/task-decomposition
+  code-generation: ./skills/code-generation
+  code-review: ./skills/code-review
+  testing: ./skills/testing
+  skillfold-context: ./skills/skillfold-context
+
+  # Composed agents - built from atomic skills
+  architect:
+    compose: [skillfold-context, architecture, task-decomposition]
+
+  engineer:
+    compose: [skillfold-context, code-generation, testing]
+
+  reviewer:
+    compose: [skillfold-context, code-review, testing]
