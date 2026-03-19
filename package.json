@@ -8,6 +8,7 @@
   "scripts": {
     "dev": "tsx src/cli.ts",
     "build": "tsc",
+    "test": "tsx --test 'src/**/*.test.ts'",
     "start": "node dist/cli.js"
   },
   "dependencies": {

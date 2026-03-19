@@ -1,0 +1,266 @@
+import { afterEach, describe, it } from "node:test";
+import assert from "node:assert/strict";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+
+import { isAtomic, isComposed, readConfig } from "./config.js";
+import { ConfigError } from "./errors.js";
+
+function makeTmpDir(): string {
+  const dir = join(tmpdir(), `skillfold-config-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  mkdirSync(dir, { recursive: true });
+  return dir;
+}
+
+function writeYaml(dir: string, content: string): string {
+  const filePath = join(dir, "skillfold.yaml");
+  writeFileSync(filePath, content, "utf-8");
+  return filePath;
+}
+
+describe("readConfig", () => {
+  let tmpDir: string | undefined;
+
+  afterEach(() => {
+    if (tmpDir) {
+      rmSync(tmpDir, { recursive: true, force: true });
+      tmpDir = undefined;
+    }
+  });
+
+  it("string shorthand produces AtomicSkill", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  review: ./skills/review
+`);
+    const config = readConfig(configPath);
+    const skill = config.skills["review"];
+    assert.ok(isAtomic(skill));
+    assert.equal(skill.path, "./skills/review");
+  });
+
+  it("object with path key produces AtomicSkill", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  review:
+    path: ./skills/review
+`);
+    const config = readConfig(configPath);
+    const skill = config.skills["review"];
+    assert.ok(isAtomic(skill));
+    assert.equal(skill.path, "./skills/review");
+  });
+
+  it("object with compose and string array produces ComposedSkill", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  lint: ./skills/lint
+  format: ./skills/format
+  quality:
+    compose:
+      - lint
+      - format
+`);
+    const config = readConfig(configPath);
+    const skill = config.skills["quality"];
+    assert.ok(isComposed(skill));
+    assert.deepEqual(skill.compose, ["lint", "format"]);
+  });
+
+  it("rejects compose with non-string elements", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  quality:
+    compose:
+      - 42
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /compose must be an array of skill names/);
+      return true;
+    });
+  });
+
+  it("rejects unrecognized skill shape", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  weird:
+    unknown_key: value
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /must be a path string/);
+      return true;
+    });
+  });
+
+  it("composed skill referencing unknown skill throws ConfigError", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  quality:
+    compose:
+      - nonexistent
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /composes unknown skill "nonexistent"/);
+      return true;
+    });
+  });
+
+  it("direct self-reference cycle throws with cycle path", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  loop:
+    compose:
+      - loop
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /Circular composition detected/);
+      assert.match(err.message, /loop -> loop/);
+      return true;
+    });
+  });
+
+  it("indirect cycle (A -> B -> C -> A) throws with cycle path", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  a:
+    compose:
+      - b
+  b:
+    compose:
+      - c
+  c:
+    compose:
+      - a
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /Circular composition detected/);
+      assert.match(err.message, /a -> b -> c -> a/);
+      return true;
+    });
+  });
+
+  it("diamond shape (not a cycle) passes", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  leaf: ./skills/leaf
+  mid1:
+    compose:
+      - leaf
+  mid2:
+    compose:
+      - leaf
+  top:
+    compose:
+      - mid1
+      - mid2
+`);
+    const config = readConfig(configPath);
+    assert.ok(isComposed(config.skills["top"]));
+  });
+
+  it("missing file throws ConfigError", () => {
+    assert.throws(() => readConfig("/nonexistent/path/config.yaml"), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /Cannot read config file/);
+      return true;
+    });
+  });
+
+  it("non-object YAML throws", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, "just a string");
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /Config must be a YAML object/);
+      return true;
+    });
+  });
+
+  it("missing name field throws", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+skills:
+  review: ./skills/review
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /must have a 'name' field/);
+      return true;
+    });
+  });
+
+  it("missing skills field throws", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /must have a 'skills' field/);
+      return true;
+    });
+  });
+
+  it("valid YAML returns correct Config", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: my-pipeline
+skills:
+  review: ./skills/review
+  lint:
+    path: ./skills/lint
+  quality:
+    compose:
+      - review
+      - lint
+`);
+    const config = readConfig(configPath);
+    assert.equal(config.name, "my-pipeline");
+    assert.deepEqual(Object.keys(config.skills).sort(), ["lint", "quality", "review"]);
+    assert.ok(isAtomic(config.skills["review"]));
+    assert.ok(isAtomic(config.skills["lint"]));
+    assert.ok(isComposed(config.skills["quality"]));
+  });
+});
+
+describe("type guards", () => {
+  it("isAtomic returns true for AtomicSkill", () => {
+    assert.equal(isAtomic({ path: "./skills/review" }), true);
+  });
+
+  it("isAtomic returns false for ComposedSkill", () => {
+    assert.equal(isAtomic({ compose: ["a", "b"] }), false);
+  });
+
+  it("isComposed returns true for ComposedSkill", () => {
+    assert.equal(isComposed({ compose: ["a", "b"] }), true);
+  });
+
+  it("isComposed returns false for AtomicSkill", () => {
+    assert.equal(isComposed({ path: "./skills/review" }), false);
+  });
+});
