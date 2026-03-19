@@ -1149,7 +1149,7 @@ describe("validateGraph when-clause validation", () => {
       () => validateGraph(graph, skills, state),
       (err: unknown) => {
         assert.ok(err instanceof GraphError);
-        assert.match(err.message, /when clause references "unknown.field" which is not a state or map variable path/);
+        assert.match(err.message, /when clause references "unknown.field" but "unknown" is not a declared state field/);
         return true;
       },
     );
