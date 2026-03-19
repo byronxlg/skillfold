@@ -1,11 +1,17 @@
 import { afterEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
 
-import { isAtomic, isComposed, readConfig } from "./config.js";
+import { isAtomic, isComposed, loadConfig, readConfig } from "./config.js";
+import { compile } from "./compiler.js";
 import { ConfigError } from "./errors.js";
+import { resolveSkills } from "./resolver.js";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const fixturesDir = join(__dirname, "..", "test", "fixtures", "imports");
 
 function makeTmpDir(): string {
   const dir = join(tmpdir(), `skillfold-config-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -566,6 +572,160 @@ orchestrator: nonexistent
     assert.throws(() => readConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
       assert.match(err.message, /Orchestrator references unknown skill "nonexistent"/);
+      return true;
+    });
+  });
+});
+
+describe("loadConfig imports", () => {
+  let tmpDir: string | undefined;
+
+  afterEach(() => {
+    if (tmpDir) {
+      rmSync(tmpDir, { recursive: true, force: true });
+      tmpDir = undefined;
+    }
+  });
+
+  it("local import merges skills", async () => {
+    const configPath = join(fixturesDir, "main", "skillfold.yaml");
+    const config = await loadConfig(configPath);
+    assert.ok("common-skill" in config.skills, "imported skill should be present");
+    assert.ok("local-skill" in config.skills, "local skill should be present");
+    assert.ok("combined" in config.skills, "composed skill should be present");
+  });
+
+  it("composed skill references imported skill", async () => {
+    const configPath = join(fixturesDir, "main", "skillfold.yaml");
+    const config = await loadConfig(configPath);
+    const combined = config.skills["combined"];
+    assert.ok(isComposed(combined));
+    assert.deepEqual(combined.compose, ["common-skill", "local-skill"]);
+  });
+
+  it("state merges from import", async () => {
+    const configPath = join(fixturesDir, "main", "skillfold.yaml");
+    const config = await loadConfig(configPath);
+    assert.ok(config.state, "merged config should have state");
+    assert.ok("SharedType" in config.state.types, "imported custom type should be present");
+    assert.ok("shared-field" in config.state.fields, "imported state field should be present");
+  });
+
+  it("local override wins", async () => {
+    const configPath = join(fixturesDir, "override", "skillfold.yaml");
+    const config = await loadConfig(configPath);
+    const skill = config.skills["common-skill"];
+    assert.ok(isAtomic(skill));
+    // Local path should be ./skills/common (not the imported ../shared path)
+    assert.equal(skill.path, "./skills/common");
+  });
+
+  it("imported graph is ignored", async () => {
+    tmpDir = makeTmpDir();
+    const configPath = join(tmpDir, "skillfold.yaml");
+    writeFileSync(configPath, `
+imports:
+  - ${join(fixturesDir, "with-graph", "skillfold.yaml")}
+
+name: no-graph
+skills:
+  my-skill: ./dummy
+`, "utf-8");
+    const config = await loadConfig(configPath);
+    assert.equal(config.graph, undefined, "graph from import should not carry over");
+  });
+
+  it("imported imports are ignored", async () => {
+    tmpDir = makeTmpDir();
+    const configPath = join(tmpDir, "skillfold.yaml");
+    // Import a config that itself has imports - those nested imports should be ignored
+    writeFileSync(configPath, `
+imports:
+  - ${join(fixturesDir, "nested-imports", "skillfold.yaml")}
+
+name: flat
+skills:
+  top-skill: ./dummy
+`, "utf-8");
+    const config = await loadConfig(configPath);
+    // nested-imports imports shared, but since nested imports are ignored,
+    // common-skill should NOT be in our merged config
+    assert.ok(!("common-skill" in config.skills), "nested import's skills should not be present");
+    // nested-skill from the directly imported config should be present
+    assert.ok("nested-skill" in config.skills, "directly imported skill should be present");
+  });
+
+  it("missing import file throws ConfigError", async () => {
+    tmpDir = makeTmpDir();
+    const configPath = join(tmpDir, "skillfold.yaml");
+    writeFileSync(configPath, `
+imports:
+  - ./nonexistent/skillfold.yaml
+
+name: broken
+skills:
+  my-skill: ./dummy
+`, "utf-8");
+    await assert.rejects(() => loadConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /Cannot read imported config/);
+      return true;
+    });
+  });
+
+  it("full pipeline: loadConfig, resolveSkills, compile", async () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "build");
+    const configPath = join(fixturesDir, "main", "skillfold.yaml");
+    const baseDir = dirname(configPath);
+
+    const config = await loadConfig(configPath);
+    const bodies = await resolveSkills(config, baseDir);
+    const results = compile(config, bodies, outDir);
+
+    assert.ok(results.length > 0, "should produce compile results");
+    // The composed skill 'combined' should be compiled
+    assert.ok(
+      existsSync(join(outDir, "combined", "SKILL.md")),
+      "combined/SKILL.md should exist"
+    );
+
+    const content = readFileSync(join(outDir, "combined", "SKILL.md"), "utf-8");
+    assert.ok(content.includes("Common Skill"), "should contain imported skill body");
+    assert.ok(content.includes("Local Skill"), "should contain local skill body");
+  });
+
+  it("invalid imports type throws ConfigError", async () => {
+    tmpDir = makeTmpDir();
+    const configPath = join(tmpDir, "skillfold.yaml");
+    writeFileSync(configPath, `
+imports: not-an-array
+
+name: broken
+skills:
+  my-skill: ./dummy
+`, "utf-8");
+    await assert.rejects(() => loadConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /Imports must be an array of strings/);
+      return true;
+    });
+  });
+
+  it("imports with non-string elements throws ConfigError", async () => {
+    tmpDir = makeTmpDir();
+    const configPath = join(tmpDir, "skillfold.yaml");
+    writeFileSync(configPath, `
+imports:
+  - 42
+
+name: broken
+skills:
+  my-skill: ./dummy
+`, "utf-8");
+    await assert.rejects(() => loadConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /Imports must be an array of strings/);
       return true;
     });
   });

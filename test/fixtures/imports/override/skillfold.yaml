@@ -1,0 +1,6 @@
+imports:
+  - ../shared/skillfold.yaml
+
+name: override-pipeline
+skills:
+  common-skill: ./skills/common

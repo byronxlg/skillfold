@@ -1,4 +1,4 @@
-import { ResolveError } from "./errors.js";
+import { ConfigError, ResolveError } from "./errors.js";
 
 const GITHUB_TREE_RE =
   /^https:\/\/github\.com\/([^/]+)\/([^/]+)\/tree\/([^/]+)\/(.+)$/;
@@ -58,6 +58,41 @@ export async function fetchRemoteSkill(
     throw new ResolveError(
       name,
       `Failed to fetch ${rawUrl}: HTTP ${response.status}`
+    );
+  }
+
+  return response.text();
+}
+
+export async function fetchRemoteConfig(url: string): Promise<string> {
+  if (!url.startsWith("https://github.com/")) {
+    throw new ConfigError(
+      `Unsupported import URL format: ${url}. Only GitHub tree URLs are supported`
+    );
+  }
+
+  let parts: GitHubUrlParts;
+  try {
+    parts = parseGitHubUrl(url);
+  } catch {
+    throw new ConfigError(
+      `Unsupported import URL format: ${url}. Only GitHub tree URLs are supported`
+    );
+  }
+
+  const rawUrl = `https://raw.githubusercontent.com/${parts.owner}/${parts.repo}/${parts.ref}/${parts.path}/skillfold.yaml`;
+
+  let response: Response;
+  try {
+    response = await fetch(rawUrl);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    throw new ConfigError(`Network error fetching import from ${rawUrl}: ${message}`);
+  }
+
+  if (!response.ok) {
+    throw new ConfigError(
+      `Failed to fetch import from ${rawUrl}: HTTP ${response.status}`
     );
   }
 

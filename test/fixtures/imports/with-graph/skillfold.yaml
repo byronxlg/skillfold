@@ -1,0 +1,9 @@
+name: graph-config
+skills:
+  planner: ./dummy
+state:
+  goal:
+    type: string
+graph:
+  - planner:
+      writes: [state.goal]
