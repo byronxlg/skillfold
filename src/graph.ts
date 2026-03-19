@@ -1,6 +1,6 @@
 import { SkillEntry } from "./config.js";
 import { GraphError } from "./errors.js";
-import { StateSchema } from "./state.js";
+import { CustomType, StateSchema } from "./state.js";
 
 export interface ConditionalBranch {
   when: string;
@@ -194,10 +194,18 @@ function nodeLabel(node: GraphNode): string {
   return isMapNode(node) ? "map" : node.skill;
 }
 
+// Context for validating paths inside a map subgraph
+interface MapContext {
+  as: string;
+  typeName: string;
+  type: CustomType;
+}
+
 function validateNodes(
   nodes: GraphNode[],
   skills: Record<string, SkillEntry>,
   state: StateSchema | undefined,
+  mapCtx?: MapContext,
 ): void {
   const nodeLabels = new Set(collectNodeLabels(nodes));
 
@@ -232,32 +240,48 @@ function validateNodes(
     const label = node.skill;
 
     for (const path of node.reads) {
-      if (!path.startsWith("state.")) continue;
-      if (!state) {
-        throw new GraphError(
-          `Graph node "${label}": reads state field "${path}" but no state is declared`
-        );
-      }
-      const fieldName = path.slice("state.".length);
-      if (!(fieldName in state.fields)) {
-        throw new GraphError(
-          `Graph node "${label}": reads state field "${path}" which is not declared`
-        );
+      if (path.startsWith("state.")) {
+        if (!state) {
+          throw new GraphError(
+            `Graph node "${label}": reads state field "${path}" but no state is declared`
+          );
+        }
+        const fieldName = path.slice("state.".length);
+        if (!(fieldName in state.fields)) {
+          throw new GraphError(
+            `Graph node "${label}": reads state field "${path}" which is not declared`
+          );
+        }
+      } else if (mapCtx && path.startsWith(mapCtx.as + ".")) {
+        const fieldName = path.slice(mapCtx.as.length + 1);
+        if (!(fieldName in mapCtx.type.fields)) {
+          throw new GraphError(
+            `Map subgraph node "${label}": reads "${path}" but type "${mapCtx.typeName}" has no field "${fieldName}"`
+          );
+        }
       }
     }
 
     for (const path of node.writes) {
-      if (!path.startsWith("state.")) continue;
-      if (!state) {
-        throw new GraphError(
-          `Graph node "${label}": writes state field "${path}" but no state is declared`
-        );
-      }
-      const fieldName = path.slice("state.".length);
-      if (!(fieldName in state.fields)) {
-        throw new GraphError(
-          `Graph node "${label}": writes state field "${path}" which is not declared`
-        );
+      if (path.startsWith("state.")) {
+        if (!state) {
+          throw new GraphError(
+            `Graph node "${label}": writes state field "${path}" but no state is declared`
+          );
+        }
+        const fieldName = path.slice("state.".length);
+        if (!(fieldName in state.fields)) {
+          throw new GraphError(
+            `Graph node "${label}": writes state field "${path}" which is not declared`
+          );
+        }
+      } else if (mapCtx && path.startsWith(mapCtx.as + ".")) {
+        const fieldName = path.slice(mapCtx.as.length + 1);
+        if (!(fieldName in mapCtx.type.fields)) {
+          throw new GraphError(
+            `Map subgraph node "${label}": writes "${path}" but type "${mapCtx.typeName}" has no field "${fieldName}"`
+          );
+        }
       }
     }
   }
@@ -308,8 +332,22 @@ function validateNodes(
       );
     }
 
+    // Resolve the element type for subgraph path validation
+    let subMapCtx: MapContext | undefined;
+    if (node.over.startsWith("state.") && state) {
+      const fieldName = node.over.slice("state.".length);
+      const field = state.fields[fieldName];
+      if (field && field.type.kind === "list") {
+        const elementTypeName = field.type.element;
+        const elementType = state.types[elementTypeName];
+        if (elementType) {
+          subMapCtx = { as: node.as, typeName: elementTypeName, type: elementType };
+        }
+      }
+    }
+
     // Recursively validate the subgraph
-    validateNodes(node.graph, skills, state);
+    validateNodes(node.graph, skills, state, subMapCtx);
   }
 
   // Build index: node label -> position in this level's node list

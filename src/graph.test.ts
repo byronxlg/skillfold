@@ -616,6 +616,139 @@ describe("validateGraph", () => {
     });
   });
 
+  describe("map subgraph state path validation", () => {
+    // State schema with a Task type and a list<Task> field
+    function makeMapState(): StateSchema {
+      return {
+        types: {
+          Task: {
+            fields: {
+              description: "string",
+              output: "string",
+              approved: "bool",
+            },
+          },
+        },
+        fields: {
+          tasks: { type: { kind: "list", element: "Task" } },
+        },
+      };
+    }
+
+    it("valid map subgraph state path passes", () => {
+      const graph: Graph = {
+        nodes: [
+          {
+            over: "state.tasks",
+            as: "task",
+            graph: [
+              { skill: "engineer", reads: ["task.description"], writes: ["task.output"] },
+            ],
+          },
+        ],
+      };
+      const skills = makeSkills("engineer");
+      assert.doesNotThrow(() => validateGraph(graph, skills, makeMapState()));
+    });
+
+    it("invalid map subgraph reads path errors", () => {
+      const graph: Graph = {
+        nodes: [
+          {
+            over: "state.tasks",
+            as: "task",
+            graph: [
+              { skill: "engineer", reads: ["task.nonexistent"], writes: [] },
+            ],
+          },
+        ],
+      };
+      const skills = makeSkills("engineer");
+      assert.throws(
+        () => validateGraph(graph, skills, makeMapState()),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(
+            err.message,
+            /Map subgraph node "engineer": reads "task.nonexistent" but type "Task" has no field "nonexistent"/,
+          );
+          return true;
+        },
+      );
+    });
+
+    it("invalid map subgraph writes path errors", () => {
+      const graph: Graph = {
+        nodes: [
+          {
+            over: "state.tasks",
+            as: "task",
+            graph: [
+              { skill: "engineer", reads: [], writes: ["task.missing"] },
+            ],
+          },
+        ],
+      };
+      const skills = makeSkills("engineer");
+      assert.throws(
+        () => validateGraph(graph, skills, makeMapState()),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(
+            err.message,
+            /Map subgraph node "engineer": writes "task.missing" but type "Task" has no field "missing"/,
+          );
+          return true;
+        },
+      );
+    });
+
+    it("multiple valid paths pass", () => {
+      const graph: Graph = {
+        nodes: [
+          {
+            over: "state.tasks",
+            as: "task",
+            graph: [
+              {
+                skill: "engineer",
+                reads: ["task.description"],
+                writes: ["task.output"],
+                then: "reviewer",
+              },
+              {
+                skill: "reviewer",
+                reads: ["task.output"],
+                writes: ["task.approved"],
+                then: "end",
+              },
+            ],
+          },
+        ],
+      };
+      const skills = makeSkills("engineer", "reviewer");
+      assert.doesNotThrow(() => validateGraph(graph, skills, makeMapState()));
+    });
+
+    it("skips subgraph path validation when state is undefined", () => {
+      const graph: Graph = {
+        nodes: [
+          {
+            over: "items",
+            as: "item",
+            graph: [
+              { skill: "worker", reads: ["item.name"], writes: ["item.result"] },
+            ],
+          },
+        ],
+      };
+      const skills = makeSkills("worker");
+      // map.over doesn't start with "state." so no state validation triggered,
+      // and no map context is resolved, so item.* paths are skipped
+      assert.doesNotThrow(() => validateGraph(graph, skills, undefined));
+    });
+  });
+
   describe("cycle exit condition (rule 5)", () => {
     it("conditional cycle with exit condition passes", () => {
       const graph: Graph = {
