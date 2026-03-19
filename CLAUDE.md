@@ -47,6 +47,8 @@ Read BRIEF.md for full context. Key points:
 - Config parsing with cycle detection and reference validation
 - Skill path resolution and SKILL.md reading
 - Recursive skill composition and compilation to dist/
+- Test suite (28 tests) covering config, resolver, and compiler modules
+  - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next
 
