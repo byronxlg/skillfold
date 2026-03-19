@@ -172,12 +172,17 @@ The orchestrator skill gets its composed bodies plus a generated section describ
 ## Output
 
 ```
-dist/
-  strategy.md         # strategic-thinking + slack bodies
-  tech-lead.md        # strategic-thinking + task-decomposition + slack + jira bodies
-  senior-engineer.md  # task-decomposition + code-generation bodies
-  reviewer.md         # code-review body
-  orchestrator.md     # slack + confluence + jira bodies + generated execution plan
+build/
+  strategy/
+    SKILL.md         # strategic-thinking + slack bodies
+  tech-lead/
+    SKILL.md         # strategic-thinking + task-decomposition + slack + jira bodies
+  senior-engineer/
+    SKILL.md         # task-decomposition + code-generation bodies
+  reviewer/
+    SKILL.md         # code-review body
+  orchestrator/
+    SKILL.md         # slack + confluence + jira bodies + generated execution plan
 ```
 
 All output files are valid `SKILL.md` files per the Agent Skills open standard.

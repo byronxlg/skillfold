@@ -65,7 +65,7 @@ Read BRIEF.md for full context. Key points:
 - Orchestrator SKILL.md generation (execution plan with steps, state table, conditionals, map/parallel)
 - Optional `orchestrator` config key to append generated plan to a composed skill
 - End-to-end test with the brief's full example config (dev-pipeline with map, external locations, conditionals)
-- Test suite (133 tests) covering config, resolver, compiler, state, graph, orchestrator, and e2e modules
+- Test suite (142 tests) covering config, resolver, compiler, state, graph, orchestrator, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next
