@@ -1,11 +1,21 @@
 {
   "name": "skillfold",
   "version": "0.1.0",
+  "description": "Compiler for multi-agent AI pipelines. Compose skills, wire execution graphs, generate orchestrators.",
   "type": "module",
   "bin": {
     "skillfold": "./dist/cli.js"
   },
   "files": ["dist"],
+  "keywords": ["agent", "skills", "pipeline", "compiler", "multi-agent", "orchestrator", "skill-composition"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/byronxlg/skillfold.git"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
     "dev": "tsx src/cli.ts",
     "build": "tsc -p tsconfig.build.json",

@@ -7,14 +7,20 @@ Skillfold is agent-first. Agents author the config, agents consume the output, h
 ## Install
 
 ```bash
-npm install
+npm install -g skillfold
+```
+
+Or run directly:
+
+```bash
+npx skillfold
 ```
 
 ## Usage
 
 ```bash
-npx tsx src/cli.ts                                    # uses ./skillfold.yaml
-npx tsx src/cli.ts --config pipeline.yaml --out-dir build/
+skillfold                                    # uses ./skillfold.yaml
+skillfold --config pipeline.yaml --out-dir build/
 ```
 
 ## What it does
@@ -179,7 +185,7 @@ All output files are valid `SKILL.md` files per the Agent Skills open standard.
 ## Tests
 
 ```bash
-npm test          # 133 tests, node:test, no extra dependencies
+npm test          # 142 tests, node:test, no extra dependencies
 npx tsc --noEmit  # type check
 ```
 
