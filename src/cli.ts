@@ -5,9 +5,10 @@ import { fileURLToPath } from "node:url";
 
 import { loadConfig } from "./config.js";
 import { compile } from "./compiler.js";
-import { ConfigError, CompileError, ResolveError } from "./errors.js";
+import { ConfigError, CompileError, GraphError, ResolveError } from "./errors.js";
 import { initProject } from "./init.js";
 import { resolveSkills } from "./resolver.js";
+import { generateMermaid } from "./visualize.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(
@@ -21,6 +22,7 @@ Usage: skillfold [command] [options]
 
 Commands:
   init              Scaffold a new pipeline project
+  graph             Output Mermaid flowchart of the execution graph
   (default)         Compile the pipeline config
 
 Options:
@@ -32,7 +34,7 @@ Options:
 }
 
 interface Args {
-  command: "init" | "compile";
+  command: "init" | "compile" | "graph";
   configPath: string;
   outDir: string;
   dir: string;
@@ -41,7 +43,7 @@ interface Args {
 }
 
 function parseArgs(argv: string[]): Args {
-  let command: "init" | "compile" = "compile";
+  let command: "init" | "compile" | "graph" = "compile";
   let configPath = "skillfold.yaml";
   let outDir = "build";
   let dir = ".";
@@ -53,6 +55,9 @@ function parseArgs(argv: string[]): Args {
   // Check for subcommand as first positional arg
   if (argv.length > 0 && argv[0] === "init") {
     command = "init";
+    i = 1;
+  } else if (argv.length > 0 && argv[0] === "graph") {
+    command = "graph";
     i = 1;
   }
 
@@ -102,6 +107,25 @@ async function main(): Promise<void> {
       }
     } catch (err) {
       if (err instanceof Error) {
+        console.error(`skillfold error: ${err.message}`);
+        process.exit(1);
+      }
+      throw err;
+    }
+    return;
+  }
+
+  if (args.command === "graph") {
+    try {
+      const config = await loadConfig(args.configPath);
+      if (!config.graph) {
+        console.error("skillfold error: No graph defined in config");
+        process.exit(1);
+      }
+      const output = generateMermaid(config.graph);
+      process.stdout.write(output);
+    } catch (err) {
+      if (err instanceof ConfigError || err instanceof GraphError) {
         console.error(`skillfold error: ${err.message}`);
         process.exit(1);
       }
