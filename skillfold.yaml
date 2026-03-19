@@ -8,6 +8,7 @@ skills:
   code-review: ./skills/code-review
   testing: ./skills/testing
   product-strategy: ./skills/product-strategy
+  github: ./skills/github
   skillfold-context: ./skills/skillfold-context
   agent-invocation: ./skills/agent-invocation
 
@@ -21,17 +22,17 @@ skills:
     description: "Designs systems and decomposes work into tasks."
 
   engineer:
-    compose: [skillfold-context, code-generation, testing]
-    description: "Writes production-quality TypeScript code and tests."
+    compose: [skillfold-context, code-generation, testing, github]
+    description: "Writes production-quality TypeScript code and tests, works on feature branches and opens PRs."
 
   reviewer:
-    compose: [skillfold-context, code-review, testing]
-    description: "Reviews code for correctness, clarity, and maintainability."
+    compose: [skillfold-context, code-review, testing, github]
+    description: "Reviews pull requests on GitHub for correctness, clarity, and maintainability."
 
   # Orchestrator gets composed context + generated execution plan
   orchestrator:
-    compose: [skillfold-context, agent-invocation]
-    description: "Coordinates the skillfold-team pipeline execution."
+    compose: [skillfold-context, agent-invocation, github]
+    description: "Coordinates the skillfold-team pipeline execution and merges approved PRs."
 
 orchestrator: orchestrator
 
