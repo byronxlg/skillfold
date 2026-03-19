@@ -340,6 +340,69 @@ state:
   });
 });
 
+describe("readConfig graph integration", () => {
+  let tmpDir: string | undefined;
+
+  afterEach(() => {
+    if (tmpDir) {
+      rmSync(tmpDir, { recursive: true, force: true });
+      tmpDir = undefined;
+    }
+  });
+
+  it("config without graph has undefined graph", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  review: ./skills/review
+`);
+    const config = readConfig(configPath);
+    assert.equal(config.graph, undefined);
+  });
+
+  it("config with valid graph parses", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  strategy: ./skills/strategy
+  lead: ./skills/lead
+state:
+  goal:
+    type: string
+  plan:
+    type: string
+graph:
+  - strategy:
+      writes: [state.goal]
+    then: lead
+  - lead:
+      reads: [state.goal]
+      writes: [state.plan]
+    then: end
+`);
+    const config = readConfig(configPath);
+    assert.ok(config.graph);
+    assert.equal(config.graph.nodes.length, 2);
+  });
+
+  it("config with non-array graph throws ConfigError", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  review: ./skills/review
+graph: not-an-array
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /Graph must be a YAML array/);
+      return true;
+    });
+  });
+});
+
 describe("type guards", () => {
   it("isAtomic returns true for AtomicSkill", () => {
     assert.equal(isAtomic({ path: "./skills/review" }), true);

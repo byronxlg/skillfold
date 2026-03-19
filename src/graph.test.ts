@@ -1,0 +1,780 @@
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+
+import { SkillEntry } from "./config.js";
+import { GraphError } from "./errors.js";
+import {
+  Graph,
+  isConditionalThen,
+  isMapNode,
+  parseGraph,
+  StepNode,
+  validateGraph,
+} from "./graph.js";
+import { StateSchema } from "./state.js";
+
+// Helper: build a minimal skills record
+function makeSkills(...names: string[]): Record<string, SkillEntry> {
+  const skills: Record<string, SkillEntry> = {};
+  for (const name of names) {
+    skills[name] = { path: `./skills/${name}` };
+  }
+  return skills;
+}
+
+// Helper: build a minimal state schema
+function makeState(
+  fields: Record<string, { kind: "primitive"; value: "string" | "bool" | "number" } | { kind: "list"; element: string } | { kind: "custom"; name: string }>,
+): StateSchema {
+  const stateFields: StateSchema["fields"] = {};
+  for (const [name, type] of Object.entries(fields)) {
+    stateFields[name] = { type };
+  }
+  return { types: {}, fields: stateFields };
+}
+
+describe("parseGraph", () => {
+  it("parses a single step node with reads, writes, and then", () => {
+    const raw = [
+      {
+        strategy: { writes: ["state.goal"] },
+        then: "tech-lead",
+      },
+    ];
+    const graph = parseGraph(raw);
+    assert.equal(graph.nodes.length, 1);
+    const node = graph.nodes[0] as StepNode;
+    assert.equal(node.skill, "strategy");
+    assert.deepEqual(node.reads, []);
+    assert.deepEqual(node.writes, ["state.goal"]);
+    assert.equal(node.then, "tech-lead");
+  });
+
+  it("parses a chain of step nodes", () => {
+    const raw = [
+      {
+        strategy: { writes: ["state.goal"] },
+        then: "tech-lead",
+      },
+      {
+        "tech-lead": { reads: ["state.goal"], writes: ["state.plan"] },
+        then: "end",
+      },
+    ];
+    const graph = parseGraph(raw);
+    assert.equal(graph.nodes.length, 2);
+    assert.equal((graph.nodes[0] as StepNode).skill, "strategy");
+    assert.equal((graph.nodes[1] as StepNode).skill, "tech-lead");
+  });
+
+  it("parses conditional then (array of when/to)", () => {
+    const raw = [
+      {
+        reviewer: { reads: ["state.output"], writes: ["state.approved"] },
+        then: [
+          { when: "state.approved == false", to: "engineer" },
+          { when: "state.approved == true", to: "end" },
+        ],
+      },
+    ];
+    const graph = parseGraph(raw);
+    const node = graph.nodes[0];
+    assert.ok(node.then);
+    assert.ok(isConditionalThen(node.then));
+    assert.equal(node.then.length, 2);
+    assert.equal(node.then[0].when, "state.approved == false");
+    assert.equal(node.then[0].to, "engineer");
+    assert.equal(node.then[1].to, "end");
+  });
+
+  it("parses a map node with nested subgraph", () => {
+    const raw = [
+      {
+        map: {
+          over: "state.tasks",
+          as: "task",
+          graph: [
+            {
+              engineer: { reads: ["task.description"], writes: ["task.output"] },
+              then: "end",
+            },
+          ],
+        },
+        then: "end",
+      },
+    ];
+    const graph = parseGraph(raw);
+    assert.equal(graph.nodes.length, 1);
+    const node = graph.nodes[0];
+    assert.ok(isMapNode(node));
+    assert.equal(node.over, "state.tasks");
+    assert.equal(node.as, "task");
+    assert.equal(node.graph.length, 1);
+    assert.equal(node.then, "end");
+  });
+
+  it("parses step node with no reads/writes", () => {
+    const raw = [
+      {
+        strategy: {},
+        then: "end",
+      },
+    ];
+    const graph = parseGraph(raw);
+    const node = graph.nodes[0] as StepNode;
+    assert.deepEqual(node.reads, []);
+    assert.deepEqual(node.writes, []);
+  });
+
+  it("parses step node with null value (no properties)", () => {
+    const raw = [
+      {
+        strategy: null,
+        then: "end",
+      },
+    ];
+    const graph = parseGraph(raw);
+    const node = graph.nodes[0] as StepNode;
+    assert.equal(node.skill, "strategy");
+    assert.deepEqual(node.reads, []);
+    assert.deepEqual(node.writes, []);
+  });
+
+  describe("malformed input", () => {
+    it("rejects non-array graph", () => {
+      assert.throws(
+        () => parseGraph("not-an-array"),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /Graph must be an array/);
+          return true;
+        },
+      );
+    });
+
+    it("rejects empty array", () => {
+      assert.throws(
+        () => parseGraph([]),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /Graph must have at least one node/);
+          return true;
+        },
+      );
+    });
+
+    it("rejects non-object element", () => {
+      assert.throws(
+        () => parseGraph(["not-an-object"]),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /must be an object/);
+          return true;
+        },
+      );
+    });
+
+    it("rejects element with no primary key", () => {
+      assert.throws(
+        () => parseGraph([{ then: "end" }]),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /must have exactly one primary key/);
+          return true;
+        },
+      );
+    });
+
+    it("rejects element with multiple primary keys", () => {
+      assert.throws(
+        () => parseGraph([{ a: {}, b: {} }]),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /must have exactly one primary key/);
+          return true;
+        },
+      );
+    });
+
+    it("rejects invalid then shape (number)", () => {
+      assert.throws(
+        () => parseGraph([{ strategy: {}, then: 42 }]),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /then must be a string or array/);
+          return true;
+        },
+      );
+    });
+
+    it("rejects conditional then with non-object item", () => {
+      assert.throws(
+        () => parseGraph([{ strategy: {}, then: ["not-an-object"] }]),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /conditional then must be an array of \{when, to\}/);
+          return true;
+        },
+      );
+    });
+
+    it("rejects conditional then with missing when/to", () => {
+      assert.throws(
+        () => parseGraph([{ strategy: {}, then: [{ when: "x" }] }]),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /conditional branch must have "when"/);
+          return true;
+        },
+      );
+    });
+
+    it("rejects map node missing over", () => {
+      assert.throws(
+        () => parseGraph([{ map: { as: "task", graph: [] } }]),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /must have "over"/);
+          return true;
+        },
+      );
+    });
+
+    it("rejects map node missing as", () => {
+      assert.throws(
+        () => parseGraph([{ map: { over: "state.tasks", graph: [] } }]),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /must have "as"/);
+          return true;
+        },
+      );
+    });
+
+    it("rejects map node missing graph", () => {
+      assert.throws(
+        () => parseGraph([{ map: { over: "state.tasks", as: "task" } }]),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /must have "graph"/);
+          return true;
+        },
+      );
+    });
+
+    it("rejects reads that is not an array of strings", () => {
+      assert.throws(
+        () => parseGraph([{ strategy: { reads: "not-an-array" } }]),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /reads must be an array of strings/);
+          return true;
+        },
+      );
+    });
+
+    it("rejects writes that is not an array of strings", () => {
+      assert.throws(
+        () => parseGraph([{ strategy: { writes: [42] } }]),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /writes must be an array of strings/);
+          return true;
+        },
+      );
+    });
+  });
+});
+
+describe("validateGraph", () => {
+  describe("skill references (rule 1)", () => {
+    it("valid graph passes", () => {
+      const graph: Graph = {
+        nodes: [
+          { skill: "strategy", reads: [], writes: ["state.goal"], then: "lead" },
+          { skill: "lead", reads: ["state.goal"], writes: [], then: "end" },
+        ],
+      };
+      const skills = makeSkills("strategy", "lead");
+      const state = makeState({ goal: { kind: "primitive", value: "string" } });
+      assert.doesNotThrow(() => validateGraph(graph, skills, state));
+    });
+
+    it("unknown skill reference errors", () => {
+      const graph: Graph = {
+        nodes: [
+          { skill: "unknown", reads: [], writes: [] },
+        ],
+      };
+      const skills = makeSkills("strategy");
+      assert.throws(
+        () => validateGraph(graph, skills, undefined),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /skill "unknown" is not declared/);
+          return true;
+        },
+      );
+    });
+  });
+
+  describe("transition targets (rule 2)", () => {
+    it("unknown transition target errors", () => {
+      const graph: Graph = {
+        nodes: [
+          { skill: "strategy", reads: [], writes: [], then: "nonexistent" },
+        ],
+      };
+      const skills = makeSkills("strategy");
+      assert.throws(
+        () => validateGraph(graph, skills, undefined),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(
+            err.message,
+            /transition target "nonexistent" is not a declared skill or "end"/,
+          );
+          return true;
+        },
+      );
+    });
+
+    it('"end" is a valid target', () => {
+      const graph: Graph = {
+        nodes: [
+          { skill: "strategy", reads: [], writes: [], then: "end" },
+        ],
+      };
+      const skills = makeSkills("strategy");
+      assert.doesNotThrow(() => validateGraph(graph, skills, undefined));
+    });
+
+    it("conditional then with unknown target errors", () => {
+      const graph: Graph = {
+        nodes: [
+          {
+            skill: "reviewer",
+            reads: [],
+            writes: [],
+            then: [
+              { when: "approved", to: "end" },
+              { when: "rejected", to: "ghost" },
+            ],
+          },
+        ],
+      };
+      const skills = makeSkills("reviewer");
+      assert.throws(
+        () => validateGraph(graph, skills, undefined),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /transition target "ghost"/);
+          return true;
+        },
+      );
+    });
+  });
+
+  describe("state path validation (rule 3)", () => {
+    it("valid state paths pass", () => {
+      const graph: Graph = {
+        nodes: [
+          { skill: "strategy", reads: [], writes: ["state.goal"], then: "lead" },
+          { skill: "lead", reads: ["state.goal"], writes: ["state.plan"] },
+        ],
+      };
+      const skills = makeSkills("strategy", "lead");
+      const state = makeState({
+        goal: { kind: "primitive", value: "string" },
+        plan: { kind: "primitive", value: "string" },
+      });
+      assert.doesNotThrow(() => validateGraph(graph, skills, state));
+    });
+
+    it("unknown state field in reads errors", () => {
+      const graph: Graph = {
+        nodes: [
+          { skill: "strategy", reads: ["state.missing"], writes: [] },
+        ],
+      };
+      const skills = makeSkills("strategy");
+      const state = makeState({ goal: { kind: "primitive", value: "string" } });
+      assert.throws(
+        () => validateGraph(graph, skills, state),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /reads state field "state.missing" which is not declared/);
+          return true;
+        },
+      );
+    });
+
+    it("unknown state field in writes errors", () => {
+      const graph: Graph = {
+        nodes: [
+          { skill: "strategy", reads: [], writes: ["state.missing"] },
+        ],
+      };
+      const skills = makeSkills("strategy");
+      const state = makeState({ goal: { kind: "primitive", value: "string" } });
+      assert.throws(
+        () => validateGraph(graph, skills, state),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /writes state field "state.missing" which is not declared/);
+          return true;
+        },
+      );
+    });
+
+    it("graph with no state but reads/writes errors", () => {
+      const graph: Graph = {
+        nodes: [
+          { skill: "strategy", reads: ["state.goal"], writes: [] },
+        ],
+      };
+      const skills = makeSkills("strategy");
+      assert.throws(
+        () => validateGraph(graph, skills, undefined),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /reads state field "state.goal" but no state is declared/);
+          return true;
+        },
+      );
+    });
+
+    it("non-state paths are skipped during validation", () => {
+      const graph: Graph = {
+        nodes: [
+          { skill: "engineer", reads: ["task.description"], writes: ["task.output"] },
+        ],
+      };
+      const skills = makeSkills("engineer");
+      assert.doesNotThrow(() => validateGraph(graph, skills, undefined));
+    });
+  });
+
+  describe("write conflicts (rule 4)", () => {
+    it("no conflicts passes", () => {
+      const graph: Graph = {
+        nodes: [
+          { skill: "strategy", reads: [], writes: ["state.goal"], then: "lead" },
+          { skill: "lead", reads: [], writes: ["state.plan"] },
+        ],
+      };
+      const skills = makeSkills("strategy", "lead");
+      const state = makeState({
+        goal: { kind: "primitive", value: "string" },
+        plan: { kind: "primitive", value: "string" },
+      });
+      assert.doesNotThrow(() => validateGraph(graph, skills, state));
+    });
+
+    it("two nodes writing same field errors", () => {
+      const graph: Graph = {
+        nodes: [
+          { skill: "strategy", reads: [], writes: ["state.goal"], then: "lead" },
+          { skill: "lead", reads: [], writes: ["state.goal"] },
+        ],
+      };
+      const skills = makeSkills("strategy", "lead");
+      const state = makeState({
+        goal: { kind: "primitive", value: "string" },
+      });
+      assert.throws(
+        () => validateGraph(graph, skills, state),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /Write conflict: nodes "strategy" and "lead" both write "state.goal"/);
+          return true;
+        },
+      );
+    });
+
+    it("same field in different scopes (outer vs map subgraph) passes", () => {
+      const graph: Graph = {
+        nodes: [
+          { skill: "strategy", reads: [], writes: ["state.goal"], then: "map" },
+          {
+            over: "state.tasks",
+            as: "task",
+            graph: [
+              { skill: "engineer", reads: [], writes: ["state.goal"] },
+            ],
+          },
+        ],
+      };
+      // The outer strategy and inner engineer write the same field
+      // but they are at different graph levels, so no conflict.
+      const skills = makeSkills("strategy", "engineer");
+      const state = makeState({
+        goal: { kind: "primitive", value: "string" },
+        tasks: { kind: "list", element: "Task" },
+      });
+      assert.doesNotThrow(() => validateGraph(graph, skills, state));
+    });
+  });
+
+  describe("map validation (rules 7 & 8)", () => {
+    it("map over non-list field errors", () => {
+      const graph: Graph = {
+        nodes: [
+          {
+            over: "state.goal",
+            as: "item",
+            graph: [
+              { skill: "engineer", reads: [], writes: [] },
+            ],
+          },
+        ],
+      };
+      const skills = makeSkills("engineer");
+      const state = makeState({
+        goal: { kind: "primitive", value: "string" },
+      });
+      assert.throws(
+        () => validateGraph(graph, skills, state),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /Map node: "state.goal" is not a list field/);
+          return true;
+        },
+      );
+    });
+
+    it("map over undeclared state field errors", () => {
+      const graph: Graph = {
+        nodes: [
+          {
+            over: "state.missing",
+            as: "item",
+            graph: [
+              { skill: "engineer", reads: [], writes: [] },
+            ],
+          },
+        ],
+      };
+      const skills = makeSkills("engineer");
+      const state = makeState({
+        tasks: { kind: "list", element: "Task" },
+      });
+      assert.throws(
+        () => validateGraph(graph, skills, state),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /is not a declared state field/);
+          return true;
+        },
+      );
+    });
+
+    it("map as shadowing state field errors", () => {
+      const graph: Graph = {
+        nodes: [
+          {
+            over: "state.tasks",
+            as: "goal",
+            graph: [
+              { skill: "engineer", reads: [], writes: [] },
+            ],
+          },
+        ],
+      };
+      const skills = makeSkills("engineer");
+      const state = makeState({
+        tasks: { kind: "list", element: "Task" },
+        goal: { kind: "primitive", value: "string" },
+      });
+      assert.throws(
+        () => validateGraph(graph, skills, state),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /loop variable "goal" shadows state field/);
+          return true;
+        },
+      );
+    });
+
+    it("valid map node passes", () => {
+      const graph: Graph = {
+        nodes: [
+          {
+            over: "state.tasks",
+            as: "task",
+            graph: [
+              { skill: "engineer", reads: ["task.description"], writes: ["task.output"] },
+            ],
+          },
+        ],
+      };
+      const skills = makeSkills("engineer");
+      const state = makeState({
+        tasks: { kind: "list", element: "Task" },
+      });
+      assert.doesNotThrow(() => validateGraph(graph, skills, state));
+    });
+  });
+
+  describe("cycle exit condition (rule 5)", () => {
+    it("conditional cycle with exit condition passes", () => {
+      const graph: Graph = {
+        nodes: [
+          { skill: "engineer", reads: [], writes: [], then: "reviewer" },
+          {
+            skill: "reviewer",
+            reads: [],
+            writes: [],
+            then: [
+              { when: "rejected", to: "engineer" },
+              { when: "approved", to: "end" },
+            ],
+          },
+        ],
+      };
+      const skills = makeSkills("engineer", "reviewer");
+      assert.doesNotThrow(() => validateGraph(graph, skills, undefined));
+    });
+
+    it("conditional cycle without exit condition errors", () => {
+      const graph: Graph = {
+        nodes: [
+          { skill: "engineer", reads: [], writes: [], then: "reviewer" },
+          {
+            skill: "reviewer",
+            reads: [],
+            writes: [],
+            then: [
+              { when: "rejected", to: "engineer" },
+              { when: "needs-revision", to: "engineer" },
+            ],
+          },
+        ],
+      };
+      const skills = makeSkills("engineer", "reviewer");
+      assert.throws(
+        () => validateGraph(graph, skills, undefined),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /conditional cycle has no exit condition/);
+          return true;
+        },
+      );
+    });
+
+    it("unconditional then (string) forming a back-edge is not checked by cycle rule", () => {
+      // The cycle rule only applies to conditional branches
+      // An unconditional back-edge is not caught by this rule
+      const graph: Graph = {
+        nodes: [
+          { skill: "engineer", reads: [], writes: [], then: "reviewer" },
+          { skill: "reviewer", reads: [], writes: [], then: "engineer" },
+        ],
+      };
+      const skills = makeSkills("engineer", "reviewer");
+      // This is a design choice: unconditional loops are allowed
+      // (they'd run forever, but that's the user's problem)
+      assert.doesNotThrow(() => validateGraph(graph, skills, undefined));
+    });
+  });
+
+  describe("reachability (rule 6)", () => {
+    it("linear graph passes", () => {
+      const graph: Graph = {
+        nodes: [
+          { skill: "a", reads: [], writes: [], then: "b" },
+          { skill: "b", reads: [], writes: [], then: "c" },
+          { skill: "c", reads: [], writes: [], then: "end" },
+        ],
+      };
+      const skills = makeSkills("a", "b", "c");
+      assert.doesNotThrow(() => validateGraph(graph, skills, undefined));
+    });
+
+    it("unreachable node errors", () => {
+      const graph: Graph = {
+        nodes: [
+          { skill: "a", reads: [], writes: [], then: "end" },
+          { skill: "b", reads: [], writes: [] },
+        ],
+      };
+      const skills = makeSkills("a", "b");
+      assert.throws(
+        () => validateGraph(graph, skills, undefined),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /Graph node "b" is unreachable/);
+          return true;
+        },
+      );
+    });
+
+    it("implicit fall-through makes next node reachable", () => {
+      const graph: Graph = {
+        nodes: [
+          { skill: "a", reads: [], writes: [] },
+          { skill: "b", reads: [], writes: [] },
+        ],
+      };
+      const skills = makeSkills("a", "b");
+      assert.doesNotThrow(() => validateGraph(graph, skills, undefined));
+    });
+
+    it("conditional branches make both targets reachable", () => {
+      const graph: Graph = {
+        nodes: [
+          {
+            skill: "a",
+            reads: [],
+            writes: [],
+            then: [
+              { when: "x", to: "b" },
+              { when: "y", to: "c" },
+            ],
+          },
+          { skill: "b", reads: [], writes: [], then: "end" },
+          { skill: "c", reads: [], writes: [], then: "end" },
+        ],
+      };
+      const skills = makeSkills("a", "b", "c");
+      assert.doesNotThrow(() => validateGraph(graph, skills, undefined));
+    });
+
+    it("node reachable only through cycle is still reachable", () => {
+      const graph: Graph = {
+        nodes: [
+          { skill: "a", reads: [], writes: [], then: "b" },
+          {
+            skill: "b",
+            reads: [],
+            writes: [],
+            then: [
+              { when: "retry", to: "a" },
+              { when: "done", to: "end" },
+            ],
+          },
+        ],
+      };
+      const skills = makeSkills("a", "b");
+      assert.doesNotThrow(() => validateGraph(graph, skills, undefined));
+    });
+  });
+});
+
+describe("type guards", () => {
+  it("isMapNode returns true for MapNode", () => {
+    assert.equal(isMapNode({ over: "state.tasks", as: "task", graph: [] }), true);
+  });
+
+  it("isMapNode returns false for StepNode", () => {
+    assert.equal(isMapNode({ skill: "a", reads: [], writes: [] }), false);
+  });
+
+  it("isConditionalThen returns true for array", () => {
+    assert.equal(isConditionalThen([{ when: "x", to: "y" }]), true);
+  });
+
+  it("isConditionalThen returns false for string", () => {
+    assert.equal(isConditionalThen("next"), false);
+  });
+});

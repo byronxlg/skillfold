@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { parse } from "yaml";
 
 import { ConfigError } from "./errors.js";
+import { Graph, parseGraph, validateGraph } from "./graph.js";
 import { parseState, StateSchema } from "./state.js";
 
 export interface AtomicSkill {
@@ -19,6 +20,7 @@ export interface Config {
   name: string;
   skills: Record<string, SkillEntry>;
   state?: StateSchema;
+  graph?: Graph;
 }
 
 export function isAtomic(skill: SkillEntry): skill is AtomicSkill {
@@ -149,6 +151,15 @@ export function readConfig(configPath: string): Config {
     }
     const skillNames = new Set(Object.keys(skills));
     config.state = parseState(raw.state as Record<string, unknown>, skillNames);
+  }
+
+  if (raw.graph !== undefined) {
+    if (!Array.isArray(raw.graph)) {
+      throw new ConfigError("Graph must be a YAML array");
+    }
+    const graph = parseGraph(raw.graph);
+    validateGraph(graph, skills, config.state);
+    config.graph = graph;
   }
 
   return config;
