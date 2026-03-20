@@ -87,7 +87,8 @@ Read BRIEF.md for full context. Key points:
 - Pipeline imports (import skills and state from other configs, team is local-only)
 - End-to-end test with the brief's full example config
 - CI via GitHub Actions (Node 20 + 22)
-- Test suite (200 tests) covering config, resolver, compiler, state, graph, orchestrator, remote, init, and e2e modules
+- Graph visualization with full composition lineage and state writes (`skillfold graph`)
+- Test suite (211 tests) covering config, resolver, compiler, state, graph, orchestrator, visualize, remote, init, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next
