@@ -7,7 +7,27 @@
 Submit via the GitHub web UI at:
 https://github.com/hesreallyhim/awesome-claude-code/issues/new?template=recommend-resource.yml
 
-Earliest submission date: March 26, 2026 (7-day repo age requirement met).
+Earliest submission date: April 3, 2026 (cooldown period, see below).
+
+---
+
+## Cooldown History
+
+Two prior submissions were closed on March 20, 2026, triggering escalating
+cooldown penalties:
+
+1. **PR #1020** (March 20) - 7-day cooldown imposed
+2. **PR #1022** (March 20) - 14-day cooldown imposed (escalation)
+
+The escalating pattern means a third violation would trigger an even longer
+cooldown. The submission MUST be done correctly on the first attempt via the
+web UI. Do NOT submit before April 3, 2026.
+
+Key reminders:
+- The `gh` CLI cannot submit issue forms; use the web UI only
+- Fill in every required field before submitting
+- Double-check category and sub-category dropdown selections
+- Review the form preview before clicking "Submit new issue"
 
 ---
 
