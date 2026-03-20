@@ -89,6 +89,7 @@ team:
 
   flow:
     - strategist:
+        reads: [state.tasks]
         writes: [state.direction]
       then: architect
 
