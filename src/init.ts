@@ -10,61 +10,107 @@ name: my-pipeline
 
 skills:
   atomic:
-    plan: ./skills/plan
-    execute: ./skills/execute
+    planning: ./skills/planning
+    coding: ./skills/coding
+    reviewing: ./skills/reviewing
 
   composed:
     planner:
-      compose: [plan]
-      description: "Analyzes the goal and produces a plan."
+      compose: [planning]
+      description: "Analyzes the goal and produces a structured plan."
 
-    worker:
-      compose: [plan, execute]
-      description: "Executes tasks from the plan."
+    engineer:
+      compose: [planning, coding]
+      description: "Implements the plan, writes code and tests."
+
+    reviewer:
+      compose: [reviewing]
+      description: "Reviews code for correctness, clarity, and security."
 
     orchestrator:
-      compose: [plan]
+      compose: [planning]
       description: "Coordinates pipeline execution."
 
 state:
-  goal:
+  Review:
+    approved: bool
+    feedback: string
+
+  plan:
     type: string
 
-  result:
+  code:
     type: string
+
+  review:
+    type: Review
 
 team:
   orchestrator: orchestrator
 
   flow:
     - planner:
-        writes: [state.goal]
-      then: worker
+        writes: [state.plan]
+      then: engineer
 
-    - worker:
-        reads: [state.goal]
-        writes: [state.result]
-      then: end
+    - engineer:
+        reads: [state.plan]
+        writes: [state.code]
+      then: reviewer
+
+    - reviewer:
+        reads: [state.code]
+        writes: [state.review]
+      then:
+        - when: review.approved == false
+          to: engineer
+        - when: review.approved == true
+          to: end
 `;
 
-const PLAN_SKILL = `---
-name: plan
-description: Analyze problems and produce structured plans.
+const PLANNING_SKILL = `---
+name: planning
+description: Break problems into steps and produce structured plans.
 ---
 
-# Plan
+# Planning
 
-You analyze problems and produce structured, actionable plans. Break work into clear steps with defined inputs and outputs.
+You break problems into structured, actionable plans.
+
+- Clarify the goal before planning
+- Identify dependencies between steps
+- Estimate scope and flag risks early
+- Produce plans that others can execute without ambiguity
 `;
 
-const EXECUTE_SKILL = `---
-name: execute
-description: Execute tasks and produce results.
+const CODING_SKILL = `---
+name: coding
+description: Write clean, correct, production-quality code.
 ---
 
-# Execute
+# Coding
 
-You take a plan and execute it step by step, producing concrete output for each task.
+You write clean, correct, production-quality code.
+
+- Follow existing patterns and conventions in the codebase
+- Write tests alongside implementation
+- Handle errors gracefully with meaningful messages
+- Keep functions small and focused on a single task
+`;
+
+const REVIEWING_SKILL = `---
+name: reviewing
+description: Review code for correctness, clarity, and security.
+---
+
+# Reviewing
+
+You review code for correctness, clarity, and security.
+
+- Check that the implementation matches the stated goal
+- Look for edge cases, error handling gaps, and security issues
+- Verify tests cover the key behaviors
+- Provide specific, actionable feedback
 `;
 
 export function initProject(dir: string): string[] {
@@ -78,22 +124,22 @@ export function initProject(dir: string): string[] {
 
   const files: string[] = [];
 
-  // Create skillfold.yaml
   mkdirSync(dir, { recursive: true });
   writeFileSync(configPath, STARTER_CONFIG, "utf-8");
   files.push("skillfold.yaml");
 
-  // Create skills/plan/SKILL.md
-  const planDir = join(dir, "skills", "plan");
-  mkdirSync(planDir, { recursive: true });
-  writeFileSync(join(planDir, "SKILL.md"), PLAN_SKILL, "utf-8");
-  files.push("skills/plan/SKILL.md");
+  const skills: Array<[string, string]> = [
+    ["planning", PLANNING_SKILL],
+    ["coding", CODING_SKILL],
+    ["reviewing", REVIEWING_SKILL],
+  ];
 
-  // Create skills/execute/SKILL.md
-  const executeDir = join(dir, "skills", "execute");
-  mkdirSync(executeDir, { recursive: true });
-  writeFileSync(join(executeDir, "SKILL.md"), EXECUTE_SKILL, "utf-8");
-  files.push("skills/execute/SKILL.md");
+  for (const [name, content] of skills) {
+    const skillDir = join(dir, "skills", name);
+    mkdirSync(skillDir, { recursive: true });
+    writeFileSync(join(skillDir, "SKILL.md"), content, "utf-8");
+    files.push(`skills/${name}/SKILL.md`);
+  }
 
   return files;
 }

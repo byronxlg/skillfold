@@ -33,22 +33,27 @@ describe("initProject", () => {
     initProject(tmpDir);
 
     assert.ok(existsSync(join(tmpDir, "skillfold.yaml")));
-    assert.ok(existsSync(join(tmpDir, "skills", "plan", "SKILL.md")));
-    assert.ok(existsSync(join(tmpDir, "skills", "execute", "SKILL.md")));
+    assert.ok(existsSync(join(tmpDir, "skills", "planning", "SKILL.md")));
+    assert.ok(existsSync(join(tmpDir, "skills", "coding", "SKILL.md")));
+    assert.ok(existsSync(join(tmpDir, "skills", "reviewing", "SKILL.md")));
 
     const config = readFileSync(join(tmpDir, "skillfold.yaml"), "utf-8");
     assert.ok(config.includes("name: my-pipeline"));
 
-    const plan = readFileSync(join(tmpDir, "skills", "plan", "SKILL.md"), "utf-8");
-    assert.ok(plan.includes("name: plan"));
-    assert.ok(plan.includes("# Plan"));
+    const planning = readFileSync(join(tmpDir, "skills", "planning", "SKILL.md"), "utf-8");
+    assert.ok(planning.includes("name: planning"));
+    assert.ok(planning.includes("# Planning"));
 
-    const execute = readFileSync(join(tmpDir, "skills", "execute", "SKILL.md"), "utf-8");
-    assert.ok(execute.includes("name: execute"));
-    assert.ok(execute.includes("# Execute"));
+    const coding = readFileSync(join(tmpDir, "skills", "coding", "SKILL.md"), "utf-8");
+    assert.ok(coding.includes("name: coding"));
+    assert.ok(coding.includes("# Coding"));
+
+    const reviewing = readFileSync(join(tmpDir, "skills", "reviewing", "SKILL.md"), "utf-8");
+    assert.ok(reviewing.includes("name: reviewing"));
+    assert.ok(reviewing.includes("# Reviewing"));
   });
 
-  it("generated config compiles", async () => {
+  it("generated config compiles with orchestrator and review loop", async () => {
     tmpDir = makeTmpDir();
     initProject(tmpDir);
 
@@ -59,12 +64,20 @@ describe("initProject", () => {
     const bodies = await resolveSkills(config, tmpDir);
     const results = compile(config, bodies, outDir);
 
-    assert.ok(results.length > 0);
+    // 4 agents: planner, engineer, reviewer, orchestrator
+    assert.equal(results.length, 4);
 
-    // Verify compiled skills exist on disk
     for (const result of results) {
       assert.ok(existsSync(result.path), `Expected ${result.path} to exist`);
     }
+
+    // Orchestrator should contain the generated execution plan
+    const orchResult = results.find((r) => r.name === "orchestrator");
+    assert.ok(orchResult);
+    const orchContent = readFileSync(orchResult.path, "utf-8");
+    assert.ok(orchContent.includes("## Execution Plan"));
+    assert.ok(orchContent.includes("review.approved == false"));
+    assert.ok(orchContent.includes("review.approved == true"));
   });
 
   it("errors if skillfold.yaml already exists", () => {
@@ -88,7 +101,8 @@ describe("initProject", () => {
     initProject(subDir);
 
     assert.ok(existsSync(join(subDir, "skillfold.yaml")));
-    assert.ok(existsSync(join(subDir, "skills", "plan", "SKILL.md")));
-    assert.ok(existsSync(join(subDir, "skills", "execute", "SKILL.md")));
+    assert.ok(existsSync(join(subDir, "skills", "planning", "SKILL.md")));
+    assert.ok(existsSync(join(subDir, "skills", "coding", "SKILL.md")));
+    assert.ok(existsSync(join(subDir, "skills", "reviewing", "SKILL.md")));
   });
 });
