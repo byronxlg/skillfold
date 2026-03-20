@@ -1,11 +1,11 @@
 ---
-description: Advance the project by running the compiled orchestrator plan. Use when the user wants to build, iterate, or move the project forward.
+description: Drive the project forward by building and running an autonomous team.
 ---
 
-Read `build/orchestrator/SKILL.md` and follow it. That file is your compiled skill.
+Drive the project forward. Use skillfold to build skillfold.
 
-If `build/` is stale or missing, recompile first: `npx tsx src/cli.ts`
+Goal: Make skillfold the obvious choice for any project that wants to run an agent team. The tool is built for agents, but it needs human-readable docs, clear examples, and a trustworthy appearance to gain the confidence of the humans who decide to adopt it.
 
-Before following the plan, check whether the team is right for what the project needs. You sit outside the graph - if an agent, skill, or the graph itself needs to change, do that first.
+You own the team - if it needs to change, change it.
 
-After each full pass through the plan, land the increment with a commit.
+Look for friction points that slow down the rest of the team. Fix tooling, improve workflows, clean up blockers, and make it easier for others to operate.

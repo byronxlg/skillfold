@@ -2,5 +2,7 @@ node_modules/
 dist/
 build/
 *.tsbuildinfo
-.claude/logs/
-.claude/scheduled_tasks.lock
+.claude/*
+!.claude/skills/
+.claude/skills/*
+!.claude/skills/build/
