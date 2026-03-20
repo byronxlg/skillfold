@@ -1,0 +1,254 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/byronxlg/skillfold/raw/main/skillfold.schema.json",
+  "title": "Skillfold Pipeline Config",
+  "description": "Configuration for a skillfold multi-agent AI pipeline.",
+  "type": "object",
+  "required": ["name", "skills"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Pipeline name."
+    },
+    "imports": {
+      "type": "array",
+      "description": "Paths or URLs to other skillfold configs. Imports pull in skills and state, not team.",
+      "items": {
+        "type": "string"
+      }
+    },
+    "skills": {
+      "type": "object",
+      "description": "Skill definitions split into atomic and composed sub-sections.",
+      "additionalProperties": false,
+      "anyOf": [
+        { "required": ["atomic"] },
+        { "required": ["composed"] }
+      ],
+      "properties": {
+        "atomic": {
+          "type": "object",
+          "description": "Atomic skills referenced by local path or GitHub URL.",
+          "additionalProperties": {
+            "oneOf": [
+              {
+                "type": "string",
+                "description": "Path to the skill directory (local path or GitHub tree URL)."
+              },
+              {
+                "type": "object",
+                "required": ["path"],
+                "additionalProperties": false,
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "description": "Path to the skill directory."
+                  }
+                }
+              }
+            ]
+          }
+        },
+        "composed": {
+          "type": "object",
+          "description": "Composed skills that combine atomic skills.",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["compose", "description"],
+            "additionalProperties": false,
+            "properties": {
+              "compose": {
+                "type": "array",
+                "description": "Ordered list of skill names to compose.",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1
+              },
+              "description": {
+                "type": "string",
+                "description": "Human-readable description of the composed skill.",
+                "minLength": 1,
+                "maxLength": 1024
+              }
+            }
+          }
+        }
+      }
+    },
+    "state": {
+      "type": "object",
+      "description": "Typed state schema. Entries without a 'type' field define custom types. Entries with a 'type' field define state fields.",
+      "additionalProperties": {
+        "type": "object",
+        "oneOf": [
+          { "$ref": "#/$defs/customType" },
+          { "$ref": "#/$defs/stateField" }
+        ]
+      }
+    },
+    "team": {
+      "type": "object",
+      "description": "Team configuration with orchestrator and execution flow.",
+      "required": ["flow"],
+      "additionalProperties": false,
+      "properties": {
+        "orchestrator": {
+          "type": "string",
+          "description": "Name of the composed skill that receives the generated execution plan."
+        },
+        "flow": {
+          "type": "array",
+          "description": "Directed execution flow. Each element is a step node or map node.",
+          "items": {
+            "$ref": "#/$defs/flowElement"
+          },
+          "minItems": 1
+        }
+      }
+    }
+  },
+  "$defs": {
+    "primitiveType": {
+      "type": "string",
+      "enum": ["string", "bool", "number"]
+    },
+    "customType": {
+      "type": "object",
+      "description": "Custom type definition. An object whose keys are field names and values are primitive types. Must NOT contain a 'type' key.",
+      "not": {
+        "required": ["type"]
+      },
+      "additionalProperties": {
+        "$ref": "#/$defs/primitiveType"
+      },
+      "minProperties": 1
+    },
+    "stateField": {
+      "type": "object",
+      "description": "State field with a type and optional external location.",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Type of the state field. Primitives (string, bool, number), custom type names, or list<TypeName>."
+        },
+        "location": {
+          "$ref": "#/$defs/stateLocation"
+        }
+      }
+    },
+    "stateLocation": {
+      "type": "object",
+      "description": "External storage location for a state field.",
+      "required": ["skill", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "skill": {
+          "type": "string",
+          "description": "Name of the skill that provides access to this storage."
+        },
+        "path": {
+          "type": "string",
+          "description": "Path within the external system."
+        },
+        "kind": {
+          "type": "string",
+          "description": "Optional qualifier (e.g., 'reply', 'review')."
+        }
+      }
+    },
+    "conditionalBranch": {
+      "type": "object",
+      "description": "Conditional transition. Routes to a target when the condition is met.",
+      "required": ["when", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "when": {
+          "type": "string",
+          "description": "Condition expression (e.g., 'review.approved == true')."
+        },
+        "to": {
+          "type": "string",
+          "description": "Target skill name or 'end'."
+        }
+      }
+    },
+    "then": {
+      "description": "Transition target. A skill name, 'end', or an array of conditional branches.",
+      "oneOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/conditionalBranch"
+          },
+          "minItems": 1
+        }
+      ]
+    },
+    "stepBody": {
+      "type": ["object", "null"],
+      "description": "Step node body with optional reads and writes.",
+      "additionalProperties": false,
+      "properties": {
+        "reads": {
+          "type": "array",
+          "description": "State fields this step reads.",
+          "items": { "type": "string" }
+        },
+        "writes": {
+          "type": "array",
+          "description": "State fields this step writes.",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "mapBody": {
+      "type": "object",
+      "description": "Map node that parallelizes over a list state field.",
+      "required": ["over", "as", "graph"],
+      "additionalProperties": false,
+      "properties": {
+        "over": {
+          "type": "string",
+          "description": "State field of type list<T> to iterate over."
+        },
+        "as": {
+          "type": "string",
+          "description": "Alias for the current item in the map iteration."
+        },
+        "graph": {
+          "type": "array",
+          "description": "Sub-flow executed for each item.",
+          "items": {
+            "$ref": "#/$defs/flowElement"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "flowElement": {
+      "type": "object",
+      "description": "A flow element: either a step node (skill-name: {reads, writes}) or a map node (map: {over, as, graph}). Has an optional 'then' for transitions.",
+      "properties": {
+        "then": {
+          "$ref": "#/$defs/then"
+        },
+        "map": {
+          "$ref": "#/$defs/mapBody"
+        }
+      },
+      "patternProperties": {
+        "^(?!then$|map$)[a-z0-9][a-z0-9-]*$": {
+          "$ref": "#/$defs/stepBody"
+        }
+      },
+      "minProperties": 1
+    }
+  }
+}

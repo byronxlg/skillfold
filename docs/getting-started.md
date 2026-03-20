@@ -26,6 +26,7 @@ This creates `skillfold.yaml`, `skills/plan/SKILL.md`, and `skills/execute/SKILL
 Open `skillfold.yaml`. It defines a two-agent pipeline:
 
 ```yaml
+# yaml-language-server: $schema=node_modules/skillfold/skillfold.schema.json
 name: my-pipeline
 
 # To import shared skills from the skillfold library, uncomment:

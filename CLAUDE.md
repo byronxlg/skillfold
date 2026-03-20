@@ -36,8 +36,9 @@ library/          - Shared skills library (10 generic skills + 3 example configs
 docs/             - Getting-started tutorial and documentation
 dist/             - tsc compiled JS (npm package, gitignored)
 build/            - Compiled skill output (default --out-dir, gitignored)
-skillfold.yaml    - Pipeline config for the dev team itself
-BRIEF.md          - Full design brief
+skillfold.yaml         - Pipeline config for the dev team itself
+skillfold.schema.json  - JSON Schema for config validation and IDE autocompletion
+BRIEF.md               - Full design brief
 ```
 
 ## Workflow
@@ -132,6 +133,8 @@ Located in `library/examples/`:
 - `skillfold validate` command for config validation without compiling output
 - `skillfold list` command for pipeline introspection (skills, state, team flow)
 - Getting-started tutorial (`docs/getting-started.md`) walking users from install to compiled pipeline
+- JSON Schema (`skillfold.schema.json`) for IDE autocompletion and config validation
+- Automated npm publish via GitHub Actions (`.github/workflows/publish.yml`, triggered on release)
 - Test suite covering config, resolver, compiler, state, graph, orchestrator, visualize, remote, init, library, validate, list, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 

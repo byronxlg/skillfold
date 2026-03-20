@@ -6,7 +6,7 @@
   "bin": {
     "skillfold": "./dist/cli.js"
   },
-  "files": ["dist", "library"],
+  "files": ["dist", "library", "skillfold.schema.json"],
   "keywords": ["agent", "skills", "pipeline", "compiler", "multi-agent", "orchestrator", "skill-composition"],
   "homepage": "https://github.com/byronxlg/skillfold",
   "bugs": "https://github.com/byronxlg/skillfold/issues",
