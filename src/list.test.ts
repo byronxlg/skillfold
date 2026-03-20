@@ -183,4 +183,56 @@ skills:
     assert.ok(output.includes("agent"));
     assert.ok(output.includes("= a + b + c + d"));
   });
+
+  it("renders state with list type fields", () => {
+    const raw = parseRawConfig(`
+name: list-state-test
+skills:
+  atomic:
+    worker: ./skills/worker
+state:
+  Task:
+    title: string
+    done: bool
+  tasks:
+    type: "list<Task>"
+  status:
+    type: string
+`);
+    const config = validateAndBuild(raw);
+    const output = listPipeline(config);
+
+    assert.ok(output.includes("State (2 fields, 1 types):"));
+    assert.ok(output.includes("list<Task>"));
+    assert.ok(output.includes("Task { title: string, done: bool }"));
+  });
+
+  it("renders implicit fall-through in team flow", () => {
+    const raw = parseRawConfig(`
+name: fall-through
+skills:
+  atomic:
+    a: ./skills/a
+    b: ./skills/b
+  composed:
+    first:
+      compose: [a]
+      description: "First agent."
+    second:
+      compose: [b]
+      description: "Second agent."
+team:
+  flow:
+    - first:
+        writes: []
+    - second:
+        writes: []
+`);
+    const config = validateAndBuild(raw);
+    const output = listPipeline(config);
+
+    assert.ok(output.includes("Team Flow:"));
+    assert.ok(output.includes("first -> second"));
+    assert.ok(output.includes("second -> end"));
+  });
 });

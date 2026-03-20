@@ -394,6 +394,78 @@ orchestrator: review
       return true;
     });
   });
+
+  it("rejects composed skill without compose field", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  composed:
+    quality:
+      description: "No compose field."
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /must have a "compose" field/);
+      return true;
+    });
+  });
+
+  it("rejects composed skill with empty description", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose: [lint]
+      description: ""
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /composed skills must have a description/);
+      return true;
+    });
+  });
+
+  it("rejects empty YAML file", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, "");
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /Config must be a YAML object/);
+      return true;
+    });
+  });
+
+  it("rejects skills section that is not an object", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills: not-an-object
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      return true;
+    });
+  });
+
+  it("rejects skill name ending with a hyphen", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    bad-name-: ./skills/bad
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /name must be lowercase alphanumeric with hyphens/);
+      return true;
+    });
+  });
 });
 
 describe("readConfig name validation", () => {
