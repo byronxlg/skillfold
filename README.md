@@ -261,6 +261,7 @@ Commands:
   validate          Validate config without compiling
   list              Display a structured summary of the pipeline
   graph             Output Mermaid flowchart of the team flow
+  watch             Compile and watch for changes
 
 Options:
   --config <path>      Config file (default: skillfold.yaml)
@@ -338,7 +339,7 @@ Conditional transitions, parallel map, and imports are documented in [BRIEF.md](
 ### Tests
 
 ```bash
-npm test          # 271 tests, node:test, no extra dependencies
+npm test          # 274 tests, node:test, no extra dependencies
 npx tsc --noEmit  # type check
 ```
 

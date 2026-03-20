@@ -10,6 +10,7 @@ Configuration language and compiler for multi-agent AI pipelines. Compiles YAML 
 ## Quick Reference
 
 - **Run compiler**: `npx tsx src/cli.ts`
+- **Watch mode**: `npx tsx src/cli.ts watch`
 - **Validate config**: `npx tsx src/cli.ts validate`
 - **Check output is current**: `npx tsx src/cli.ts --check`
 - **List pipeline**: `npx tsx src/cli.ts list`
@@ -30,6 +31,7 @@ src/
   graph.ts        - Graph parsing, validation (skills, state, conflicts, cycles)
   orchestrator.ts - Orchestrator SKILL.md generation from graph definition
   list.ts         - Pipeline introspection (skillfold list)
+  watch.ts        - File watching and auto-recompile (skillfold watch)
   init.ts         - skillfold init scaffolding
   errors.ts       - ConfigError, ResolveError, CompileError, GraphError
 skills/           - Atomic skill definitions (each has a SKILL.md)
@@ -137,8 +139,12 @@ Located in `library/examples/`:
 - Getting-started tutorial (`docs/getting-started.md`) walking users from install to compiled pipeline
 - JSON Schema (`skillfold.schema.json`) for IDE autocompletion and config validation
 - `--check` flag for CI integration (verifies compiled output is up-to-date without writing)
+- `skillfold watch` command for auto-recompile on config or skill changes
+- Compiled output provenance headers include version and source config path
+- `skillfold init --template` for scaffolding from library example configs
+- Platform integration guide (`docs/integrations.md`) for Claude Code, Cursor, VS Code Copilot, Codex, Gemini CLI
 - Automated npm publish via GitHub Actions (`.github/workflows/publish.yml`, triggered on release)
-- Test suite covering config, resolver, compiler, state, graph, orchestrator, visualize, remote, init, library, validate, list, and e2e modules
+- Test suite covering config, resolver, compiler, state, graph, orchestrator, visualize, remote, init, library, validate, list, watch, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next
