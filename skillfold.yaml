@@ -3,6 +3,7 @@ name: skillfold-team
 skills:
   atomic:
     architecture: ./skills/architecture
+    create-readme: https://github.com/github/awesome-copilot/tree/main/skills/create-readme
     design: ./skills/design
     task-decomposition: ./skills/task-decomposition
     code-generation: ./skills/code-generation
@@ -20,6 +21,14 @@ skills:
     architect:
       compose: [skillfold-context, architecture, task-decomposition, github]
       description: "Designs systems and decomposes work into GitHub issues."
+
+    designer:
+      compose: [skillfold-context, create-readme, design, github]
+      description: "Designs project-facing content like READMEs, docs, and landing pages for visual impact and clarity."
+
+    marketer:
+      compose: [skillfold-context, product-strategy, design, github]
+      description: "Positions the project for adoption through messaging, content, and outreach."
 
     engineer:
       compose: [skillfold-context, code-generation, testing, github]
