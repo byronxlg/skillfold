@@ -193,11 +193,17 @@ Templates use library skills via imports, so they work out of the box with no lo
 Compile directly to where your platform reads skills. See the [Integration Guide](integrations.md) for all platforms.
 
 ```bash
-npx skillfold --out-dir .claude/skills     # Claude Code
+npx skillfold --out-dir .claude/skills     # Claude Code (skills only)
+npx skillfold --target claude-code         # Claude Code (skills + agents)
+npx skillfold plugin                       # Claude Code plugin package
 npx skillfold --out-dir .agents/skills     # cross-platform
 npx skillfold --out-dir .github/skills     # VS Code Copilot
 npx skillfold --out-dir .gemini/skills     # Gemini CLI
 ```
+
+For Claude Code, `--target claude-code` generates agent markdown files alongside skills, with role metadata and team flow integration. The `plugin` command packages everything as a distributable Claude Code plugin.
+
+Skillfold also ships a built-in plugin with 11 generic skills. Install it by referencing `node_modules/skillfold/plugin/` from your Claude Code configuration.
 
 ## 8. Next steps
 
@@ -206,4 +212,5 @@ npx skillfold --out-dir .gemini/skills     # Gemini CLI
 - Use `skillfold graph` to visualize your team flow as a Mermaid diagram
 - Try parallel `map` to process lists of items concurrently
 - Add `skillfold --check` to CI to verify compiled output stays in sync
+- Use `skillfold plugin` to package your pipeline for distribution
 - Set `GITHUB_TOKEN` to reference skills from private GitHub repositories

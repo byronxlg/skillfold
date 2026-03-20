@@ -12,22 +12,51 @@ npx skillfold --out-dir .agents/skills
 
 ## Claude Code
 
-Claude Code reads skills from `.claude/skills/`.
+Claude Code reads skills from `.claude/skills/` and agents from `.claude/agents/`.
+
+### Option 1: Skills only (default output)
 
 ```bash
 npx skillfold --out-dir .claude/skills
 ```
 
-Result:
+### Option 2: Skills + agents (claude-code target)
+
+The `--target claude-code` flag generates both skill files and agent markdown files with frontmatter (name, description, model, color) and role-based metadata.
+
+```bash
+npx skillfold --target claude-code
+```
+
+This outputs to `.claude/` by default:
 
 ```
-.claude/skills/
-  engineer/SKILL.md
-  reviewer/SKILL.md
-  orchestrator/SKILL.md
+.claude/
+  skills/
+    engineer/SKILL.md
+    reviewer/SKILL.md
+    orchestrator/SKILL.md
+  agents/
+    engineer.md
+    reviewer.md
+    orchestrator.md
 ```
 
-Skills are auto-discovered at session start. No additional configuration needed.
+Agent files include reads/writes from the team flow, composed skill instructions, and color-coded role assignments.
+
+### Option 3: Plugin installation
+
+The `skillfold plugin` command packages your pipeline as a distributable Claude Code plugin:
+
+```bash
+npx skillfold plugin
+```
+
+This produces a `plugin/` directory with `.claude-plugin/plugin.json`, agents, skills, and an optional slash command for the orchestrator. Install by copying the plugin directory or referencing it from your project.
+
+Skillfold also ships a built-in plugin at `node_modules/skillfold/plugin/` with 11 generic skills and a `/skillfold` slash command.
+
+Skills and agents are auto-discovered at session start. No additional configuration needed.
 
 ## Cursor
 

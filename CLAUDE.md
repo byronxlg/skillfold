@@ -10,12 +10,15 @@ Configuration language and compiler for multi-agent AI pipelines. Compiles YAML 
 ## Quick Reference
 
 - **Run compiler**: `npx tsx src/cli.ts`
+- **Compile to Claude Code agents**: `npx tsx src/cli.ts --target claude-code`
+- **Package as plugin**: `npx tsx src/cli.ts plugin`
 - **Watch mode**: `npx tsx src/cli.ts watch`
 - **Validate config**: `npx tsx src/cli.ts validate`
 - **Check output is current**: `npx tsx src/cli.ts --check`
 - **List pipeline**: `npx tsx src/cli.ts list`
 - **Run with custom config**: `npx tsx src/cli.ts --config path.yaml --out-dir out/`
 - **Build**: `npm run build`
+- **Build plugin**: `npm run build:plugin`
 - **Type check**: `npx tsc --noEmit`
 
 ## Project Structure
@@ -27,15 +30,18 @@ src/
   state.ts        - State schema parsing, type system, location validation
   resolver.ts     - Reads SKILL.md files from skill directories (local + remote)
   remote.ts       - GitHub URL parsing and remote skill fetching
+  agent.ts        - Claude Code agent markdown generation from composed skills
   compiler.ts     - Recursive composition, body concatenation, orchestrator integration
   graph.ts        - Graph parsing, validation (skills, state, conflicts, cycles)
   orchestrator.ts - Orchestrator SKILL.md generation from graph definition
+  plugin.ts       - Claude Code plugin packaging (skillfold plugin)
   list.ts         - Pipeline introspection (skillfold list)
   watch.ts        - File watching and auto-recompile (skillfold watch)
   init.ts         - skillfold init scaffolding
   errors.ts       - ConfigError, ResolveError, CompileError, GraphError
 skills/           - Atomic skill definitions (each has a SKILL.md)
 library/          - Shared skills library (11 generic skills + 3 example configs)
+plugin/           - Claude Code plugin (library skills + /skillfold command)
 docs/             - Getting-started tutorial and documentation
 dist/             - tsc compiled JS (npm package, gitignored)
 build/            - Compiled skill output (default --out-dir, gitignored)
@@ -144,7 +150,10 @@ Located in `library/examples/`:
 - `skillfold init --template` for scaffolding from library example configs
 - Platform integration guide (`docs/integrations.md`) for Claude Code, Cursor, VS Code Copilot, Codex, Gemini CLI
 - Automated npm publish via GitHub Actions (`.github/workflows/publish.yml`, triggered on release)
-- Test suite covering config, resolver, compiler, state, graph, orchestrator, visualize, remote, init, library, validate, list, watch, and e2e modules
+- Claude Code plugin with 11 library skills and `/skillfold` slash command (`plugin/`)
+- `--target claude-code` output mode generating `.claude/agents/*.md` and `.claude/skills/{name}/SKILL.md`
+- `skillfold plugin` command for packaging pipelines as distributable Claude Code plugins
+- Test suite covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, library, validate, list, watch, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next
