@@ -25,46 +25,61 @@ Earliest submission date: March 26, 2026 (repo must be at least one week old).
 
 **Description:**
 
-YAML pipeline compiler for multi-agent teams. Define atomic skills once, compose them into agents, wire agents into typed team flows with conditional routing and parallel map, and compile to standard SKILL.md files. Includes `skillfold adopt` to convert existing Claude Code agent setups into a pipeline config.
+YAML pipeline compiler with native Claude Code integration. Install the plugin for `/skillfold` slash command access, or use `--target claude-code` to compile directly to `.claude/agents/*.md` layout. Define atomic skills once, compose them into agents, wire agents into typed team flows with conditional routing and parallel map, and compile to standard SKILL.md files. Works across Claude Code, Cursor, Codex, and Gemini CLI.
 
 **Validate Claims:**
 
-Install and run against an existing Claude Code project that has agents in `.claude/agents/`:
+Scaffold and compile a pipeline directly to Claude Code agent layout:
+
+```bash
+npx skillfold init demo --template dev-team
+cd demo
+npx skillfold --target claude-code
+```
+
+Inspect the output - you'll see `.claude/agents/planner.md`, `.claude/agents/engineer.md`, `.claude/agents/reviewer.md` with composed skill instructions and YAML frontmatter.
+
+To see a composed agent with multiple skills (planning + code-writing + testing):
+
+```bash
+cat .claude/agents/engineer.md
+```
+
+To adopt an existing Claude Code project that already has agents in `.claude/agents/`:
 
 ```bash
 npx skillfold adopt
+npx skillfold --target claude-code
 ```
 
-This reads the existing agent files, creates a skill directory for each one, and generates a `skillfold.yaml` config. Then compile:
-
-```bash
-npx skillfold
-```
-
-The output in `build/` contains one SKILL.md per agent with YAML frontmatter, matching the original agent instructions. The round-trip proves the compiler works with real agent setups.
-
-For a fresh start without existing agents:
-
-```bash
-npx skillfold init my-team --template dev-team
-cd my-team
-npx skillfold
-```
-
-This scaffolds a three-agent pipeline (planner, engineer, reviewer) with a review loop, compiles it, and produces SKILL.md files in `build/`.
+This round-trips existing agent files through the compiler and back to `.claude/agents/` layout.
 
 **Specific Task(s):**
 
-1. Run `npx skillfold init demo --template dev-team && cd demo && npx skillfold` to scaffold and compile a pipeline.
-2. Inspect `build/orchestrator/SKILL.md` to see the generated execution plan with numbered steps, state table, and conditional branches.
+1. Run `npx skillfold init demo --template dev-team && cd demo && npx skillfold --target claude-code` to scaffold and compile a pipeline to Claude Code layout.
+2. Inspect `.claude/agents/engineer.md` to see composed skill instructions with YAML frontmatter.
 3. Run `npx skillfold graph` to see the Mermaid flowchart of the team flow.
 
 **Specific Prompt(s):**
 
-Not applicable - skillfold is a CLI compiler, not a Claude Code skill. It compiles config into SKILL.md files that Claude Code (and other platforms) consume. The value is in the compilation step, not in a Claude Code prompt.
+Install the skillfold plugin for Claude Code:
 
-To see it in action: `npx skillfold init demo --template dev-team && cd demo && npx skillfold && cat build/orchestrator/SKILL.md`
+```bash
+npm install skillfold
+```
+
+The plugin at `node_modules/skillfold/plugin/` is auto-discovered by Claude Code. Use the `/skillfold` slash command to compile your pipeline.
+
+Alternatively, compile directly to Claude Code agent layout without the plugin:
+
+```bash
+npx skillfold init my-team --template dev-team
+cd my-team
+npx skillfold --target claude-code
+```
+
+This generates `.claude/agents/*.md` files ready for Claude Code to use immediately.
 
 **Additional Comments:**
 
-Skillfold is the only YAML-to-SKILL.md compiler with typed skill composition, team flows, and orchestrator generation. It ships with 11 reusable atomic skills (planning, research, code-writing, testing, etc.) and 3 example pipeline configs. The project self-hosts its own dev team via its own config. Also supports `--target claude-code` to compile directly to `.claude/agents/*.md` layout, and `skillfold plugin` to package pipelines as distributable Claude Code plugins.
+Skillfold is a compile-time orchestrator - no runtime agent framework, no SDK, no daemon. The compiler validates skill references, state types, write conflicts, and cycle exit conditions before any agent runs. Atomic skills compose recursively into agents, and team flows define the execution graph with typed state. The output is plain Markdown files that Claude Code reads natively. Ships with 11 reusable library skills and 3 example pipeline configs.
