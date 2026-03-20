@@ -3,8 +3,8 @@ import { readFileSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { type CompileTarget, check, compile } from "./compiler.js";
 import { isAtomic, isComposed, loadConfig } from "./config.js";
-import { check, compile } from "./compiler.js";
 import { ConfigError, CompileError, GraphError, ResolveError } from "./errors.js";
 import { initFromTemplate, initProject, TEMPLATES } from "./init.js";
 import { listPipeline } from "./list.js";
@@ -27,12 +27,14 @@ Commands:
   list              Display a structured summary of the pipeline
   graph             Output Mermaid flowchart of the team flow
   watch             Compile and watch for changes
+  plugin            Package compiled output as a Claude Code plugin
   (default)         Compile the pipeline config
 
 Options:
   --config <path>      Config file (default: skillfold.yaml)
-  --out-dir <path>     Output directory (default: build)
+  --out-dir <path>     Output directory (default: build, or .claude for claude-code target)
   --dir <path>         Target directory for init (default: .)
+  --target <mode>      Output mode: skill (default) or claude-code
   --template <name>    Start from a library template (init only)
   --check              Verify compiled output is up-to-date (exit 1 if stale)
   --help               Show this help
@@ -41,11 +43,15 @@ Options:
 Templates: ${TEMPLATES.join(", ")}`);
 }
 
+type Command = "init" | "compile" | "graph" | "list" | "validate" | "watch" | "plugin";
+
 interface Args {
-  command: "init" | "compile" | "graph" | "list" | "validate" | "watch";
+  command: Command;
   configPath: string;
   outDir: string;
+  outDirExplicit: boolean;
   dir: string;
+  target: CompileTarget;
   template: string | undefined;
   check: boolean;
   help: boolean;
@@ -53,10 +59,12 @@ interface Args {
 }
 
 function parseArgs(argv: string[]): Args {
-  let command: "init" | "compile" | "graph" | "list" | "validate" | "watch" = "compile";
+  let command: Command = "compile";
   let configPath = "skillfold.yaml";
   let outDir = "build";
+  let outDirExplicit = false;
   let dir = ".";
+  let target: CompileTarget = "skill";
   let template: string | undefined;
   let checkMode = false;
   let help = false;
@@ -85,6 +93,9 @@ function parseArgs(argv: string[]): Args {
   } else if (argv.length > 0 && argv[0] === "watch") {
     command = "watch";
     i = 1;
+  } else if (argv.length > 0 && argv[0] === "plugin") {
+    command = "plugin";
+    i = 1;
   }
 
   for (; i < argv.length; i++) {
@@ -92,8 +103,16 @@ function parseArgs(argv: string[]): Args {
       configPath = argv[++i];
     } else if (argv[i] === "--out-dir" && argv[i + 1]) {
       outDir = argv[++i];
+      outDirExplicit = true;
     } else if (argv[i] === "--dir" && argv[i + 1]) {
       dir = argv[++i];
+    } else if (argv[i] === "--target" && argv[i + 1]) {
+      const val = argv[++i];
+      if (val !== "skill" && val !== "claude-code") {
+        console.error(`skillfold error: unknown target "${val}" (expected: skill, claude-code)`);
+        process.exit(1);
+      }
+      target = val;
     } else if (argv[i] === "--template" && argv[i + 1]) {
       template = argv[++i];
     } else if (argv[i] === "--check") {
@@ -105,11 +124,22 @@ function parseArgs(argv: string[]): Args {
     }
   }
 
+  // Default outDir changes based on target when not explicitly set
+  if (!outDirExplicit) {
+    if (target === "claude-code") {
+      outDir = ".claude";
+    } else if (command === "plugin") {
+      outDir = "plugin";
+    }
+  }
+
   return {
     command,
     configPath: resolve(configPath),
     outDir: resolve(outDir),
+    outDirExplicit,
     dir: resolve(dir),
+    target,
     template,
     check: checkMode,
     help,
@@ -231,13 +261,31 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (args.command === "plugin") {
+    const { buildPlugin } = await import("./plugin.js");
+    try {
+      await buildPlugin(args.configPath, args.outDir, pkg.version);
+    } catch (err) {
+      if (
+        err instanceof ConfigError ||
+        err instanceof ResolveError ||
+        err instanceof CompileError
+      ) {
+        console.error(`skillfold error: ${err.message}`);
+        process.exit(1);
+      }
+      throw err;
+    }
+    return;
+  }
+
   try {
     const config = await loadConfig(args.configPath);
     const baseDir = dirname(args.configPath);
     const bodies = await resolveSkills(config, baseDir);
 
     if (args.check) {
-      const results = check(config, bodies, args.outDir, pkg.version, basename(args.configPath));
+      const results = check(config, bodies, args.outDir, pkg.version, basename(args.configPath), args.target);
       const stale = results.filter((r) => r.status !== "ok");
 
       if (stale.length === 0) {
@@ -250,7 +298,7 @@ async function main(): Promise<void> {
         process.exit(1);
       }
     } else {
-      const results = compile(config, bodies, args.outDir, pkg.version, basename(args.configPath));
+      const results = compile(config, bodies, args.outDir, pkg.version, basename(args.configPath), args.target);
 
       console.log(`skillfold: compiled ${config.name}`);
       for (const result of results) {

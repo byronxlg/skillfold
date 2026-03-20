@@ -19,9 +19,17 @@ export type {
 // Skill resolution
 export { resolveSkills, stripFrontmatter } from "./resolver.js";
 
+// Agent generation
+export { assignColor, generateAgents } from "./agent.js";
+export type { AgentColor, AgentDefinition, AgentResult } from "./agent.js";
+
 // Compilation
-export { check, compile, generate } from "./compiler.js";
-export type { CheckResult, CompileResult, GenerateResult } from "./compiler.js";
+export { check, compile, expandComposedBodies, generate, generateClaudeCode } from "./compiler.js";
+export type { CheckResult, CompileResult, CompileTarget, GenerateResult } from "./compiler.js";
+
+// Plugin packaging
+export { buildPlugin } from "./plugin.js";
+
 
 // Graph parsing and validation
 export {
