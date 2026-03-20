@@ -4,7 +4,7 @@ Skillfold compiles your pipeline config into `build/<agent>/SKILL.md` files. To 
 
 ## Cross-Platform
 
-The `.agents/skills/` directory is the cross-client standard, scanned by Cursor, VS Code Copilot, OpenAI Codex, and Gemini CLI.
+The `.agents/skills/` directory is scanned by VS Code Copilot, OpenAI Codex, and Gemini CLI alongside their native paths.
 
 ```bash
 npx skillfold --out-dir .agents/skills
@@ -27,11 +27,11 @@ Result:
   orchestrator/SKILL.md
 ```
 
-Claude Code auto-discovers skills in this directory. No additional configuration needed.
+Skills are auto-discovered at session start. No additional configuration needed.
 
 ## Cursor
 
-Cursor reads skills from `.cursor/skills/` and `.agents/skills/`.
+Cursor reads rules from `.cursor/rules/` as `.mdc` files with YAML frontmatter. It does not natively scan `SKILL.md` files. Use `.agents/skills/` if your Cursor version supports it, or copy compiled output manually.
 
 ```bash
 npx skillfold --out-dir .cursor/skills
@@ -39,29 +39,21 @@ npx skillfold --out-dir .cursor/skills
 
 ## VS Code (GitHub Copilot)
 
-VS Code Copilot reads skills from `.github/skills/`, `.agents/skills/`, and `.claude/skills/`.
+VS Code Copilot reads skills from `.github/skills/`, `.claude/skills/`, and `.agents/skills/`.
 
 ```bash
 npx skillfold --out-dir .github/skills
 ```
 
-Enable skills in VS Code settings:
-
-```json
-{
-  "chat.useAgentSkills": true
-}
-```
-
 ## OpenAI Codex
 
-Codex reads skills from `.codex/skills/` and `.agents/skills/`.
+Codex reads skills from `.agents/skills/`, scanning every directory between the project root and cwd.
 
 ```bash
 npx skillfold --out-dir .agents/skills
 ```
 
-Codex scans `.agents/skills/` in every directory between the project root and cwd, which works well for monorepos.
+This directory structure works well for monorepos where different subdirectories have different agent configurations.
 
 ## Gemini CLI
 
@@ -71,7 +63,7 @@ Gemini CLI reads skills from `.gemini/skills/` and `.agents/skills/`.
 npx skillfold --out-dir .gemini/skills
 ```
 
-You can verify skills are loaded with `gemini skills list`.
+Verify loaded skills with `gemini skills list`.
 
 ## CI Integration
 
