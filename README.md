@@ -36,6 +36,8 @@ Output: `build/planner/SKILL.md`, `build/worker/SKILL.md`, `build/orchestrator/S
 Write one YAML config. The compiler produces one `SKILL.md` per agent.
 
 ```yaml
+name: dev-team
+
 skills:
   atomic:
     planning: ./skills/planning
@@ -54,6 +56,8 @@ state:
   Review:
     approved: bool
     feedback: string
+  code:
+    type: string
   review:
     type: Review
 
