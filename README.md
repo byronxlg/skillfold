@@ -77,6 +77,58 @@ npx skillfold                # compile it
 
 For a step-by-step walkthrough, see the [Getting Started](docs/getting-started.md) guide. To compile directly to your platform, see the [Integration Guide](docs/integrations.md).
 
+<details>
+<summary><strong>See it in action</strong></summary>
+
+```
+$ npx skillfold init my-team --template dev-team
+skillfold: project initialized
+  -> skillfold.yaml
+
+$ npx skillfold --target claude-code
+skillfold: compiled dev-team
+  -> .claude/skills/planner/SKILL.md
+  -> .claude/skills/engineer/SKILL.md
+  -> .claude/skills/reviewer/SKILL.md
+  -> .claude/skills/orchestrator/SKILL.md
+  -> .claude/agents/planner.md
+  -> .claude/agents/engineer.md
+  -> .claude/agents/reviewer.md
+
+$ npx skillfold list
+dev-team
+
+Skills (11 atomic, 3 composed):
+  planning             (atomic)
+  research             (atomic)
+  decision-making      (atomic)
+  code-writing         (atomic)
+  code-review          (atomic)
+  testing              (atomic)
+  writing              (atomic)
+  summarization        (atomic)
+  github-workflow      (atomic)
+  file-management      (atomic)
+  skillfold-cli        (atomic)
+  planner              = planning + decision-making
+  engineer             = planning + code-writing + testing
+  reviewer             = code-review + testing
+
+State (3 fields, 1 types):
+  plan                 string
+  implementation       string
+  review               Review
+  Review { approved: bool, feedback: string }
+
+Team Flow:
+  planner -> engineer
+  engineer -> reviewer
+  reviewer -> end (when review.approved == true)
+  reviewer -> engineer (when review.approved == false)
+```
+
+</details>
+
 Add state and team flow to go beyond skill composition:
 
 ```yaml
