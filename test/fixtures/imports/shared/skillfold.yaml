@@ -1,6 +1,8 @@
 name: shared
 skills:
-  common-skill: ./skills/common
+  atomic:
+    common-skill: ./skills/common
+
 state:
   SharedType:
     value: string

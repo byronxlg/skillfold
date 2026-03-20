@@ -3,4 +3,5 @@ imports:
 
 name: nested
 skills:
-  nested-skill: ./dummy
+  atomic:
+    nested-skill: ./dummy

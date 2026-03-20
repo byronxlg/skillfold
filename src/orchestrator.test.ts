@@ -27,26 +27,28 @@ describe("generateOrchestrator", () => {
           },
         },
       },
-      graph: {
-        nodes: [
-          {
-            skill: "alpha",
-            reads: [],
-            writes: ["state.goal"],
-            then: "beta",
-          },
-          {
-            skill: "beta",
-            reads: ["state.goal"],
-            writes: ["state.plan"],
-            then: "gamma",
-          },
-          {
-            skill: "gamma",
-            reads: ["state.plan"],
-            writes: ["state.result"],
-          },
-        ],
+      team: {
+        flow: {
+          nodes: [
+            {
+              skill: "alpha",
+              reads: [],
+              writes: ["state.goal"],
+              then: "beta",
+            },
+            {
+              skill: "beta",
+              reads: ["state.goal"],
+              writes: ["state.plan"],
+              then: "gamma",
+            },
+            {
+              skill: "gamma",
+              reads: ["state.plan"],
+              writes: ["state.result"],
+            },
+          ],
+        },
       },
     };
 
@@ -86,29 +88,31 @@ describe("generateOrchestrator", () => {
         fixer: { path: "./skills/fixer" },
         done: { path: "./skills/done" },
       },
-      graph: {
-        nodes: [
-          {
-            skill: "checker",
-            reads: [],
-            writes: [],
-            then: "fixer",
-          },
-          {
-            skill: "fixer",
-            reads: [],
-            writes: [],
-            then: [
-              { when: "result == false", to: "checker" },
-              { when: "result == true", to: "done" },
-            ],
-          },
-          {
-            skill: "done",
-            reads: [],
-            writes: [],
-          },
-        ],
+      team: {
+        flow: {
+          nodes: [
+            {
+              skill: "checker",
+              reads: [],
+              writes: [],
+              then: "fixer",
+            },
+            {
+              skill: "fixer",
+              reads: [],
+              writes: [],
+              then: [
+                { when: "result == false", to: "checker" },
+                { when: "result == true", to: "done" },
+              ],
+            },
+            {
+              skill: "done",
+              reads: [],
+              writes: [],
+            },
+          ],
+        },
       },
     };
 
@@ -143,32 +147,34 @@ describe("generateOrchestrator", () => {
           },
         },
       },
-      graph: {
-        nodes: [
-          {
-            skill: "planner",
-            reads: [],
-            writes: ["state.tasks"],
-            then: "map",
-          },
-          {
-            over: "state.tasks",
-            as: "task",
-            graph: [
-              {
-                skill: "worker",
-                reads: ["task.description"],
-                writes: ["task.output"],
-                then: "reviewer",
-              },
-              {
-                skill: "reviewer",
-                reads: ["task.output"],
-                writes: [],
-              },
-            ],
-          },
-        ],
+      team: {
+        flow: {
+          nodes: [
+            {
+              skill: "planner",
+              reads: [],
+              writes: ["state.tasks"],
+              then: "map",
+            },
+            {
+              over: "state.tasks",
+              as: "task",
+              graph: [
+                {
+                  skill: "worker",
+                  reads: ["task.description"],
+                  writes: ["task.output"],
+                  then: "reviewer",
+                },
+                {
+                  skill: "reviewer",
+                  reads: ["task.output"],
+                  writes: [],
+                },
+              ],
+            },
+          ],
+        },
       },
     };
 
@@ -224,14 +230,16 @@ describe("generateOrchestrator", () => {
           },
         },
       },
-      graph: {
-        nodes: [
-          {
-            skill: "agent",
-            reads: [],
-            writes: [],
-          },
-        ],
+      team: {
+        flow: {
+          nodes: [
+            {
+              skill: "agent",
+              reads: [],
+              writes: [],
+            },
+          ],
+        },
       },
     };
 
@@ -252,14 +260,16 @@ describe("generateOrchestrator", () => {
       skills: {
         worker: { path: "./skills/worker" },
       },
-      graph: {
-        nodes: [
-          {
-            skill: "worker",
-            reads: [],
-            writes: [],
-          },
-        ],
+      team: {
+        flow: {
+          nodes: [
+            {
+              skill: "worker",
+              reads: [],
+              writes: [],
+            },
+          ],
+        },
       },
     };
 
@@ -278,14 +288,16 @@ describe("generateOrchestrator", () => {
       skills: {
         only: { path: "./skills/only" },
       },
-      graph: {
-        nodes: [
-          {
-            skill: "only",
-            reads: [],
-            writes: [],
-          },
-        ],
+      team: {
+        flow: {
+          nodes: [
+            {
+              skill: "only",
+              reads: [],
+              writes: [],
+            },
+          ],
+        },
       },
     };
 
@@ -304,23 +316,25 @@ describe("generateOrchestrator", () => {
         checker: { path: "./skills/checker" },
         fixer: { path: "./skills/fixer" },
       },
-      graph: {
-        nodes: [
-          {
-            skill: "checker",
-            reads: [],
-            writes: [],
-            then: [
-              { when: "ok == false", to: "fixer" },
-              { when: "ok == true", to: "end" },
-            ],
-          },
-          {
-            skill: "fixer",
-            reads: [],
-            writes: [],
-          },
-        ],
+      team: {
+        flow: {
+          nodes: [
+            {
+              skill: "checker",
+              reads: [],
+              writes: [],
+              then: [
+                { when: "ok == false", to: "fixer" },
+                { when: "ok == true", to: "end" },
+              ],
+            },
+            {
+              skill: "fixer",
+              reads: [],
+              writes: [],
+            },
+          ],
+        },
       },
     };
 
@@ -354,34 +368,36 @@ describe("generateOrchestrator", () => {
           },
         },
       },
-      graph: {
-        nodes: [
-          {
-            skill: "setup",
-            reads: [],
-            writes: ["state.tasks"],
-          },
-          {
-            over: "state.tasks",
-            as: "task",
-            graph: [
-              {
-                skill: "worker",
-                reads: ["task.description"],
-                writes: ["task.output"],
-              },
-              {
-                skill: "reviewer",
-                reads: ["task.output"],
-                writes: ["task.approved"],
-                then: [
-                  { when: "task.approved == false", to: "worker" },
-                  { when: "task.approved == true", to: "end" },
-                ],
-              },
-            ],
-          },
-        ],
+      team: {
+        flow: {
+          nodes: [
+            {
+              skill: "setup",
+              reads: [],
+              writes: ["state.tasks"],
+            },
+            {
+              over: "state.tasks",
+              as: "task",
+              graph: [
+                {
+                  skill: "worker",
+                  reads: ["task.description"],
+                  writes: ["task.output"],
+                },
+                {
+                  skill: "reviewer",
+                  reads: ["task.output"],
+                  writes: ["task.approved"],
+                  then: [
+                    { when: "task.approved == false", to: "worker" },
+                    { when: "task.approved == true", to: "end" },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
       },
     };
 
@@ -412,14 +428,16 @@ describe("generateOrchestrator", () => {
           c: { type: { kind: "primitive", value: "string" } },
         },
       },
-      graph: {
-        nodes: [
-          {
-            skill: "agent",
-            reads: ["state.a", "state.b"],
-            writes: ["state.b", "state.c"],
-          },
-        ],
+      team: {
+        flow: {
+          nodes: [
+            {
+              skill: "agent",
+              reads: ["state.a", "state.b"],
+              writes: ["state.b", "state.c"],
+            },
+          ],
+        },
       },
     };
 

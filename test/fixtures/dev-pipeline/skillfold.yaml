@@ -1,35 +1,35 @@
 name: dev-pipeline
 
 skills:
-  strategic-thinking: ./skills/strategic-thinking
-  task-decomposition: ./skills/task-decomposition
-  code-generation: ./skills/code-generation
-  code-review: ./skills/code-review
-  slack: ./skills/slack
-  confluence: ./skills/confluence
-  jira: ./skills/jira
+  atomic:
+    strategic-thinking: ./skills/strategic-thinking
+    task-decomposition: ./skills/task-decomposition
+    code-generation: ./skills/code-generation
+    code-review: ./skills/code-review
+    slack: ./skills/slack
+    confluence: ./skills/confluence
+    jira: ./skills/jira
 
-  strategy:
-    compose: [strategic-thinking, slack]
-    description: "Defines the strategic goal for the pipeline by analyzing the problem space."
+  composed:
+    strategy:
+      compose: [strategic-thinking, slack]
+      description: "Defines the strategic goal for the pipeline by analyzing the problem space."
 
-  tech-lead:
-    compose: [strategic-thinking, task-decomposition, slack, jira]
-    description: "Produces a technical plan and breaks it into tasks."
+    tech-lead:
+      compose: [strategic-thinking, task-decomposition, slack, jira]
+      description: "Produces a technical plan and breaks it into tasks."
 
-  senior-engineer:
-    compose: [task-decomposition, code-generation]
-    description: "Implements individual tasks from the plan."
+    senior-engineer:
+      compose: [task-decomposition, code-generation]
+      description: "Implements individual tasks from the plan."
 
-  reviewer:
-    compose: [code-review]
-    description: "Reviews implementation output for correctness."
+    reviewer:
+      compose: [code-review]
+      description: "Reviews implementation output for correctness."
 
-  orchestrator:
-    compose: [slack, confluence, jira]
-    description: "Coordinates the dev pipeline execution."
-
-orchestrator: orchestrator
+    orchestrator:
+      compose: [slack, confluence, jira]
+      description: "Coordinates the dev pipeline execution."
 
 state:
   Task:
@@ -56,30 +56,33 @@ state:
       skill: jira
       path: DEV/dev-board
 
-graph:
-  - strategy:
-      writes: [state.goal]
-    then: tech-lead
+team:
+  orchestrator: orchestrator
 
-  - tech-lead:
-      reads: [state.goal]
-      writes: [state.plan, state.tasks]
-    then: map
+  flow:
+    - strategy:
+        writes: [state.goal]
+      then: tech-lead
 
-  - map:
-      over: state.tasks
-      as: task
-      graph:
-        - senior-engineer:
-            reads: [task.description]
-            writes: [task.output]
-          then: reviewer
+    - tech-lead:
+        reads: [state.goal]
+        writes: [state.plan, state.tasks]
+      then: map
 
-        - reviewer:
-            reads: [task.output]
-            writes: [task.approved]
-          then:
-            - when: task.approved == false
-              to: senior-engineer
-            - when: task.approved == true
-              to: end
+    - map:
+        over: state.tasks
+        as: task
+        graph:
+          - senior-engineer:
+              reads: [task.description]
+              writes: [task.output]
+            then: reviewer
+
+          - reviewer:
+              reads: [task.output]
+              writes: [task.approved]
+            then:
+              - when: task.approved == false
+                to: senior-engineer
+              - when: task.approved == true
+                to: end

@@ -167,7 +167,7 @@ describe("compile", () => {
     });
   });
 
-  it("config with graph and orchestrator key appends orchestrator to composed skill output", () => {
+  it("config with team and orchestrator key appends orchestrator to composed skill output", () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
@@ -193,8 +193,10 @@ describe("compile", () => {
         pipeline: { compose: ["strategy", "lead"], description: "Runs the pipeline." },
       },
       state,
-      graph,
-      orchestrator: "pipeline",
+      team: {
+        orchestrator: "pipeline",
+        flow: graph,
+      },
     };
 
     const bodies = new Map<string, string>();
@@ -225,7 +227,7 @@ describe("compile", () => {
     assert.ok(!existsSync(join(outDir, "orchestrator")));
   });
 
-  it("config with graph but no orchestrator key generates standalone orchestrator/SKILL.md", () => {
+  it("config with team but no orchestrator key generates standalone orchestrator/SKILL.md", () => {
     tmpDir = makeTmpDir();
     const outDir = join(tmpDir, "dist");
 
@@ -240,7 +242,7 @@ describe("compile", () => {
       skills: {
         worker: { path: "./skills/worker" },
       },
-      graph,
+      team: { flow: graph },
     };
 
     const bodies = new Map<string, string>();

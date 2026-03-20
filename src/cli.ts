@@ -22,7 +22,7 @@ Usage: skillfold [command] [options]
 
 Commands:
   init              Scaffold a new pipeline project
-  graph             Output Mermaid flowchart of the execution graph
+  graph             Output Mermaid flowchart of the team flow
   (default)         Compile the pipeline config
 
 Options:
@@ -118,11 +118,11 @@ async function main(): Promise<void> {
   if (args.command === "graph") {
     try {
       const config = await loadConfig(args.configPath);
-      if (!config.graph) {
-        console.error("skillfold error: No graph defined in config");
+      if (!config.team) {
+        console.error("skillfold error: No team defined in config");
         process.exit(1);
       }
-      const output = generateMermaid(config.graph);
+      const output = generateMermaid(config.team.flow);
       process.stdout.write(output);
     } catch (err) {
       if (err instanceof ConfigError || err instanceof GraphError) {

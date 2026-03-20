@@ -1,40 +1,37 @@
 name: skillfold-team
 
 skills:
-  # Atomic skills
-  architecture: ./skills/architecture
-  task-decomposition: ./skills/task-decomposition
-  code-generation: ./skills/code-generation
-  code-review: ./skills/code-review
-  testing: ./skills/testing
-  product-strategy: ./skills/product-strategy
-  github: ./skills/github
-  skillfold-context: ./skills/skillfold-context
-  agent-invocation: ./skills/agent-invocation
+  atomic:
+    architecture: ./skills/architecture
+    task-decomposition: ./skills/task-decomposition
+    code-generation: ./skills/code-generation
+    code-review: ./skills/code-review
+    testing: ./skills/testing
+    product-strategy: ./skills/product-strategy
+    github: ./skills/github
+    skillfold-context: ./skills/skillfold-context
+    agent-invocation: ./skills/agent-invocation
 
-  # Composed agents
-  strategist:
-    compose: [skillfold-context, product-strategy, task-decomposition]
-    description: "Assesses what the project needs and sets direction for the next increment."
+  composed:
+    strategist:
+      compose: [skillfold-context, product-strategy, task-decomposition]
+      description: "Assesses what the project needs and sets direction for the next increment."
 
-  architect:
-    compose: [skillfold-context, architecture, task-decomposition]
-    description: "Designs systems and decomposes work into tasks."
+    architect:
+      compose: [skillfold-context, architecture, task-decomposition]
+      description: "Designs systems and decomposes work into tasks."
 
-  engineer:
-    compose: [skillfold-context, code-generation, testing, github]
-    description: "Writes production-quality TypeScript code and tests, works on feature branches and opens PRs."
+    engineer:
+      compose: [skillfold-context, code-generation, testing, github]
+      description: "Writes production-quality TypeScript code and tests, works on feature branches and opens PRs."
 
-  reviewer:
-    compose: [skillfold-context, code-review, testing, github]
-    description: "Reviews pull requests on GitHub for correctness, clarity, and maintainability."
+    reviewer:
+      compose: [skillfold-context, code-review, testing, github]
+      description: "Reviews pull requests on GitHub for correctness, clarity, and maintainability."
 
-  # Orchestrator gets composed context + generated execution plan
-  orchestrator:
-    compose: [skillfold-context, agent-invocation, github]
-    description: "Coordinates the skillfold-team pipeline execution and merges approved PRs."
-
-orchestrator: orchestrator
+    orchestrator:
+      compose: [skillfold-context, agent-invocation, github]
+      description: "Coordinates the skillfold-team pipeline execution and merges approved PRs."
 
 state:
   Review:
@@ -53,26 +50,29 @@ state:
   review:
     type: Review
 
-graph:
-  - strategist:
-      writes: [state.direction]
-    then: architect
+team:
+  orchestrator: orchestrator
 
-  - architect:
-      reads: [state.direction]
-      writes: [state.plan]
-    then: engineer
+  flow:
+    - strategist:
+        writes: [state.direction]
+      then: architect
 
-  - engineer:
-      reads: [state.plan]
-      writes: [state.implementation]
-    then: reviewer
+    - architect:
+        reads: [state.direction]
+        writes: [state.plan]
+      then: engineer
 
-  - reviewer:
-      reads: [state.implementation]
-      writes: [state.review]
-    then:
-      - when: review.approved == false
-        to: engineer
-      - when: review.approved == true
-        to: end
+    - engineer:
+        reads: [state.plan]
+        writes: [state.implementation]
+      then: reviewer
+
+    - reviewer:
+        reads: [state.implementation]
+        writes: [state.review]
+      then:
+        - when: review.approved == false
+          to: engineer
+        - when: review.approved == true
+          to: end

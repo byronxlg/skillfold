@@ -4,22 +4,22 @@ import { join } from "node:path";
 const STARTER_CONFIG = `name: my-pipeline
 
 skills:
-  plan: ./skills/plan
-  execute: ./skills/execute
+  atomic:
+    plan: ./skills/plan
+    execute: ./skills/execute
 
-  planner:
-    compose: [plan]
-    description: "Analyzes the goal and produces a plan."
+  composed:
+    planner:
+      compose: [plan]
+      description: "Analyzes the goal and produces a plan."
 
-  worker:
-    compose: [plan, execute]
-    description: "Executes tasks from the plan."
+    worker:
+      compose: [plan, execute]
+      description: "Executes tasks from the plan."
 
-  orchestrator:
-    compose: [plan]
-    description: "Coordinates pipeline execution."
-
-orchestrator: orchestrator
+    orchestrator:
+      compose: [plan]
+      description: "Coordinates pipeline execution."
 
 state:
   goal:
@@ -28,15 +28,18 @@ state:
   result:
     type: string
 
-graph:
-  - planner:
-      writes: [state.goal]
-    then: worker
+team:
+  orchestrator: orchestrator
 
-  - worker:
-      reads: [state.goal]
-      writes: [state.result]
-    then: end
+  flow:
+    - planner:
+        writes: [state.goal]
+      then: worker
+
+    - worker:
+        reads: [state.goal]
+        writes: [state.result]
+      then: end
 `;
 
 const PLAN_SKILL = `---
