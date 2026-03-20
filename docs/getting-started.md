@@ -245,3 +245,4 @@ Three example configs in `library/examples/` show common patterns:
 - Use `skillfold graph` to visualize your team flow as a Mermaid diagram
 - Add `team.orchestrator` to generate execution plans automatically
 - Try parallel `map` to process lists of items concurrently
+- Set `GITHUB_TOKEN` to reference skills from private GitHub repositories

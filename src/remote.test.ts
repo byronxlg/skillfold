@@ -2,7 +2,39 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 import { ResolveError } from "./errors.js";
-import { fetchRemoteSkill, parseGitHubUrl } from "./remote.js";
+import { fetchRemoteSkill, getGitHubHeaders, parseGitHubUrl } from "./remote.js";
+
+describe("getGitHubHeaders", () => {
+  it("returns Authorization header when GITHUB_TOKEN is set", () => {
+    const original = process.env.GITHUB_TOKEN;
+    try {
+      process.env.GITHUB_TOKEN = "ghp_test123";
+      const headers = getGitHubHeaders();
+      assert.deepEqual(headers, { Authorization: "token ghp_test123" });
+    } finally {
+      if (original === undefined) {
+        delete process.env.GITHUB_TOKEN;
+      } else {
+        process.env.GITHUB_TOKEN = original;
+      }
+    }
+  });
+
+  it("returns empty headers when GITHUB_TOKEN is not set", () => {
+    const original = process.env.GITHUB_TOKEN;
+    try {
+      delete process.env.GITHUB_TOKEN;
+      const headers = getGitHubHeaders();
+      assert.deepEqual(headers, {});
+    } finally {
+      if (original === undefined) {
+        delete process.env.GITHUB_TOKEN;
+      } else {
+        process.env.GITHUB_TOKEN = original;
+      }
+    }
+  });
+});
 
 describe("parseGitHubUrl", () => {
   it("parses a valid GitHub tree URL into parts", () => {
