@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { loadConfig } from "./config.js";
+import { isAtomic, isComposed, loadConfig } from "./config.js";
 import { compile } from "./compiler.js";
 import { ConfigError, CompileError, GraphError, ResolveError } from "./errors.js";
 import { initProject } from "./init.js";
@@ -22,6 +22,7 @@ Usage: skillfold [command] [options]
 
 Commands:
   init              Scaffold a new pipeline project
+  validate          Validate config without compiling
   graph             Output Mermaid flowchart of the team flow
   (default)         Compile the pipeline config
 
@@ -34,7 +35,7 @@ Options:
 }
 
 interface Args {
-  command: "init" | "compile" | "graph";
+  command: "init" | "compile" | "graph" | "validate";
   configPath: string;
   outDir: string;
   dir: string;
@@ -43,7 +44,7 @@ interface Args {
 }
 
 function parseArgs(argv: string[]): Args {
-  let command: "init" | "compile" | "graph" = "compile";
+  let command: "init" | "compile" | "graph" | "validate" = "compile";
   let configPath = "skillfold.yaml";
   let outDir = "build";
   let dir = ".";
@@ -58,6 +59,9 @@ function parseArgs(argv: string[]): Args {
     i = 1;
   } else if (argv.length > 0 && argv[0] === "graph") {
     command = "graph";
+    i = 1;
+  } else if (argv.length > 0 && argv[0] === "validate") {
+    command = "validate";
     i = 1;
   }
 
@@ -129,6 +133,38 @@ async function main(): Promise<void> {
       process.stdout.write(output);
     } catch (err) {
       if (err instanceof ConfigError || err instanceof GraphError) {
+        console.error(`skillfold error: ${err.message}`);
+        process.exit(1);
+      }
+      throw err;
+    }
+    return;
+  }
+
+  if (args.command === "validate") {
+    try {
+      const config = await loadConfig(args.configPath);
+      const baseDir = dirname(args.configPath);
+      await resolveSkills(config, baseDir);
+
+      const skills = Object.values(config.skills);
+      const atomicCount = skills.filter(isAtomic).length;
+      const composedCount = skills.filter(isComposed).length;
+      const fieldCount = config.state ? Object.keys(config.state.fields).length : 0;
+      const typeCount = config.state ? Object.keys(config.state.types).length : 0;
+
+      const parts = [`${atomicCount} atomic`, `${composedCount} composed`];
+      if (fieldCount > 0) parts.push(`${fieldCount} state fields`);
+      if (typeCount > 0) parts.push(`${typeCount} types`);
+      if (config.team) parts.push("team flow");
+
+      console.log(`skillfold: ${config.name} is valid (${parts.join(", ")})`);
+    } catch (err) {
+      if (
+        err instanceof ConfigError ||
+        err instanceof ResolveError ||
+        err instanceof GraphError
+      ) {
         console.error(`skillfold error: ${err.message}`);
         process.exit(1);
       }
