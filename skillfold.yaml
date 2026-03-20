@@ -3,6 +3,7 @@ name: skillfold-team
 skills:
   atomic:
     architecture: ./skills/architecture
+    design: ./skills/design
     task-decomposition: ./skills/task-decomposition
     code-generation: ./skills/code-generation
     code-review: ./skills/code-review
@@ -13,7 +14,7 @@ skills:
 
   composed:
     strategist:
-      compose: [skillfold-context, product-strategy, task-decomposition]
+      compose: [skillfold-context, product-strategy, design, task-decomposition]
       description: "Assesses what the project needs and sets direction for the next increment."
 
     architect:
@@ -25,8 +26,8 @@ skills:
       description: "Writes production-quality TypeScript code and tests, works on feature branches and opens PRs."
 
     reviewer:
-      compose: [skillfold-context, code-review, testing, github]
-      description: "Reviews pull requests on GitHub for correctness, clarity, and maintainability."
+      compose: [skillfold-context, code-review, design, testing, github]
+      description: "Reviews pull requests on GitHub for correctness, design quality, and maintainability."
 
     orchestrator:
       compose: [skillfold-context, github]
