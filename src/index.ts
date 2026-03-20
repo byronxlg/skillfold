@@ -30,7 +30,6 @@ export type { CheckResult, CompileResult, CompileTarget, GenerateResult } from "
 // Plugin packaging
 export { buildPlugin } from "./plugin.js";
 
-
 // Graph parsing and validation
 export {
   isConditionalThen,

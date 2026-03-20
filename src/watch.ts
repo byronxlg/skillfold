@@ -2,19 +2,20 @@ import { watch, type FSWatcher } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 
 import { isAtomic, loadConfig } from "./config.js";
-import { compile } from "./compiler.js";
+import { type CompileTarget, compile } from "./compiler.js";
 import { ConfigError, CompileError, GraphError, ResolveError } from "./errors.js";
 import { resolveSkills } from "./resolver.js";
 
 async function runCompile(
   configPath: string,
   outDir: string,
-  version: string
+  version: string,
+  target: CompileTarget = "skill",
 ): Promise<string[]> {
   const config = await loadConfig(configPath);
   const baseDir = dirname(configPath);
   const bodies = await resolveSkills(config, baseDir);
-  const results = compile(config, bodies, outDir, version, basename(configPath));
+  const results = compile(config, bodies, outDir, version, basename(configPath), target);
 
   console.log(`skillfold: compiled ${config.name}`);
   for (const result of results) {
@@ -34,7 +35,8 @@ async function runCompile(
 export async function watchPipeline(
   configPath: string,
   outDir: string,
-  version: string
+  version: string,
+  target: CompileTarget = "skill",
 ): Promise<void> {
   const watchers: FSWatcher[] = [];
   let debounceTimer: ReturnType<typeof setTimeout> | undefined;
@@ -58,7 +60,7 @@ export async function watchPipeline(
       debounceTimer = undefined;
       try {
         closeAll();
-        const skillDirs = await runCompile(configPath, outDir, version);
+        const skillDirs = await runCompile(configPath, outDir, version, target);
         startWatching(skillDirs);
       } catch (err) {
         if (
@@ -102,7 +104,7 @@ export async function watchPipeline(
 
   let skillDirs: string[];
   try {
-    skillDirs = await runCompile(configPath, outDir, version);
+    skillDirs = await runCompile(configPath, outDir, version, target);
   } catch (err) {
     if (
       err instanceof ConfigError ||

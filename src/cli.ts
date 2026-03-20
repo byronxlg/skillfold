@@ -257,7 +257,7 @@ async function main(): Promise<void> {
 
   if (args.command === "watch") {
     const { watchPipeline } = await import("./watch.js");
-    await watchPipeline(args.configPath, args.outDir, pkg.version);
+    await watchPipeline(args.configPath, args.outDir, pkg.version, args.target);
     return;
   }
 
