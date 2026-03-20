@@ -1,7 +1,11 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { parse } from "yaml";
+
+const __pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const SELF_IMPORT_PREFIX = "node_modules/skillfold/";
 
 import { ConfigError } from "./errors.js";
 import { Graph, parseGraph, validateGraph } from "./graph.js";
@@ -363,7 +367,14 @@ async function resolveImports(
       content = await fetchRemoteConfig(importPath);
       // Remote imports keep their paths as-is (already URLs or relative to remote)
     } else {
-      const resolved = resolve(baseDir, importPath);
+      let resolved = resolve(baseDir, importPath);
+      // When running via npx, node_modules/skillfold/ won't exist in the
+      // project directory. Fall back to the CLI's own package root so that
+      // template-generated imports work without a local install.
+      if (!existsSync(resolved) && importPath.startsWith(SELF_IMPORT_PREFIX)) {
+        const tail = importPath.slice(SELF_IMPORT_PREFIX.length);
+        resolved = resolve(__pkgRoot, tail);
+      }
       importDir = dirname(resolved);
       try {
         content = readFileSync(resolved, "utf-8");
