@@ -33,6 +33,7 @@ src/
   errors.ts       - ConfigError, ResolveError, CompileError, GraphError
 skills/           - Atomic skill definitions (each has a SKILL.md)
 library/          - Shared skills library (10 generic skills + 3 example configs)
+docs/             - Getting-started tutorial and documentation
 dist/             - tsc compiled JS (npm package, gitignored)
 build/            - Compiled skill output (default --out-dir, gitignored)
 skillfold.yaml    - Pipeline config for the dev team itself
@@ -130,6 +131,7 @@ Located in `library/examples/`:
 - `skillfold init` shows library import hint in generated config and CLI output
 - `skillfold validate` command for config validation without compiling output
 - `skillfold list` command for pipeline introspection (skills, state, team flow)
+- Getting-started tutorial (`docs/getting-started.md`) walking users from install to compiled pipeline
 - Test suite covering config, resolver, compiler, state, graph, orchestrator, visualize, remote, init, library, validate, list, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
