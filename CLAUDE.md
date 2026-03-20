@@ -153,7 +153,8 @@ Located in `library/examples/`:
 - Claude Code plugin with 11 library skills and `/skillfold` slash command (`plugin/`)
 - `--target claude-code` output mode generating `.claude/agents/*.md` and `.claude/skills/{name}/SKILL.md`
 - `skillfold plugin` command for packaging pipelines as distributable Claude Code plugins
-- Test suite with 310 tests across 57 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, library, validate, list, watch, and e2e modules
+- `skillfold adopt` command for adopting existing Claude Code agents into a pipeline
+- Test suite with 318 tests across 58 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, adopt, library, validate, list, watch, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next

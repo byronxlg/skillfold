@@ -32,9 +32,21 @@ Works with [Claude Code](https://claude.ai/code), [Cursor](https://cursor.com), 
 
 <div align="center">
 
-[Quick Start](#quick-start) | [Claude Code](#claude-code) | [How Is This Different?](#how-is-this-different) | [How It Works](#how-it-works) | [Features](#features) | [Library](#shared-library) | [Integrations](docs/integrations.md) | [Reference](#reference)
+[Already using Claude Code?](#already-using-claude-code) | [Quick Start](#quick-start) | [Claude Code](#claude-code) | [How Is This Different?](#how-is-this-different) | [How It Works](#how-it-works) | [Features](#features) | [Library](#shared-library) | [Integrations](docs/integrations.md) | [Reference](#reference)
 
 </div>
+
+## Already Using Claude Code?
+
+If you have agents in `.claude/agents/`, skillfold can adopt them:
+
+```bash
+npx skillfold adopt
+```
+
+This reads your existing agent files, creates a skill directory for each one, and generates a `skillfold.yaml` config. Your agents keep working exactly as before - now you can start extracting shared instructions into reusable skills that the compiler keeps in sync.
+
+---
 
 ## Quick Start
 
@@ -285,6 +297,7 @@ skillfold [command] [options]
 
 Commands:
   init [dir]        Scaffold a new pipeline project
+  adopt             Adopt existing Claude Code agents into a pipeline
   validate          Validate config without compiling
   list              Display a structured summary of the pipeline
   graph             Output Mermaid flowchart of the team flow
