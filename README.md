@@ -241,7 +241,13 @@ Options:
 
 ### Config
 
-Three top-level sections. Full specification in [BRIEF.md](BRIEF.md).
+Three top-level sections. Full specification in [BRIEF.md](BRIEF.md). A [JSON Schema](skillfold.schema.json) is available for IDE autocompletion.
+
+Add this line to the top of your `skillfold.yaml` for editor support:
+
+```yaml
+# yaml-language-server: $schema=node_modules/skillfold/skillfold.schema.json
+```
 
 <details>
 <summary><strong>skills</strong> - atomic paths and composition rules</summary>

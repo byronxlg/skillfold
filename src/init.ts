@@ -1,7 +1,8 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-const STARTER_CONFIG = `name: my-pipeline
+const STARTER_CONFIG = `# yaml-language-server: $schema=node_modules/skillfold/skillfold.schema.json
+name: my-pipeline
 
 # To import shared skills from the skillfold library, uncomment:
 # imports:
