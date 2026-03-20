@@ -2,6 +2,32 @@
 
 This tutorial walks you from zero to a compiled multi-agent pipeline. By the end, you will have a working pipeline with skill composition, typed state, conditional routing, and a review loop.
 
+**Two paths:** If you already have Claude Code agents in `.claude/agents/`, start with [Adopting an existing setup](#adopting-an-existing-setup). Otherwise, continue below to scaffold from scratch.
+
+## Adopting an Existing Setup
+
+If you have `.claude/agents/*.md` files, skillfold can adopt them into a pipeline:
+
+```bash
+npx skillfold adopt
+```
+
+This reads each agent file, creates a `skills/{name}/SKILL.md` for each one, and generates a `skillfold.yaml` config. The generated config starts with a 1:1 mapping - each agent has its own atomic skill. From there you can:
+
+1. Extract shared instructions into reusable atomic skills
+2. Compose multiple skills per agent
+3. Add state and team flow for orchestration
+
+Compile to verify nothing changed:
+
+```bash
+npx skillfold --target claude-code
+```
+
+Then skip to [step 4](#4-compile-and-examine-output) below.
+
+---
+
 ## 1. Install
 
 Install skillfold from npm:

@@ -23,6 +23,7 @@ Usage: skillfold [command] [options]
 
 Commands:
   init [dir]        Scaffold a new pipeline project
+  adopt             Adopt existing Claude Code agents into a pipeline
   validate          Validate config without compiling
   list              Display a structured summary of the pipeline
   graph             Output Mermaid flowchart of the team flow
@@ -43,7 +44,7 @@ Options:
 Templates: ${TEMPLATES.join(", ")}`);
 }
 
-type Command = "init" | "compile" | "graph" | "list" | "validate" | "watch" | "plugin";
+type Command = "init" | "adopt" | "compile" | "graph" | "list" | "validate" | "watch" | "plugin";
 
 interface Args {
   command: Command;
@@ -81,6 +82,9 @@ function parseArgs(argv: string[]): Args {
       dir = argv[1];
       i = 2;
     }
+  } else if (argv.length > 0 && argv[0] === "adopt") {
+    command = "adopt";
+    i = 1;
   } else if (argv.length > 0 && argv[0] === "graph") {
     command = "graph";
     i = 1;
@@ -180,6 +184,26 @@ async function main(): Promise<void> {
       console.log(
         `\nTemplates: skillfold init --template <name> (${TEMPLATES.join(", ")})`
       );
+    } catch (err) {
+      if (err instanceof Error) {
+        console.error(`skillfold error: ${err.message}`);
+        process.exit(1);
+      }
+      throw err;
+    }
+    return;
+  }
+
+  if (args.command === "adopt") {
+    const { adoptProject } = await import("./adopt.js");
+    try {
+      const result = adoptProject(args.dir);
+      console.log("skillfold: adopted agents");
+      for (const agent of result.agents) {
+        console.log(`  -> ${agent.name} (${agent.skillPath})`);
+      }
+      console.log(`\nConfig: ${result.configPath}`);
+      console.log("\nNext: npx skillfold --target claude-code");
     } catch (err) {
       if (err instanceof Error) {
         console.error(`skillfold error: ${err.message}`);
