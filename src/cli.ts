@@ -122,7 +122,7 @@ async function main(): Promise<void> {
         console.error("skillfold error: No team defined in config");
         process.exit(1);
       }
-      const output = generateMermaid(config.team.flow);
+      const output = generateMermaid(config);
       process.stdout.write(output);
     } catch (err) {
       if (err instanceof ConfigError || err instanceof GraphError) {
