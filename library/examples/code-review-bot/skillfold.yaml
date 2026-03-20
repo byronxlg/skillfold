@@ -1,0 +1,32 @@
+name: code-review-bot
+
+imports:
+  - ../../skillfold.yaml
+
+skills:
+  composed:
+    analyzer:
+      compose: [code-review, file-management]
+      description: "Reads code files and analyzes them for issues."
+
+    reporter:
+      compose: [writing, summarization]
+      description: "Produces a structured report from code review findings."
+
+state:
+  findings:
+    type: string
+
+  report:
+    type: string
+
+team:
+  flow:
+    - analyzer:
+        writes: [state.findings]
+      then: reporter
+
+    - reporter:
+        reads: [state.findings]
+        writes: [state.report]
+      then: end

@@ -3,6 +3,10 @@ import { join } from "node:path";
 
 const STARTER_CONFIG = `name: my-pipeline
 
+# To import shared skills from the skillfold library, uncomment:
+# imports:
+#   - node_modules/skillfold/library/skillfold.yaml
+
 skills:
   atomic:
     plan: ./skills/plan

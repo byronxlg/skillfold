@@ -1,0 +1,51 @@
+name: content-pipeline
+
+imports:
+  - ../../skillfold.yaml
+
+skills:
+  composed:
+    researcher:
+      compose: [research, planning]
+      description: "Researches a subject and produces a list of topics to cover."
+
+    writer:
+      compose: [research, writing]
+      description: "Drafts content for a given topic with supporting research."
+
+    editor:
+      compose: [summarization, writing]
+      description: "Reviews and refines drafted content for clarity and completeness."
+
+state:
+  Topic:
+    title: string
+    draft: string
+    approved: bool
+
+  topics:
+    type: list<Topic>
+
+team:
+  flow:
+    - researcher:
+        writes: [state.topics]
+      then: map
+
+    - map:
+        over: state.topics
+        as: topic
+        graph:
+          - writer:
+              reads: [topic.title]
+              writes: [topic.draft]
+            then: editor
+
+          - editor:
+              reads: [topic.draft]
+              writes: [topic.approved]
+            then:
+              - when: topic.approved == true
+                to: end
+              - when: topic.approved == false
+                to: writer

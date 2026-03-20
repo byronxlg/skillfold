@@ -1,0 +1,14 @@
+name: skillfold-library
+
+skills:
+  atomic:
+    planning: ./skills/planning
+    research: ./skills/research
+    decision-making: ./skills/decision-making
+    code-writing: ./skills/code-writing
+    code-review: ./skills/code-review
+    testing: ./skills/testing
+    writing: ./skills/writing
+    summarization: ./skills/summarization
+    github-workflow: ./skills/github-workflow
+    file-management: ./skills/file-management

@@ -105,6 +105,9 @@ async function main(): Promise<void> {
       for (const file of files) {
         console.log(`  -> ${file}`);
       }
+      console.log(
+        "\nTip: import shared skills from the library by uncommenting the imports line in skillfold.yaml"
+      );
     } catch (err) {
       if (err instanceof Error) {
         console.error(`skillfold error: ${err.message}`);
