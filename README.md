@@ -8,20 +8,33 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/byronxlg/skillfold/ci.yml?style=flat-square&label=CI)](https://github.com/byronxlg/skillfold/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
-One YAML config. One command. Every agent gets a compiled [SKILL.md](https://agentskills.io/specification).
+</div>
+
+Running multiple AI agents? Each one needs a [SKILL.md](https://agentskills.io/specification) - and when agents share skills, you end up copy-pasting instructions between them. Change one skill, manually update every agent that uses it.
+
+Skillfold fixes this. Define each skill once, compose them into agents, and compile one YAML config into a spec-compliant SKILL.md for every agent.
+
+```bash
+npx skillfold init my-team   # scaffold a starter pipeline
+cd my-team
+npx skillfold                # compile it
+```
+
+```
+build/
+  planner/SKILL.md       # planning body
+  engineer/SKILL.md      # planning + coding bodies, composed
+  reviewer/SKILL.md      # reviewing body
+  orchestrator/SKILL.md  # planning body + generated execution plan
+```
 
 Works with [Claude Code](https://claude.ai/code), [Cursor](https://cursor.com), [VS Code](https://code.visualstudio.com), [GitHub Copilot](https://github.com), [OpenAI Codex](https://developers.openai.com/codex), [Gemini CLI](https://geminicli.com), and [26 more](https://agentskills.io).
 
-[Quick Start](#quick-start) | [How It Works](#how-it-works) | [Features](#features) | [Library](#shared-library) | [Reference](#reference)
+<div align="center">
+
+[Quick Start](#quick-start) | [How Is This Different?](#how-is-this-different) | [How It Works](#how-it-works) | [Features](#features) | [Library](#shared-library) | [Reference](#reference)
 
 </div>
-
----
-
-```bash
-npx skillfold init   # scaffold a starter pipeline
-npx skillfold        # compile it
-```
 
 ## Quick Start
 
@@ -82,6 +95,20 @@ The `engineer` agent's SKILL.md contains the concatenated bodies of `planning` a
 
 > [!TIP]
 > Add `team.orchestrator: orchestrator` and the orchestrator's compiled SKILL.md gets a generated execution plan with numbered steps, state tables, and conditional branches.
+
+---
+
+## How Is This Different?
+
+Agent Skills tools solve different problems at different layers:
+
+| Layer | What it does | Examples |
+|-------|-------------|----------|
+| **Skill authoring** | Define individual skills, ship them with packages | TanStack Intent, manual SKILL.md |
+| **Composition and orchestration** | Compose skills into agents, wire agents into typed team flows, compile output | **Skillfold** |
+| **Execution** | Run the agents | Claude Code, Cursor, Copilot, etc. |
+
+Authoring tools help library maintainers *ship* skills. Skillfold helps teams *consume and orchestrate* them. A library author ships skills with their package, a team imports those skills into a skillfold pipeline, and agent platforms run the compiled output. These tools work together.
 
 ---
 
@@ -224,7 +251,7 @@ skillfold [command] [options]
 
 Commands:
   (default)         Compile the pipeline config
-  init              Scaffold a new pipeline project
+  init [dir]        Scaffold a new pipeline project
   validate          Validate config without compiling
   list              Display a structured summary of the pipeline
   graph             Output Mermaid flowchart of the team flow

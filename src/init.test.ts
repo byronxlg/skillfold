@@ -1,13 +1,18 @@
 import { afterEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { execSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
 
 import { compile } from "./compiler.js";
 import { readConfig } from "./config.js";
 import { initProject } from "./init.js";
 import { resolveSkills } from "./resolver.js";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const cliPath = join(__dirname, "..", "src", "cli.ts");
 
 function makeTmpDir(): string {
   const dir = join(
@@ -104,5 +109,45 @@ describe("initProject", () => {
     assert.ok(existsSync(join(subDir, "skills", "planning", "SKILL.md")));
     assert.ok(existsSync(join(subDir, "skills", "coding", "SKILL.md")));
     assert.ok(existsSync(join(subDir, "skills", "reviewing", "SKILL.md")));
+  });
+});
+
+describe("init CLI", () => {
+  let tmpDir: string | undefined;
+
+  afterEach(() => {
+    if (tmpDir) {
+      rmSync(tmpDir, { recursive: true, force: true });
+      tmpDir = undefined;
+    }
+  });
+
+  it("prints compile hint after init", () => {
+    tmpDir = makeTmpDir();
+    const subDir = join(tmpDir, "my-project");
+    const output = execSync(`npx tsx ${cliPath} init --dir ${subDir}`, {
+      encoding: "utf-8",
+    });
+    assert.ok(output.includes("Next:"), "should print Next: hint");
+    assert.ok(output.includes("npx skillfold"), "should hint to compile");
+  });
+
+  it("prints cd hint when init dir is not cwd", () => {
+    tmpDir = makeTmpDir();
+    const subDir = join(tmpDir, "my-project");
+    const output = execSync(`npx tsx ${cliPath} init --dir ${subDir}`, {
+      encoding: "utf-8",
+    });
+    assert.ok(output.includes("cd "), "should include cd when dir != cwd");
+  });
+
+  it("supports positional dir argument", () => {
+    tmpDir = makeTmpDir();
+    const subDir = join(tmpDir, "my-project");
+    const output = execSync(`npx tsx ${cliPath} init ${subDir}`, {
+      encoding: "utf-8",
+    });
+    assert.ok(output.includes("project initialized"));
+    assert.ok(existsSync(join(subDir, "skillfold.yaml")));
   });
 });

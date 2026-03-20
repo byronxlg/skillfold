@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { isAtomic, isComposed, loadConfig } from "./config.js";
@@ -22,7 +22,7 @@ function printHelp(): void {
 Usage: skillfold [command] [options]
 
 Commands:
-  init              Scaffold a new pipeline project
+  init [dir]        Scaffold a new pipeline project
   validate          Validate config without compiling
   list              Display a structured summary of the pipeline
   graph             Output Mermaid flowchart of the team flow
@@ -62,6 +62,11 @@ function parseArgs(argv: string[]): Args {
   if (argv.length > 0 && argv[0] === "init") {
     command = "init";
     i = 1;
+    // Support positional dir: skillfold init <dir>
+    if (argv.length > 1 && argv[1] && !argv[1].startsWith("-")) {
+      dir = argv[1];
+      i = 2;
+    }
   } else if (argv.length > 0 && argv[0] === "graph") {
     command = "graph";
     i = 1;
@@ -120,6 +125,9 @@ async function main(): Promise<void> {
       for (const file of files) {
         console.log(`  -> ${file}`);
       }
+      const rel = relative(process.cwd(), args.dir);
+      const cdPrefix = rel ? `cd ${rel} && ` : "";
+      console.log(`\nNext: ${cdPrefix}npx skillfold`);
       console.log(
         "\nTip: import shared skills from the library by uncommenting the imports line in skillfold.yaml"
       );
