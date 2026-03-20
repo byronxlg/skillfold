@@ -29,7 +29,7 @@ describe("library: skillfold.yaml", () => {
     assert.equal(config.name, "skillfold-library");
   });
 
-  it("declares all 10 atomic skills", () => {
+  it("declares all 11 atomic skills", () => {
     const config = readConfig(libraryConfigPath);
     const expected = [
       "planning",
@@ -42,11 +42,12 @@ describe("library: skillfold.yaml", () => {
       "summarization",
       "github-workflow",
       "file-management",
+      "skillfold-cli",
     ];
     for (const name of expected) {
       assert.ok(name in config.skills, `Expected skill "${name}" to be declared`);
     }
-    assert.equal(Object.keys(config.skills).length, 10);
+    assert.equal(Object.keys(config.skills).length, 11);
   });
 
   it("has no state or team sections", () => {

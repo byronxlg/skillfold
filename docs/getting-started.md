@@ -213,7 +213,7 @@ Validation catches:
 
 ## 7. Use the shared library
 
-Skillfold ships with 10 generic skills you can import instead of writing from scratch: `planning`, `research`, `decision-making`, `code-writing`, `code-review`, `testing`, `writing`, `summarization`, `github-workflow`, and `file-management`.
+Skillfold ships with 11 generic skills you can import instead of writing from scratch: `planning`, `research`, `decision-making`, `code-writing`, `code-review`, `testing`, `writing`, `summarization`, `github-workflow`, `file-management`, and `skillfold-cli`.
 
 To use them, uncomment the imports line in your config:
 
