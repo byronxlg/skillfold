@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { type CompileTarget, check, compile } from "./compiler.js";
+import { type CompileTarget, check, compile, computeStats } from "./compiler.js";
 import { isAtomic, isComposed, loadConfig } from "./config.js";
 import { ConfigError, CompileError, GraphError, ResolveError } from "./errors.js";
 import { initFromTemplate, initProject, TEMPLATES } from "./init.js";
@@ -329,6 +329,19 @@ async function main(): Promise<void> {
       console.log(`skillfold: compiled ${config.name}`);
       for (const result of results) {
         console.log(`  -> ${result.path}`);
+      }
+
+      const stats = computeStats(config, bodies);
+      if (stats.agents > 0) {
+        const parts: string[] = [`${stats.agents} agents`, `${stats.skills} skills`];
+        if (stats.shared > 0) {
+          parts[parts.length - 1] += ` (${stats.shared} shared)`;
+        }
+        let line = `  ${parts.join(", ")}.`;
+        if (stats.linesDeduplicated > 0) {
+          line += ` ~${stats.linesDeduplicated} lines deduplicated.`;
+        }
+        console.log(line);
       }
     }
   } catch (err) {

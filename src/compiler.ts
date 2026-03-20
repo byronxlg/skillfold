@@ -39,6 +39,80 @@ function expand(
   return parts;
 }
 
+/**
+ * Walk a skill's composition tree and collect the names of all atomic skills
+ * it expands to (in order, with duplicates).
+ */
+function expandAtomicNames(
+  name: string,
+  config: Config,
+  seen: Set<string>,
+): string[] {
+  if (seen.has(name)) return [];
+
+  const skill = config.skills[name];
+  if (!skill) return [];
+
+  if (!isComposed(skill)) {
+    return [name];
+  }
+
+  seen.add(name);
+  const names: string[] = [];
+  for (const ref of skill.compose) {
+    names.push(...expandAtomicNames(ref, config, new Set(seen)));
+  }
+  return names;
+}
+
+export interface CompileStats {
+  agents: number;
+  skills: number;
+  shared: number;
+  linesDeduplicated: number;
+}
+
+export function computeStats(
+  config: Config,
+  bodies: Map<string, string>,
+): CompileStats {
+  const composedEntries = Object.entries(config.skills).filter(
+    ([, skill]) => isComposed(skill),
+  );
+
+  // For each composed skill (agent), find which atomic skills it uses
+  const agentAtomics = new Map<string, Set<string>>();
+  for (const [name] of composedEntries) {
+    const atomicNames = expandAtomicNames(name, config, new Set());
+    agentAtomics.set(name, new Set(atomicNames));
+  }
+
+  // Collect all unique atomic skills and count how many agents use each
+  const usageCount = new Map<string, number>();
+  for (const atomics of agentAtomics.values()) {
+    for (const atomic of atomics) {
+      usageCount.set(atomic, (usageCount.get(atomic) ?? 0) + 1);
+    }
+  }
+
+  const agents = composedEntries.length;
+  const skills = usageCount.size;
+  const shared = [...usageCount.values()].filter((count) => count >= 2).length;
+
+  // Lines deduplicated: for each atomic skill used by N agents,
+  // (N - 1) * lineCount of that skill's body
+  let linesDeduplicated = 0;
+  for (const [atomic, count] of usageCount) {
+    if (count <= 1) continue;
+    const body = bodies.get(atomic);
+    if (body === undefined) continue;
+    const lineCount = body.split("\n").length;
+    linesDeduplicated += (count - 1) * lineCount;
+  }
+
+  return { agents, skills, shared, linesDeduplicated };
+}
+
 function formatFrontmatter(name: string, description: string): string {
   return `---\nname: ${name}\ndescription: ${description}\n---\n`;
 }
