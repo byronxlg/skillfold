@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 
 import { compile } from "./compiler.js";
 import { readConfig } from "./config.js";
-import { initProject } from "./init.js";
+import { initFromTemplate, initProject, TEMPLATES } from "./init.js";
 import { resolveSkills } from "./resolver.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -112,6 +112,82 @@ describe("initProject", () => {
   });
 });
 
+describe("initFromTemplate", () => {
+  let tmpDir: string | undefined;
+
+  afterEach(() => {
+    if (tmpDir) {
+      rmSync(tmpDir, { recursive: true, force: true });
+      tmpDir = undefined;
+    }
+  });
+
+  it("scaffolds dev-team template with rewritten import path", () => {
+    tmpDir = makeTmpDir();
+    const files = initFromTemplate(tmpDir, "dev-team");
+
+    assert.deepEqual(files, ["skillfold.yaml"]);
+    assert.ok(existsSync(join(tmpDir, "skillfold.yaml")));
+
+    const config = readFileSync(join(tmpDir, "skillfold.yaml"), "utf-8");
+    assert.ok(config.includes("name: dev-team"));
+    assert.ok(
+      config.includes("node_modules/skillfold/library/skillfold.yaml"),
+      "import path should be rewritten to npm path"
+    );
+    assert.ok(
+      !config.includes("../../skillfold.yaml"),
+      "relative import path should be replaced"
+    );
+    assert.ok(
+      config.includes("yaml-language-server"),
+      "should include schema comment"
+    );
+  });
+
+  it("scaffolds all available templates", () => {
+    for (const template of TEMPLATES) {
+      tmpDir = makeTmpDir();
+      const files = initFromTemplate(tmpDir, template);
+      assert.deepEqual(files, ["skillfold.yaml"]);
+
+      const config = readFileSync(join(tmpDir, "skillfold.yaml"), "utf-8");
+      assert.ok(config.includes(`name: ${template}`));
+      assert.ok(config.includes("node_modules/skillfold/library/skillfold.yaml"));
+
+      rmSync(tmpDir, { recursive: true, force: true });
+      tmpDir = undefined;
+    }
+  });
+
+  it("errors on unknown template name", () => {
+    tmpDir = makeTmpDir();
+    assert.throws(
+      () => initFromTemplate(tmpDir!, "nonexistent"),
+      (err: unknown) => {
+        assert.ok(err instanceof Error);
+        assert.ok(err.message.includes('Unknown template "nonexistent"'));
+        assert.ok(err.message.includes("dev-team"));
+        return true;
+      }
+    );
+  });
+
+  it("errors if skillfold.yaml already exists", () => {
+    tmpDir = makeTmpDir();
+    writeFileSync(join(tmpDir, "skillfold.yaml"), "name: existing\n", "utf-8");
+
+    assert.throws(
+      () => initFromTemplate(tmpDir!, "dev-team"),
+      (err: unknown) => {
+        assert.ok(err instanceof Error);
+        assert.ok(err.message.includes("skillfold.yaml already exists"));
+        return true;
+      }
+    );
+  });
+});
+
 describe("init CLI", () => {
   let tmpDir: string | undefined;
 
@@ -149,5 +225,54 @@ describe("init CLI", () => {
     });
     assert.ok(output.includes("project initialized"));
     assert.ok(existsSync(join(subDir, "skillfold.yaml")));
+  });
+
+  it("shows template hint after init without template", () => {
+    tmpDir = makeTmpDir();
+    const subDir = join(tmpDir, "my-project");
+    const output = execSync(`npx tsx ${cliPath} init ${subDir}`, {
+      encoding: "utf-8",
+    });
+    assert.ok(output.includes("--template"), "should show template hint");
+    assert.ok(output.includes("dev-team"), "should list dev-team template");
+  });
+
+  it("scaffolds from template via CLI", () => {
+    tmpDir = makeTmpDir();
+    const subDir = join(tmpDir, "my-project");
+    const output = execSync(
+      `npx tsx ${cliPath} init ${subDir} --template dev-team`,
+      { encoding: "utf-8" }
+    );
+    assert.ok(output.includes("project initialized"));
+    assert.ok(existsSync(join(subDir, "skillfold.yaml")));
+
+    const config = readFileSync(join(subDir, "skillfold.yaml"), "utf-8");
+    assert.ok(config.includes("name: dev-team"));
+    assert.ok(config.includes("node_modules/skillfold/library/skillfold.yaml"));
+  });
+
+  it("errors on unknown template via CLI", () => {
+    tmpDir = makeTmpDir();
+    const subDir = join(tmpDir, "my-project");
+    assert.throws(
+      () =>
+        execSync(`npx tsx ${cliPath} init ${subDir} --template bogus`, {
+          encoding: "utf-8",
+        }),
+      (err: unknown) => {
+        const e = err as { stderr: string };
+        assert.ok(e.stderr.includes("Unknown template"));
+        return true;
+      }
+    );
+  });
+
+  it("help text includes template option", () => {
+    const output = execSync(`npx tsx ${cliPath} --help`, {
+      encoding: "utf-8",
+    });
+    assert.ok(output.includes("--template"), "help should show --template");
+    assert.ok(output.includes("Templates:"), "help should list templates");
   });
 });

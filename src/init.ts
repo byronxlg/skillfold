@@ -1,5 +1,6 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const STARTER_CONFIG = `# yaml-language-server: $schema=node_modules/skillfold/skillfold.schema.json
 name: my-pipeline
@@ -112,6 +113,50 @@ You review code for correctness, clarity, and security.
 - Verify tests cover the key behaviors
 - Provide specific, actionable feedback
 `;
+
+export const TEMPLATES = ["dev-team", "content-pipeline", "code-review-bot"] as const;
+export type Template = (typeof TEMPLATES)[number];
+
+const SCHEMA_COMMENT =
+  "# yaml-language-server: $schema=node_modules/skillfold/skillfold.schema.json\n";
+
+const IMPORT_REWRITE_FROM = /- \.\.\/\.\.\/skillfold\.yaml/;
+const IMPORT_REWRITE_TO = "- node_modules/skillfold/library/skillfold.yaml";
+
+export function initFromTemplate(dir: string, template: string): string[] {
+  if (!TEMPLATES.includes(template as Template)) {
+    throw new Error(
+      `Unknown template "${template}". Available templates: ${TEMPLATES.join(", ")}`
+    );
+  }
+
+  const configPath = join(dir, "skillfold.yaml");
+
+  if (existsSync(configPath)) {
+    throw new Error(
+      "skillfold.yaml already exists. Remove it first or use a different directory."
+    );
+  }
+
+  const __dirname = dirname(fileURLToPath(import.meta.url));
+  const templatePath = join(
+    __dirname,
+    "..",
+    "library",
+    "examples",
+    template,
+    "skillfold.yaml"
+  );
+
+  let config = readFileSync(templatePath, "utf-8");
+  config = config.replace(IMPORT_REWRITE_FROM, IMPORT_REWRITE_TO);
+  config = SCHEMA_COMMENT + config;
+
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(configPath, config, "utf-8");
+
+  return ["skillfold.yaml"];
+}
 
 export function initProject(dir: string): string[] {
   const configPath = join(dir, "skillfold.yaml");

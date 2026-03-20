@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 import { isAtomic, isComposed, loadConfig } from "./config.js";
 import { check, compile } from "./compiler.js";
 import { ConfigError, CompileError, GraphError, ResolveError } from "./errors.js";
-import { initProject } from "./init.js";
+import { initFromTemplate, initProject, TEMPLATES } from "./init.js";
 import { listPipeline } from "./list.js";
 import { resolveSkills } from "./resolver.js";
 import { generateMermaid } from "./visualize.js";
@@ -29,12 +29,15 @@ Commands:
   (default)         Compile the pipeline config
 
 Options:
-  --config <path>   Config file (default: skillfold.yaml)
-  --out-dir <path>  Output directory (default: build)
-  --dir <path>      Target directory for init (default: .)
-  --check           Verify compiled output is up-to-date (exit 1 if stale)
-  --help            Show this help
-  --version         Show version`);
+  --config <path>      Config file (default: skillfold.yaml)
+  --out-dir <path>     Output directory (default: build)
+  --dir <path>         Target directory for init (default: .)
+  --template <name>    Start from a library template (init only)
+  --check              Verify compiled output is up-to-date (exit 1 if stale)
+  --help               Show this help
+  --version            Show version
+
+Templates: ${TEMPLATES.join(", ")}`);
 }
 
 interface Args {
@@ -42,6 +45,7 @@ interface Args {
   configPath: string;
   outDir: string;
   dir: string;
+  template: string | undefined;
   check: boolean;
   help: boolean;
   version: boolean;
@@ -52,6 +56,7 @@ function parseArgs(argv: string[]): Args {
   let configPath = "skillfold.yaml";
   let outDir = "build";
   let dir = ".";
+  let template: string | undefined;
   let checkMode = false;
   let help = false;
   let version = false;
@@ -85,6 +90,8 @@ function parseArgs(argv: string[]): Args {
       outDir = argv[++i];
     } else if (argv[i] === "--dir" && argv[i + 1]) {
       dir = argv[++i];
+    } else if (argv[i] === "--template" && argv[i + 1]) {
+      template = argv[++i];
     } else if (argv[i] === "--check") {
       checkMode = true;
     } else if (argv[i] === "--help") {
@@ -99,6 +106,7 @@ function parseArgs(argv: string[]): Args {
     configPath: resolve(configPath),
     outDir: resolve(outDir),
     dir: resolve(dir),
+    template,
     check: checkMode,
     help,
     version,
@@ -120,7 +128,9 @@ async function main(): Promise<void> {
 
   if (args.command === "init") {
     try {
-      const files = initProject(args.dir);
+      const files = args.template
+        ? initFromTemplate(args.dir, args.template)
+        : initProject(args.dir);
       console.log("skillfold: project initialized");
       for (const file of files) {
         console.log(`  -> ${file}`);
@@ -128,8 +138,13 @@ async function main(): Promise<void> {
       const rel = relative(process.cwd(), args.dir);
       const cdPrefix = rel ? `cd ${rel} && ` : "";
       console.log(`\nNext: ${cdPrefix}npx skillfold`);
+      if (!args.template) {
+        console.log(
+          "\nTip: import shared skills from the library by uncommenting the imports line in skillfold.yaml"
+        );
+      }
       console.log(
-        "\nTip: import shared skills from the library by uncommenting the imports line in skillfold.yaml"
+        `\nTemplates: skillfold init --template <name> (${TEMPLATES.join(", ")})`
       );
     } catch (err) {
       if (err instanceof Error) {
