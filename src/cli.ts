@@ -173,8 +173,10 @@ async function main(): Promise<void> {
       for (const file of files) {
         console.log(`  -> ${file}`);
       }
-      const rel = relative(process.cwd(), args.dir);
-      const cdPrefix = rel ? `cd ${rel} && ` : "";
+      const abs = resolve(args.dir);
+      const rel = relative(process.cwd(), abs);
+      const cdTarget = rel === "" ? "" : rel.startsWith("..") ? abs : rel;
+      const cdPrefix = cdTarget ? `cd ${cdTarget} && ` : "";
       console.log(`\nNext: ${cdPrefix}npx skillfold`);
       if (!args.template) {
         console.log(
