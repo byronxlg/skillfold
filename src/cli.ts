@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { isAtomic, isComposed, loadConfig } from "./config.js";
@@ -120,8 +120,14 @@ async function main(): Promise<void> {
       for (const file of files) {
         console.log(`  -> ${file}`);
       }
+      const relDir = relative(process.cwd(), args.dir);
+      if (relDir) {
+        console.log(`\nNext: cd ${relDir} && npx skillfold`);
+      } else {
+        console.log("\nNext: npx skillfold");
+      }
       console.log(
-        "\nTip: import shared skills from the library by uncommenting the imports line in skillfold.yaml"
+        "Tip: import shared skills from the library by uncommenting the imports line in skillfold.yaml"
       );
     } catch (err) {
       if (err instanceof Error) {

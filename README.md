@@ -2,48 +2,66 @@
 
 # Skillfold
 
-**Compiler for multi-agent AI pipelines**
+**One config, every agent gets the right skills**
 
 [![npm](https://img.shields.io/npm/v/skillfold?style=flat-square)](https://www.npmjs.com/package/skillfold)
 [![CI](https://img.shields.io/github/actions/workflow/status/byronxlg/skillfold/ci.yml?style=flat-square&label=CI)](https://github.com/byronxlg/skillfold/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
-One YAML config. One command. Every agent gets a compiled [SKILL.md](https://agentskills.io/specification).
+Stop copy-pasting between [SKILL.md](https://agentskills.io/specification) files.
 
 Works with [Claude Code](https://claude.ai/code), [Cursor](https://cursor.com), [VS Code](https://code.visualstudio.com), [GitHub Copilot](https://github.com), [OpenAI Codex](https://developers.openai.com/codex), [Gemini CLI](https://geminicli.com), and [26 more](https://agentskills.io).
 
-[Quick Start](#quick-start) | [How It Works](#how-it-works) | [Features](#features) | [Library](#shared-library) | [Reference](#reference)
+[Quick Start](#quick-start) | [How It Works](#how-it-works) | [How Is This Different?](#how-is-this-different) | [Features](#features) | [Library](#shared-library) | [Reference](#reference)
 
 </div>
 
 ---
 
-```bash
-npx skillfold init   # scaffold a starter pipeline
-npx skillfold        # compile it
-```
+You have agents using SKILL.md files. When you have multiple agents that need different combinations of skills, you end up copy-pasting skill content between them. When your team flow changes, you update files manually.
+
+Skillfold compiles a single YAML config into the right SKILL.md for each agent. Define your skills once, declare which agents get which combination, and let the compiler build every file.
 
 ## Quick Start
 
-For a step-by-step walkthrough, see the [Getting Started](docs/getting-started.md) guide.
+Get a working pipeline in under 60 seconds:
 
-Define skills, compose them into agents, wire agents into a team flow, and compile:
+```bash
+npx skillfold init --dir my-team
+cd my-team
+npx skillfold
+```
+
+```
+skillfold: compiled my-pipeline
+  -> build/planner/SKILL.md
+  -> build/engineer/SKILL.md
+  -> build/reviewer/SKILL.md
+  -> build/orchestrator/SKILL.md
+```
+
+That's it. Four agents, each with the right skills, compiled from one config. The orchestrator gets a generated execution plan with numbered steps and conditional branches.
+
+For a detailed walkthrough, see the [Getting Started](docs/getting-started.md) guide.
+
+<details>
+<summary><strong>What's inside the generated config?</strong></summary>
 
 ```yaml
 # skillfold.yaml
-name: dev-team
+name: my-pipeline
 
 skills:
   atomic:
     planning: ./skills/planning
     coding: ./skills/coding
-    review: ./skills/review
+    reviewing: ./skills/reviewing
   composed:
     engineer:
       compose: [planning, coding]
-      description: "Implements the plan and writes tests."
+      description: "Implements the plan, writes code and tests."
     reviewer:
-      compose: [review]
+      compose: [reviewing]
       description: "Reviews code for correctness."
 
 state:
@@ -54,8 +72,13 @@ state:
   review: { type: Review }
 
 team:
+  orchestrator: orchestrator
   flow:
+    - planner:
+        writes: [state.plan]
+      then: engineer
     - engineer:
+        reads: [state.plan]
         writes: [state.code]
       then: reviewer
     - reviewer:
@@ -68,20 +91,9 @@ team:
           to: end
 ```
 
-```bash
-npx skillfold
-```
-
-```
-build/
-  engineer/SKILL.md    # planning + coding bodies, YAML frontmatter
-  reviewer/SKILL.md    # review body, YAML frontmatter
-```
-
 The `engineer` agent's SKILL.md contains the concatenated bodies of `planning` and `coding`. Every output file is a valid SKILL.md per the [Agent Skills standard](https://agentskills.io/specification).
 
-> [!TIP]
-> Add `team.orchestrator: orchestrator` and the orchestrator's compiled SKILL.md gets a generated execution plan with numbered steps, state tables, and conditional branches.
+</details>
 
 ---
 
@@ -118,6 +130,19 @@ Then:
 ```
 
 </details>
+
+---
+
+## How Is This Different?
+
+Skillfold is a **build tool for multi-agent pipelines**. It composes skills into agents and wires agents into execution flows.
+
+| Tool | What it does | How Skillfold differs |
+|------|-------------|---------------------|
+| **[TanStack Intent](https://tanstack.com/intent)** | Helps library authors ship skills with npm packages (skill authoring layer) | Skillfold operates at the pipeline layer - it composes existing skills into agents and orchestrates them |
+| **Skill installers** (`npx skills`, etc.) | Install one skill at a time into a project | Skillfold composes multiple skills per agent, so each agent gets exactly the combination it needs |
+
+If you author skills, use Intent. If you install individual skills, use a skill manager. If you need multiple agents that each get a different mix of skills and run in a coordinated flow, use Skillfold.
 
 ---
 
