@@ -29,6 +29,7 @@ src/
   init.ts         - skillfold init scaffolding
   errors.ts       - ConfigError, ResolveError, CompileError, GraphError
 skills/           - Atomic skill definitions (each has a SKILL.md)
+library/          - Shared skills library (10 generic skills + 3 example configs)
 dist/             - tsc compiled JS (npm package, gitignored)
 build/            - Compiled skill output (default --out-dir, gitignored)
 skillfold.yaml    - Pipeline config for the dev team itself
@@ -69,6 +70,40 @@ Read BRIEF.md for full context. Key points:
 - **State schema**: Typed state schema with custom types, primitives, lists, and external locations. Reads/writes validated against team flow.
 - **Orchestrator generation**: Generated from the team flow definition. Produces structured execution plan with step numbering, state table, and conditional/map rendering.
 
+## Shared Skills Library
+
+The `library/` directory contains 10 generic, reusable atomic skills and 3 example pipeline configs. It exists as an import target - other configs can pull in library skills via the `imports` field.
+
+### Skills
+
+- **planning** - Break problems into steps, identify dependencies, estimate scope
+- **research** - Gather information, evaluate sources, synthesize findings
+- **decision-making** - Evaluate trade-offs, document options, justify recommendations
+- **code-writing** - Write clean, correct, production-quality code (language-agnostic)
+- **code-review** - Review code for correctness, clarity, and security
+- **testing** - Write and reason about tests, behavior testing, edge cases
+- **writing** - Produce clear, structured prose and documentation
+- **summarization** - Condense information with audience-appropriate detail levels
+- **github-workflow** - Work with GitHub branches, PRs, issues, reviews via `gh` CLI
+- **file-management** - Read, create, edit, and organize files and directories
+
+### Import Syntax
+
+```yaml
+imports:
+  - node_modules/skillfold/library/skillfold.yaml
+```
+
+This makes all 10 library skills available as atomic skills in the importing config. Composed skills and team flows reference them by name.
+
+### Example Configs
+
+Located in `library/examples/`:
+
+- **dev-team** - Linear pipeline with review loop (planner, engineer, reviewer)
+- **content-pipeline** - Map/parallel pattern over topics (researcher, writer, editor)
+- **code-review-bot** - Minimal two-agent flow (analyzer, reporter)
+
 ## What's Implemented
 
 - Config parsing with three top-level sections (skills, state, team), cycle detection, and reference validation
@@ -88,7 +123,9 @@ Read BRIEF.md for full context. Key points:
 - End-to-end test with the brief's full example config
 - CI via GitHub Actions (Node 20 + 22)
 - Graph visualization with full composition lineage and state writes (`skillfold graph`)
-- Test suite (211 tests) covering config, resolver, compiler, state, graph, orchestrator, visualize, remote, init, and e2e modules
+- Shared skills library with 10 generic atomic skills and 3 example pipeline configs
+- `skillfold init` shows library import hint in generated config and CLI output
+- Test suite covering config, resolver, compiler, state, graph, orchestrator, visualize, remote, init, library, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next

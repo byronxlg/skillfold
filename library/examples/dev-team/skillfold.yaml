@@ -1,0 +1,52 @@
+name: dev-team
+
+imports:
+  - ../../skillfold.yaml
+
+skills:
+  composed:
+    planner:
+      compose: [planning, decision-making]
+      description: "Analyzes the goal and produces a structured plan with key decisions."
+
+    engineer:
+      compose: [planning, code-writing, testing]
+      description: "Implements the plan by writing production code and tests."
+
+    reviewer:
+      compose: [code-review, testing]
+      description: "Reviews code for correctness, clarity, and test coverage."
+
+state:
+  Review:
+    approved: bool
+    feedback: string
+
+  plan:
+    type: string
+
+  implementation:
+    type: string
+
+  review:
+    type: Review
+
+team:
+  flow:
+    - planner:
+        writes: [state.plan]
+      then: engineer
+
+    - engineer:
+        reads: [state.plan]
+        writes: [state.implementation]
+      then: reviewer
+
+    - reviewer:
+        reads: [state.implementation]
+        writes: [state.review]
+      then:
+        - when: review.approved == true
+          to: end
+        - when: review.approved == false
+          to: engineer
