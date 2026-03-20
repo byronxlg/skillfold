@@ -26,6 +26,7 @@ Commands:
   validate          Validate config without compiling
   list              Display a structured summary of the pipeline
   graph             Output Mermaid flowchart of the team flow
+  watch             Compile and watch for changes
   (default)         Compile the pipeline config
 
 Options:
@@ -41,7 +42,7 @@ Templates: ${TEMPLATES.join(", ")}`);
 }
 
 interface Args {
-  command: "init" | "compile" | "graph" | "list" | "validate";
+  command: "init" | "compile" | "graph" | "list" | "validate" | "watch";
   configPath: string;
   outDir: string;
   dir: string;
@@ -52,7 +53,7 @@ interface Args {
 }
 
 function parseArgs(argv: string[]): Args {
-  let command: "init" | "compile" | "graph" | "list" | "validate" = "compile";
+  let command: "init" | "compile" | "graph" | "list" | "validate" | "watch" = "compile";
   let configPath = "skillfold.yaml";
   let outDir = "build";
   let dir = ".";
@@ -80,6 +81,9 @@ function parseArgs(argv: string[]): Args {
     i = 1;
   } else if (argv.length > 0 && argv[0] === "validate") {
     command = "validate";
+    i = 1;
+  } else if (argv.length > 0 && argv[0] === "watch") {
+    command = "watch";
     i = 1;
   }
 
@@ -218,6 +222,12 @@ async function main(): Promise<void> {
       }
       throw err;
     }
+    return;
+  }
+
+  if (args.command === "watch") {
+    const { watchPipeline } = await import("./watch.js");
+    await watchPipeline(args.configPath, args.outDir, pkg.version);
     return;
   }
 
