@@ -284,6 +284,155 @@ describe("compile", () => {
     assert.equal(lines[3], "description: An agent that does things.");
     assert.equal(lines[4], "---");
   });
+
+  it("--target skill produces same output as default", () => {
+    tmpDir = makeTmpDir();
+    const outDir1 = join(tmpDir, "default");
+    const outDir2 = join(tmpDir, "skill");
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        leaf: { path: "./skills/leaf" },
+        bundle: { compose: ["leaf"], description: "A bundle skill." },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("leaf", "Leaf body");
+
+    const results1 = compile(config, bodies, outDir1, "0.0.0", "test.yaml");
+    const results2 = compile(config, bodies, outDir2, "0.0.0", "test.yaml", "skill");
+
+    assert.equal(results1.length, results2.length);
+    const content1 = readFileSync(results1[0].path, "utf-8");
+    const content2 = readFileSync(results2[0].path, "utf-8");
+    assert.equal(content1, content2);
+  });
+});
+
+describe("compile with claude-code target", () => {
+  let tmpDir: string | undefined;
+
+  afterEach(() => {
+    if (tmpDir) {
+      rmSync(tmpDir, { recursive: true, force: true });
+      tmpDir = undefined;
+    }
+  });
+
+  it("outputs skills under skills/ subdirectory", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        leaf: { path: "./skills/leaf" },
+        bundle: { compose: ["leaf"], description: "A bundle skill." },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("leaf", "Leaf body");
+
+    const results = compile(config, bodies, outDir, "0.0.0", "test.yaml", "claude-code");
+
+    const skillResult = results.find((r) => r.name === "bundle" && r.path.includes("skills"));
+    assert.ok(skillResult);
+    assert.equal(skillResult.path, join(outDir, "skills", "bundle", "SKILL.md"));
+    assert.ok(existsSync(skillResult.path));
+  });
+
+  it("outputs agent markdown files under agents/ subdirectory", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        leaf: { path: "./skills/leaf" },
+        bundle: { compose: ["leaf"], description: "A bundle skill." },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("leaf", "Leaf body");
+
+    const results = compile(config, bodies, outDir, "0.0.0", "test.yaml", "claude-code");
+
+    const agentResult = results.find((r) => r.path.includes("agents"));
+    assert.ok(agentResult);
+    assert.equal(agentResult.path, join(outDir, "agents", "bundle.md"));
+    assert.ok(existsSync(agentResult.path));
+  });
+
+  it("agent files contain frontmatter and body", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        leaf: { path: "./skills/leaf" },
+        bundle: { compose: ["leaf"], description: "A bundle skill." },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("leaf", "Leaf body");
+
+    compile(config, bodies, outDir, "0.0.0", "test.yaml", "claude-code");
+
+    const content = readFileSync(join(outDir, "agents", "bundle.md"), "utf-8");
+    assert.ok(content.includes("name: bundle"));
+    assert.ok(content.includes("description: A bundle skill."));
+    assert.ok(content.includes("Leaf body"));
+  });
+
+  it("produces both skills and agents for config with team flow", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const graph: Graph = {
+      nodes: [
+        { skill: "planner", reads: [], writes: ["state.plan"] },
+        { skill: "worker", reads: ["state.plan"], writes: [] },
+      ],
+    };
+
+    const state: StateSchema = {
+      types: {},
+      fields: {
+        plan: { type: { kind: "primitive", value: "string" } },
+      },
+    };
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        planning: { path: "./skills/planning" },
+        working: { path: "./skills/working" },
+        planner: { compose: ["planning"], description: "Plans." },
+        worker: { compose: ["working"], description: "Works." },
+      },
+      state,
+      team: { flow: graph },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("planning", "Planning body.");
+    bodies.set("working", "Working body.");
+
+    const results = compile(config, bodies, outDir, "0.0.0", "test.yaml", "claude-code");
+
+    // Should have skills (planner, worker, orchestrator) + agents (planner, worker)
+    const skillPaths = results.filter((r) => r.path.includes("/skills/"));
+    const agentPaths = results.filter((r) => r.path.includes("/agents/"));
+
+    assert.ok(skillPaths.length >= 2);
+    assert.ok(agentPaths.length >= 2);
+  });
 });
 
 describe("check", () => {

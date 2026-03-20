@@ -1,9 +1,12 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 
+import { generateAgents } from "./agent.js";
 import { type Config, isComposed } from "./config.js";
 import { CompileError } from "./errors.js";
 import { generateOrchestrator } from "./orchestrator.js";
+
+export type CompileTarget = "skill" | "claude-code";
 
 function expand(
   name: string,
@@ -103,21 +106,83 @@ export function generate(
   return results;
 }
 
+/**
+ * Build a map of composed skill name -> expanded body text.
+ * Used by agent generation to include composed skill content.
+ */
+export function expandComposedBodies(
+  config: Config,
+  bodies: Map<string, string>,
+): Map<string, string> {
+  const composedBodies = new Map<string, string>();
+  for (const [name, skill] of Object.entries(config.skills)) {
+    if (!isComposed(skill)) continue;
+    const parts = expand(name, config, bodies, new Set());
+    composedBodies.set(name, parts.join("\n\n"));
+  }
+  return composedBodies;
+}
+
+/**
+ * Generate output for claude-code target: skills in skills/ subdirectory
+ * and agent markdown files in agents/ subdirectory.
+ */
+export function generateClaudeCode(
+  config: Config,
+  bodies: Map<string, string>,
+  outDir: string,
+  version: string,
+  configFile: string,
+): GenerateResult[] {
+  const results: GenerateResult[] = [];
+
+  // Generate skills under skills/ subdirectory
+  const skillResults = generate(config, bodies, outDir, version, configFile);
+  for (const result of skillResults) {
+    // Rewrite paths: {outDir}/{name}/SKILL.md -> {outDir}/skills/{name}/SKILL.md
+    result.path = join(outDir, "skills", result.name, "SKILL.md");
+    results.push(result);
+  }
+
+  // Generate agent markdown files
+  const composedBodies = expandComposedBodies(config, bodies);
+  const agentResults = generateAgents(
+    config,
+    composedBodies,
+    outDir,
+    version,
+    configFile,
+  );
+  for (const agent of agentResults) {
+    results.push(agent);
+  }
+
+  return results;
+}
+
+function writeResults(results: GenerateResult[]): void {
+  for (const result of results) {
+    mkdirSync(dirname(result.path), { recursive: true });
+    writeFileSync(result.path, result.content, "utf-8");
+  }
+}
+
 export function compile(
   config: Config,
   bodies: Map<string, string>,
   outDir: string,
   version: string,
-  configFile: string
+  configFile: string,
+  target: CompileTarget = "skill",
 ): CompileResult[] {
   mkdirSync(outDir, { recursive: true });
 
-  const generated = generate(config, bodies, outDir, version, configFile);
+  const generated =
+    target === "claude-code"
+      ? generateClaudeCode(config, bodies, outDir, version, configFile)
+      : generate(config, bodies, outDir, version, configFile);
 
-  for (const result of generated) {
-    mkdirSync(join(outDir, result.name), { recursive: true });
-    writeFileSync(result.path, result.content, "utf-8");
-  }
+  writeResults(generated);
 
   return generated.map(({ name, path }) => ({ name, path }));
 }
@@ -127,9 +192,13 @@ export function check(
   bodies: Map<string, string>,
   outDir: string,
   version: string,
-  configFile: string
+  configFile: string,
+  target: CompileTarget = "skill",
 ): CheckResult[] {
-  const generated = generate(config, bodies, outDir, version, configFile);
+  const generated =
+    target === "claude-code"
+      ? generateClaudeCode(config, bodies, outDir, version, configFile)
+      : generate(config, bodies, outDir, version, configFile);
   const results: CheckResult[] = [];
 
   for (const result of generated) {
