@@ -1,37 +1,36 @@
 # Security Policy
 
-## Supported Versions
+## Trust Model
 
-| Version | Supported |
-| ------- | --------- |
-| 1.x     | Yes       |
+Skillfold is a compiler. It reads YAML configuration files and writes Markdown (`.md`) files. It does not execute generated output or run user-defined code.
 
-## Scope
+### Dependencies
 
-This policy covers the skillfold compiler itself - config parsing, skill resolution, composition, and output generation. It does not cover the content of compiled SKILL.md output files, which are authored by users and consumed by AI agents.
+Single runtime dependency: [`yaml`](https://github.com/eemeli/yaml) (YAML parser).
 
-## Reporting a Vulnerability
+### What Skillfold Does
 
-If you discover a security vulnerability, please report it through one of these channels:
+- **Reads**: YAML config files (`skillfold.yaml`) and skill directories containing `SKILL.md` files
+- **Writes**: Compiled Markdown files to the configured output directory (default: `build/`)
+- **No hooks, no background processes, no daemons**
+- **No persistent state files**
 
-- **GitHub Security Advisories**: Open a private advisory at https://github.com/byronxlg/skillfold/security/advisories/new
-- **Email**: Contact the maintainer directly via the email listed on the [author's GitHub profile](https://github.com/byronxlg)
+### Network Access
 
-Please do not open public issues for security vulnerabilities.
+Network access is optional and limited to fetching skills from GitHub URLs via `raw.githubusercontent.com`. This only happens when a config references a remote skill by GitHub URL. Private repository access requires the `GITHUB_TOKEN` environment variable.
 
-## What to Include
+No other network requests are made.
 
-- Description of the vulnerability
-- Steps to reproduce
-- Potential impact
-- Suggested fix (if any)
+### File System Access
 
-## Response Timeline
+Skillfold reads config files and skill directories, and writes compiled output to the configured output directory. It does not read or write files outside these paths.
 
-- **Acknowledgment**: Within 3 business days
-- **Initial assessment**: Within 7 business days
-- **Fix or mitigation**: Dependent on severity, targeting 30 days for critical issues
+### npm Lifecycle Scripts
 
-## Disclosure
+The `prepare` script runs `npm run build`, which is standard TypeScript compilation (`tsc`). This only runs when installing from git source. There is no implicit execution beyond standard npm lifecycle scripts.
 
-We follow coordinated disclosure. We will work with you to understand the issue and agree on a disclosure timeline before any public communication.
+## Reporting Vulnerabilities
+
+Report vulnerabilities via [GitHub Security Advisories](https://github.com/byronxlg/skillfold/security/advisories/new).
+
+Do not open public issues for security vulnerabilities.
