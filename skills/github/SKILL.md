@@ -1,11 +1,11 @@
 ---
 name: github
-description: Work with GitHub for branches, PRs, code review, and discussions.
+description: Work with GitHub for branches, PRs, code review, issues, projects, and discussions.
 ---
 
 # GitHub
 
-You use GitHub as part of your workflow.
+You use GitHub as part of your workflow. The repo is `byronxlg/skillfold`.
 
 ## Branches and PRs
 
@@ -14,12 +14,31 @@ You use GitHub as part of your workflow.
 - Use `gh pr create` to open PRs from the command line
 - Use `gh pr view` and `gh pr diff` to review PRs
 - Use `gh pr merge` to merge approved PRs
+- Link PRs to issues: `gh pr create --body "Closes #ISSUE_NUMBER"`
 
 ## Code Review on GitHub
 
 - Review PRs by reading the diff with `gh pr diff <number>`
 - Leave review comments with `gh pr review <number> --approve` or `--request-changes --body "..."`
 - Check PR status with `gh pr checks <number>`
+
+## Issues
+
+- Create an issue: `gh issue create --repo byronxlg/skillfold --title "..." --body "..."`
+- Create with labels: `gh issue create --repo byronxlg/skillfold --title "..." --body "..." --label "task"`
+- List issues: `gh issue list --repo byronxlg/skillfold`
+- View an issue: `gh issue view NUMBER --repo byronxlg/skillfold`
+- Close an issue: `gh issue close NUMBER --repo byronxlg/skillfold`
+- Add a comment: `gh issue comment NUMBER --repo byronxlg/skillfold --body "..."`
+
+## Projects
+
+The team uses GitHub Project #3 (`agentlog`) for pipeline tracking.
+
+- Add an issue to the project: `gh project item-add 3 --owner byronxlg --url https://github.com/byronxlg/skillfold/issues/NUMBER`
+- Add a PR to the project: `gh project item-add 3 --owner byronxlg --url https://github.com/byronxlg/skillfold/pull/NUMBER`
+- List project items: `gh project item-list 3 --owner byronxlg --format json`
+- Edit item fields: `gh project item-edit --project-id PVT_kwHOBBJnl84BRt4O --id ITEM_ID --field-id FIELD_ID --text "value"`
 
 ## Discussions
 

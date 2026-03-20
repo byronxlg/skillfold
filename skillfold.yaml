@@ -17,8 +17,8 @@ skills:
       description: "Assesses what the project needs and sets direction for the next increment."
 
     architect:
-      compose: [skillfold-context, architecture, task-decomposition]
-      description: "Designs systems and decomposes work into tasks."
+      compose: [skillfold-context, architecture, task-decomposition, github]
+      description: "Designs systems and decomposes work into GitHub issues."
 
     engineer:
       compose: [skillfold-context, code-generation, testing, github]
@@ -37,6 +37,10 @@ state:
     approved: bool
     feedback: string
 
+  Task:
+    title: string
+    description: string
+
   direction:
     type: string
     location:
@@ -49,6 +53,12 @@ state:
       skill: github
       path: discussions/general
       kind: reply
+
+  tasks:
+    type: list<Task>
+    location:
+      skill: github
+      path: issues
 
   implementation:
     type: string
@@ -73,11 +83,11 @@ team:
 
     - architect:
         reads: [state.direction]
-        writes: [state.plan]
+        writes: [state.plan, state.tasks]
       then: engineer
 
     - engineer:
-        reads: [state.plan]
+        reads: [state.plan, state.tasks]
         writes: [state.implementation]
       then: reviewer
 
