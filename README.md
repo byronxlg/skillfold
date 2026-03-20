@@ -32,7 +32,7 @@ Works with [Claude Code](https://claude.ai/code), [Cursor](https://cursor.com), 
 
 <div align="center">
 
-[Quick Start](#quick-start) | [How Is This Different?](#how-is-this-different) | [How It Works](#how-it-works) | [Features](#features) | [Library](#shared-library) | [Integrations](docs/integrations.md) | [Reference](#reference)
+[Quick Start](#quick-start) | [Claude Code](#claude-code) | [How Is This Different?](#how-is-this-different) | [How It Works](#how-it-works) | [Features](#features) | [Library](#shared-library) | [Integrations](docs/integrations.md) | [Reference](#reference)
 
 </div>
 
@@ -95,6 +95,35 @@ The `engineer` agent's SKILL.md contains the concatenated bodies of `planning` a
 
 > [!TIP]
 > Add `team.orchestrator: orchestrator` and the orchestrator's compiled SKILL.md gets a generated execution plan with numbered steps, state tables, and conditional branches.
+
+---
+
+## Claude Code
+
+Compile directly to Claude Code's native agent and skill layout:
+
+```bash
+npx skillfold --target claude-code
+```
+
+```
+.claude/
+  agents/
+    engineer.md
+    reviewer.md
+  skills/
+    planning/SKILL.md
+    coding/SKILL.md
+    review/SKILL.md
+```
+
+Skillfold also ships a built-in Claude Code plugin at `node_modules/skillfold/plugin/` with the shared library skills and a `/skillfold` slash command. To package your own pipeline as a distributable plugin:
+
+```bash
+npx skillfold plugin
+```
+
+See the [Integration Guide](docs/integrations.md) for setup details.
 
 ---
 
@@ -232,7 +261,7 @@ Skillfold builds its own dev team. The [`skillfold.yaml`](skillfold.yaml) in thi
 | reviewer | Reviews pull requests for correctness and clarity |
 | orchestrator | Coordinates pipeline execution and merges approved PRs |
 
-The reviewer feeds back to the engineer when `review.approved == false`, creating a review loop that runs until code is approved.
+The flow runs: strategist -> architect -> engineer -> reviewer. The reviewer feeds back to the engineer when `review.approved == false`, creating a review loop that runs until code is approved.
 
 > [!NOTE]
 > State is mapped to real infrastructure: plans live in GitHub Discussions, tasks become GitHub Issues, implementations are pull requests, and reviews are PR reviews.
@@ -256,17 +285,19 @@ Requires Node.js 20+. Single dependency: `yaml`.
 skillfold [command] [options]
 
 Commands:
-  (default)         Compile the pipeline config
   init [dir]        Scaffold a new pipeline project
   validate          Validate config without compiling
   list              Display a structured summary of the pipeline
   graph             Output Mermaid flowchart of the team flow
   watch             Compile and watch for changes
+  plugin            Package compiled output as a Claude Code plugin
+  (default)         Compile the pipeline config
 
 Options:
   --config <path>      Config file (default: skillfold.yaml)
-  --out-dir <path>     Output directory (default: build)
+  --out-dir <path>     Output directory (default: build, or .claude for claude-code target)
   --dir <path>         Target directory for init (default: .)
+  --target <mode>      Output mode: skill (default) or claude-code
   --template <name>    Start from a library template (init only)
   --check              Verify compiled output is up-to-date (exit 1 if stale)
   --help               Show this help
