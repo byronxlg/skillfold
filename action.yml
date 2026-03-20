@@ -1,0 +1,28 @@
+name: Skillfold Check
+description: Verify compiled agent skill output is up-to-date
+branding:
+  icon: check-circle
+  color: blue
+
+inputs:
+  config:
+    description: Path to skillfold config file
+    required: false
+  target:
+    description: "Output target: skill or claude-code"
+    required: false
+
+runs:
+  using: composite
+  steps:
+    - name: Skillfold --check
+      shell: bash
+      run: |
+        cmd="npx skillfold --check"
+        if [ -n "${{ inputs.config }}" ]; then
+          cmd="$cmd --config ${{ inputs.config }}"
+        fi
+        if [ -n "${{ inputs.target }}" ]; then
+          cmd="$cmd --target ${{ inputs.target }}"
+        fi
+        $cmd
