@@ -38,12 +38,15 @@
     "url": "https://github.com/byronxlg/skillfold.git"
   },
   "license": "MIT",
+  "author": "Byron Smith",
   "engines": {
     "node": ">=20"
   },
   "scripts": {
     "dev": "tsx src/cli.ts",
     "build": "tsc -p tsconfig.build.json",
+    "postbuild": "chmod +x dist/cli.js",
+    "prepare": "npm run build",
     "build:plugin": "node scripts/build-plugin.mjs",
     "test": "tsx --test src/*.test.ts",
     "start": "node dist/cli.js"
