@@ -52,6 +52,16 @@ Both must pass before submitting a PR.
 - No `any` types, no unnecessary type assertions
 - Custom errors extend `Error` with descriptive messages including context
 
+## Versioning
+
+This project follows [Semantic Versioning](https://semver.org/):
+
+- **Patch** (e.g., 1.4.1): Bug fixes, typo corrections, minor tweaks
+- **Minor** (e.g., 1.5.0): New features that are backwards compatible
+- **Major** (e.g., 2.0.0): Breaking changes to the config format, CLI interface, or compiled output structure
+
+Version bumps happen in `package.json` before tagging a release. The publish workflow (`.github/workflows/publish.yml`) is triggered by GitHub releases and publishes to npm with provenance.
+
 ## Pull Requests
 
 1. Fork the repo and create a branch from `main`
