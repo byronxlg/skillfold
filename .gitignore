@@ -8,3 +8,4 @@ build/
 !.claude/skills/
 .claude/skills/*
 !.claude/skills/build/
+test-output/
