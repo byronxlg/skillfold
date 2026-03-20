@@ -11,6 +11,7 @@ Configuration language and compiler for multi-agent AI pipelines. Compiles YAML 
 
 - **Run compiler**: `npx tsx src/cli.ts`
 - **Validate config**: `npx tsx src/cli.ts validate`
+- **List pipeline**: `npx tsx src/cli.ts list`
 - **Run with custom config**: `npx tsx src/cli.ts --config path.yaml --out-dir out/`
 - **Build**: `npm run build`
 - **Type check**: `npx tsc --noEmit`
@@ -27,6 +28,7 @@ src/
   compiler.ts     - Recursive composition, body concatenation, orchestrator integration
   graph.ts        - Graph parsing, validation (skills, state, conflicts, cycles)
   orchestrator.ts - Orchestrator SKILL.md generation from graph definition
+  list.ts         - Pipeline introspection (skillfold list)
   init.ts         - skillfold init scaffolding
   errors.ts       - ConfigError, ResolveError, CompileError, GraphError
 skills/           - Atomic skill definitions (each has a SKILL.md)
@@ -127,7 +129,8 @@ Located in `library/examples/`:
 - Shared skills library with 10 generic atomic skills and 3 example pipeline configs
 - `skillfold init` shows library import hint in generated config and CLI output
 - `skillfold validate` command for config validation without compiling output
-- Test suite covering config, resolver, compiler, state, graph, orchestrator, visualize, remote, init, library, validate, and e2e modules
+- `skillfold list` command for pipeline introspection (skills, state, team flow)
+- Test suite covering config, resolver, compiler, state, graph, orchestrator, visualize, remote, init, library, validate, list, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next

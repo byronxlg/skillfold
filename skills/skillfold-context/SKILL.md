@@ -36,6 +36,7 @@ The codebase is TypeScript (strict, ESM modules). Key modules:
 - `src/remote.ts` - GitHub URL parsing and remote skill fetching
 - `src/compiler.ts` - Recursive composition, orchestrator integration
 - `src/visualize.ts` - Mermaid flowchart generation with composition lineage
+- `src/list.ts` - Pipeline introspection (skillfold list)
 - `src/init.ts` - skillfold init scaffolding
 - `src/errors.ts` - ConfigError, ResolveError, CompileError, GraphError
 - `src/cli.ts` - CLI entry point
@@ -50,7 +51,7 @@ The codebase is TypeScript (strict, ESM modules). Key modules:
 
 ## What's Implemented
 
-All compiler features are working: skill composition with atomic/composed sub-sections, state schema, flow validation, map subgraph validation, when-clause parsing, orchestrator generation, spec-compliant output, URL-based skill references, pipeline imports, graph visualization with full composition lineage, `skillfold init`, and `skillfold validate`. Published on npm as `skillfold`. 247 tests, CI on GitHub Actions. The project self-hosts its own dev team via `skillfold.yaml`.
+All compiler features are working: skill composition with atomic/composed sub-sections, state schema, flow validation, map subgraph validation, when-clause parsing, orchestrator generation, spec-compliant output, URL-based skill references, pipeline imports, graph visualization with full composition lineage, `skillfold init`, `skillfold validate`, and `skillfold list`. Published on npm as `skillfold`. 253 tests, CI on GitHub Actions. The project self-hosts its own dev team via `skillfold.yaml`.
 
 ## What's Next
 
