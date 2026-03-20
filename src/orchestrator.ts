@@ -204,6 +204,20 @@ export function generateOrchestrator(config: Config): string {
   lines.push(
     "To invoke an agent, read its compiled skill from `build/{name}/SKILL.md` and spawn a subagent with that content as its instructions. Give each agent the inputs the plan says it reads, and collect the outputs it writes."
   );
+  lines.push("");
+  lines.push(
+    "Agents that write code or modify files should run in isolation (e.g., a git worktree) to prevent conflicts with the orchestrator's working directory."
+  );
+
+  // State management guidance when locations are defined
+  const hasLocations = config.state &&
+    Object.values(config.state.fields).some((f) => f.location);
+  if (hasLocations) {
+    lines.push("");
+    lines.push(
+      "State fields have external locations (see the state table above). The orchestrator is responsible for reading inputs from and writing outputs to those locations between agent invocations."
+    );
+  }
 
   // Execution Plan section
   if (config.team) {
