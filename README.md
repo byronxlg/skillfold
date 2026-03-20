@@ -164,6 +164,22 @@ Skillfold has three layers, each building on the last:
 
 Compiled output is portable across [32 platforms](https://agentskills.io) that support the Agent Skills standard.
 
+Here's the Quick Start example as a flow diagram (`skillfold graph`):
+
+```mermaid
+graph TD
+    subgraph engineer
+        planning
+        coding
+    end
+    engineer -->|"code"| reviewer
+    subgraph reviewer
+        review
+    end
+    reviewer -->|"approved == false"| engineer
+    reviewer -->|"approved == true"| end_node([end])
+```
+
 <details>
 <summary><strong>Generated orchestrator output</strong></summary>
 
