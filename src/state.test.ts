@@ -411,4 +411,68 @@ describe("parseState", () => {
       assert.deepEqual(schema.fields, {});
     });
   });
+
+  describe("did-you-mean suggestions", () => {
+    it("suggests close match for unknown custom type reference", () => {
+      const raw = {
+        FileInfo: { name: "string", size: "number" },
+        currentFile: { type: "FileInf" },
+      };
+      assert.throws(
+        () => parseState(raw, NO_SKILLS),
+        (err: unknown) => {
+          assert.ok(err instanceof ConfigError);
+          assert.match(err.message, /unknown type "FileInf"/);
+          assert.match(err.message, /Did you mean "FileInfo"\?/);
+          return true;
+        }
+      );
+    });
+
+    it("suggests close match for unknown list element type", () => {
+      const raw = {
+        Issue: { title: "string", priority: "number" },
+        items: { type: "list<Issu>" },
+      };
+      assert.throws(
+        () => parseState(raw, NO_SKILLS),
+        (err: unknown) => {
+          assert.ok(err instanceof ConfigError);
+          assert.match(err.message, /unknown type "Issu"/);
+          assert.match(err.message, /Did you mean "Issue"\?/);
+          return true;
+        }
+      );
+    });
+
+    it("suggests primitive type for close misspelling", () => {
+      const raw = {
+        count: { type: "nubmer" },
+      };
+      assert.throws(
+        () => parseState(raw, NO_SKILLS),
+        (err: unknown) => {
+          assert.ok(err instanceof ConfigError);
+          assert.match(err.message, /unknown type "nubmer"/);
+          assert.match(err.message, /Did you mean "number"\?/);
+          return true;
+        }
+      );
+    });
+
+    it("omits suggestion when no close match exists", () => {
+      const raw = {
+        data: { type: "CompletelyWrong" },
+      };
+      assert.throws(
+        () => parseState(raw, NO_SKILLS),
+        (err: unknown) => {
+          assert.ok(err instanceof ConfigError);
+          assert.match(err.message, /unknown type "CompletelyWrong"/);
+          assert.ok(!err.message.includes("Did you mean"), "should not suggest when no close match");
+          return true;
+        }
+      );
+    });
+  });
 });

@@ -7,7 +7,7 @@ import { parse } from "yaml";
 const __pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SELF_IMPORT_PREFIX = "node_modules/skillfold/";
 
-import { ConfigError } from "./errors.js";
+import { ConfigError, didYouMean } from "./errors.js";
 import { Graph, parseGraph, validateGraph } from "./graph.js";
 import { fetchRemoteConfig } from "./remote.js";
 import { parseState, StateSchema } from "./state.js";
@@ -94,7 +94,7 @@ function normalizeComposedSkills(
       !("compose" in value)
     ) {
       throw new ConfigError(
-        `Skill "${name}": composed skills must have a "compose" field`
+        `Skill "${name}": composed skills must have a "compose" field. Add a "compose" list of skill names to this skill definition`
       );
     }
     const compose = (value as { compose: unknown }).compose;
@@ -106,7 +106,7 @@ function normalizeComposedSkills(
     const description = (value as { description?: unknown }).description;
     if (typeof description !== "string" || description.length === 0 || description.length > 1024) {
       throw new ConfigError(
-        `Skill "${name}": composed skills must have a description`
+        `Skill "${name}": composed skills must have a "description" field (non-empty string, max 1024 chars). Add a description explaining what this composed skill does`
       );
     }
     skills[name] = { compose, description };
@@ -132,12 +132,14 @@ function validateNames(skills: Record<string, SkillEntry>): void {
 }
 
 function validateReferences(skills: Record<string, SkillEntry>): void {
+  const allNames = Object.keys(skills);
   for (const [name, skill] of Object.entries(skills)) {
     if (isComposed(skill)) {
       for (const ref of skill.compose) {
         if (!(ref in skills)) {
+          const hint = didYouMean(ref, allNames);
           throw new ConfigError(
-            `Skill "${name}" composes unknown skill "${ref}"`
+            `Skill "${name}" composes unknown skill "${ref}"${hint}`
           );
         }
       }
@@ -297,8 +299,9 @@ export function validateAndBuild(raw: RawConfig): Config {
 
     if (raw.rawTeam.orchestrator !== undefined) {
       if (!(raw.rawTeam.orchestrator in raw.skills)) {
+        const hint = didYouMean(raw.rawTeam.orchestrator, Object.keys(raw.skills));
         throw new ConfigError(
-          `Orchestrator references unknown skill "${raw.rawTeam.orchestrator}"`
+          `Orchestrator references unknown skill "${raw.rawTeam.orchestrator}"${hint}`
         );
       }
       team.orchestrator = raw.rawTeam.orchestrator;
@@ -415,8 +418,15 @@ export function readConfig(configPath: string): Config {
     throw new ConfigError(`Cannot read config file: ${configPath}`);
   }
 
-  const raw = parseRawConfig(content);
-  return validateAndBuild(raw);
+  try {
+    const raw = parseRawConfig(content);
+    return validateAndBuild(raw);
+  } catch (err) {
+    if (err instanceof ConfigError && !err.message.includes(configPath)) {
+      throw new ConfigError(`${configPath}: ${err.message}`);
+    }
+    throw err;
+  }
 }
 
 // Async entry point that resolves imports before validation
@@ -428,7 +438,14 @@ export async function loadConfig(configPath: string): Promise<Config> {
     throw new ConfigError(`Cannot read config file: ${configPath}`);
   }
 
-  const raw = parseRawConfig(content);
-  const merged = await resolveImports(raw, dirname(configPath));
-  return validateAndBuild(merged);
+  try {
+    const raw = parseRawConfig(content);
+    const merged = await resolveImports(raw, dirname(configPath));
+    return validateAndBuild(merged);
+  } catch (err) {
+    if (err instanceof ConfigError && !err.message.includes(configPath)) {
+      throw new ConfigError(`${configPath}: ${err.message}`);
+    }
+    throw err;
+  }
 }
