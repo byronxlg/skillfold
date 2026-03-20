@@ -248,7 +248,11 @@ npx skillfold --target claude-code
   skills/
     engineer/SKILL.md
     reviewer/SKILL.md
+  commands/
+    run-pipeline.md
 ```
+
+When the pipeline has a team flow, the compiler also generates a `/run-pipeline` slash command that orchestrates the agents with a step-by-step execution plan.
 
 Skillfold also ships a built-in Claude Code plugin at `node_modules/skillfold/plugin/` with the shared library skills and a `/skillfold` slash command. To package your own pipeline as a distributable plugin:
 

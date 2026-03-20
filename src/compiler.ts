@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-import { generateAgents } from "./agent.js";
+import { generateAgents, generateRunCommand } from "./agent.js";
 import { type Config, isComposed } from "./config.js";
 import { CompileError } from "./errors.js";
 import { generateOrchestrator } from "./orchestrator.js";
@@ -155,6 +155,13 @@ export function generateClaudeCode(
   );
   for (const agent of agentResults) {
     results.push(agent);
+  }
+
+  // Generate run-pipeline command if team flow exists
+  const runCommand = generateRunCommand(config, version, configFile);
+  if (runCommand) {
+    runCommand.path = join(outDir, "commands", "run-pipeline.md");
+    results.push(runCommand);
   }
 
   return results;

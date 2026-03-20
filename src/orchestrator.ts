@@ -3,12 +3,12 @@ import { isConditionalThen, isMapNode } from "./graph.js";
 import type { GraphNode, Then } from "./graph.js";
 import type { StateField, StateType } from "./state.js";
 
-interface StepMapping {
+export interface StepMapping {
   label: string;
   number: string;
 }
 
-function formatType(type: StateType): string {
+export function formatType(type: StateType): string {
   switch (type.kind) {
     case "primitive":
       return type.value;
@@ -19,7 +19,7 @@ function formatType(type: StateType): string {
   }
 }
 
-function formatLocation(field: StateField): string {
+export function formatLocation(field: StateField): string {
   if (!field.location) return "";
   const { skill, path, kind } = field.location;
   if (kind) {
@@ -32,7 +32,7 @@ function formatLocation(field: StateField): string {
  * Build a flat map from skill name (or "map") to step number string,
  * for a given list of nodes at a given prefix.
  */
-function buildStepMap(
+export function buildStepMap(
   nodes: GraphNode[],
   prefix: string
 ): StepMapping[] {
@@ -46,7 +46,7 @@ function buildStepMap(
   return mappings;
 }
 
-function renderThen(
+export function renderThen(
   then: Then | undefined,
   stepMap: StepMapping[],
   isLastNode: boolean
@@ -89,7 +89,7 @@ function renderThen(
   return lines.join("\n");
 }
 
-function renderNodes(
+export function renderNodes(
   nodes: GraphNode[],
   stepMap: StepMapping[],
   prefix: string,

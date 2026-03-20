@@ -433,6 +433,154 @@ describe("compile with claude-code target", () => {
     assert.ok(skillPaths.length >= 2);
     assert.ok(agentPaths.length >= 2);
   });
+
+  it("generates run-pipeline command when team flow exists", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const graph: Graph = {
+      nodes: [
+        { skill: "planner", reads: [], writes: ["state.plan"] },
+        { skill: "worker", reads: ["state.plan"], writes: [] },
+      ],
+    };
+
+    const state: StateSchema = {
+      types: {},
+      fields: {
+        plan: { type: { kind: "primitive", value: "string" } },
+      },
+    };
+
+    const config: Config = {
+      name: "test-pipeline",
+      skills: {
+        planning: { path: "./skills/planning" },
+        working: { path: "./skills/working" },
+        planner: { compose: ["planning"], description: "Plans." },
+        worker: { compose: ["working"], description: "Works." },
+      },
+      state,
+      team: { flow: graph },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("planning", "Planning body.");
+    bodies.set("working", "Working body.");
+
+    const results = compile(config, bodies, outDir, "0.0.0", "test.yaml", "claude-code");
+
+    const cmdResult = results.find((r) => r.path.includes("commands"));
+    assert.ok(cmdResult);
+    assert.equal(cmdResult.path, join(outDir, "commands", "run-pipeline.md"));
+    assert.ok(existsSync(cmdResult.path));
+  });
+
+  it("does not generate run-pipeline command when team flow is absent", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        leaf: { path: "./skills/leaf" },
+        bundle: { compose: ["leaf"], description: "A bundle skill." },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("leaf", "Leaf body");
+
+    const results = compile(config, bodies, outDir, "0.0.0", "test.yaml", "claude-code");
+
+    const cmdResult = results.find((r) => r.path.includes("commands"));
+    assert.equal(cmdResult, undefined);
+    assert.ok(!existsSync(join(outDir, "commands")));
+  });
+
+  it("run-pipeline command includes execution steps matching the flow", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const graph: Graph = {
+      nodes: [
+        { skill: "planner", reads: [], writes: ["state.plan"] },
+        { skill: "worker", reads: ["state.plan"], writes: ["state.result"] },
+      ],
+    };
+
+    const state: StateSchema = {
+      types: {},
+      fields: {
+        plan: { type: { kind: "primitive", value: "string" } },
+        result: { type: { kind: "primitive", value: "string" } },
+      },
+    };
+
+    const config: Config = {
+      name: "flow-test",
+      skills: {
+        planning: { path: "./skills/planning" },
+        working: { path: "./skills/working" },
+        planner: { compose: ["planning"], description: "Plans." },
+        worker: { compose: ["working"], description: "Works." },
+      },
+      state,
+      team: { flow: graph },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("planning", "Planning body.");
+    bodies.set("working", "Working body.");
+
+    compile(config, bodies, outDir, "0.0.0", "test.yaml", "claude-code");
+
+    const content = readFileSync(join(outDir, "commands", "run-pipeline.md"), "utf-8");
+    assert.ok(content.includes("## Execution Plan"));
+    assert.ok(content.includes("### Step 1: planner"));
+    assert.ok(content.includes("### Step 2: worker"));
+    assert.ok(content.includes("Invoke **planner**"));
+    assert.ok(content.includes("Invoke **worker**"));
+  });
+
+  it("run-pipeline command includes state table when state is defined", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const graph: Graph = {
+      nodes: [
+        { skill: "planner", reads: [], writes: ["state.plan"] },
+      ],
+    };
+
+    const state: StateSchema = {
+      types: {},
+      fields: {
+        plan: { type: { kind: "primitive", value: "string" } },
+        count: { type: { kind: "primitive", value: "number" } },
+      },
+    };
+
+    const config: Config = {
+      name: "state-test",
+      skills: {
+        planning: { path: "./skills/planning" },
+        planner: { compose: ["planning"], description: "Plans." },
+      },
+      state,
+      team: { flow: graph },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("planning", "Planning body.");
+
+    compile(config, bodies, outDir, "0.0.0", "test.yaml", "claude-code");
+
+    const content = readFileSync(join(outDir, "commands", "run-pipeline.md"), "utf-8");
+    assert.ok(content.includes("## State"));
+    assert.ok(content.includes("| plan | string |"));
+    assert.ok(content.includes("| count | number |"));
+  });
 });
 
 describe("check", () => {
