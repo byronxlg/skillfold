@@ -254,6 +254,27 @@ describe("generateOrchestrator", () => {
     );
   });
 
+  it("includes agent invocation section", () => {
+    const config: Config = {
+      name: "test",
+      skills: {
+        worker: { path: "./skills/worker" },
+      },
+      team: {
+        flow: {
+          nodes: [
+            { skill: "worker", reads: [], writes: [] },
+          ],
+        },
+      },
+    };
+
+    const output = generateOrchestrator(config);
+
+    assert.ok(output.includes("## Agent Invocation"));
+    assert.ok(output.includes("build/{name}/SKILL.md"));
+  });
+
   it("no state section when config.state is undefined", () => {
     const config: Config = {
       name: "no-state",

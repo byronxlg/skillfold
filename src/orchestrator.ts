@@ -197,6 +197,14 @@ export function generateOrchestrator(config: Config): string {
     }
   }
 
+  // Agent Invocation section
+  lines.push("");
+  lines.push("## Agent Invocation");
+  lines.push("");
+  lines.push(
+    "To invoke an agent, read its compiled skill from `build/{name}/SKILL.md` and spawn a subagent with that content as its instructions. Give each agent the inputs the plan says it reads, and collect the outputs it writes."
+  );
+
   // Execution Plan section
   if (config.team) {
     lines.push("");

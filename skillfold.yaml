@@ -10,7 +10,6 @@ skills:
     product-strategy: ./skills/product-strategy
     github: ./skills/github
     skillfold-context: ./skills/skillfold-context
-    agent-invocation: ./skills/agent-invocation
 
   composed:
     strategist:
@@ -30,7 +29,7 @@ skills:
       description: "Reviews pull requests on GitHub for correctness, clarity, and maintainability."
 
     orchestrator:
-      compose: [skillfold-context, agent-invocation, github]
+      compose: [skillfold-context, github]
       description: "Coordinates the skillfold-team pipeline execution and merges approved PRs."
 
 state:
