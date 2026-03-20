@@ -55,7 +55,7 @@ Self-hosting: skillfold's own dev team pipeline is compiled by skillfold itself 
 
 CI integration: ships a reusable GitHub Action (`action.yml`) that verifies compiled output is up-to-date via `--check`, so stale agent files fail the build.
 
-Single dependency (`yaml`), 322 tests across 58 suites, Node 20+.
+Single dependency (`yaml`), 328 tests across 59 suites, Node 20+.
 
 ---
 
@@ -69,7 +69,7 @@ pre-runs that evaluation against skillfold and documents the results.
 
 | Dimension | What it checks | Assessment |
 |---|---|---|
-| Code quality | Structure, readability, correctness, consistency | Pass - TypeScript strict mode, ESM, consistent conventions, 322 tests |
+| Code quality | Structure, readability, correctness, consistency | Pass - TypeScript strict mode, ESM, consistent conventions, 328 tests |
 | Security / safety | Implicit execution, file/network access, credentials | Pass - Pure compiler, no hooks, no persistent state, no credential storage |
 | Documentation / transparency | Docs match implementation, side effects disclosed | Pass - README, getting-started guide, integration guide, JSON Schema |
 | Functionality / scope | Does what it claims, breadth of features | Pass - Compiles YAML to SKILL.md and Claude Code agents as advertised |
@@ -135,7 +135,7 @@ and the documentation accurately describes what the tool does.
   stored or logged.
 - **Single dependency** - The only runtime dependency is `yaml` (YAML parser).
   No transitive dependency tree to audit.
-- **322 tests** across 58 suites, run with `node:test` (zero test framework
+- **328 tests** across 59 suites, run with `node:test` (zero test framework
   dependencies).
 - **MIT license**, clearly stated in LICENSE and package.json.
 - **CI on Node 20 + 22** via GitHub Actions, with `--check` flag for verifying
