@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { type Config, isComposed } from "./config.js";
@@ -40,9 +40,56 @@ function formatFrontmatter(name: string, description: string): string {
   return `---\nname: ${name}\ndescription: ${description}\n---\n`;
 }
 
+export interface GenerateResult {
+  name: string;
+  path: string;
+  content: string;
+}
+
 export interface CompileResult {
   name: string;
   path: string;
+}
+
+export interface CheckResult {
+  name: string;
+  path: string;
+  status: "ok" | "stale" | "missing";
+}
+
+export function generate(
+  config: Config,
+  bodies: Map<string, string>,
+  outDir: string
+): GenerateResult[] {
+  const results: GenerateResult[] = [];
+
+  for (const [name, skill] of Object.entries(config.skills)) {
+    if (!isComposed(skill)) continue;
+
+    const parts = expand(name, config, bodies, new Set());
+    const body = parts.join("\n\n");
+    const outPath = join(outDir, name, "SKILL.md");
+
+    const output = formatFrontmatter(name, skill.description) + "\n" + body + "\n";
+    results.push({ name, path: outPath, content: output });
+  }
+
+  if (config.team) {
+    const orchestratorMd = generateOrchestrator(config);
+
+    if (config.team.orchestrator) {
+      const target = results.find((r) => r.name === config.team!.orchestrator);
+      if (target) {
+        target.content = target.content + "\n" + orchestratorMd;
+      }
+    } else {
+      const outPath = join(outDir, "orchestrator", "SKILL.md");
+      results.push({ name: "orchestrator", path: outPath, content: orchestratorMd });
+    }
+  }
+
+  return results;
 }
 
 export function compile(
@@ -52,35 +99,35 @@ export function compile(
 ): CompileResult[] {
   mkdirSync(outDir, { recursive: true });
 
-  const results: CompileResult[] = [];
+  const generated = generate(config, bodies, outDir);
 
-  for (const [name, skill] of Object.entries(config.skills)) {
-    if (!isComposed(skill)) continue;
-
-    const parts = expand(name, config, bodies, new Set());
-    const body = parts.join("\n\n");
-    const skillDir = join(outDir, name);
-    mkdirSync(skillDir, { recursive: true });
-    const outPath = join(skillDir, "SKILL.md");
-
-    const output = formatFrontmatter(name, skill.description) + "\n" + body + "\n";
-    writeFileSync(outPath, output, "utf-8");
-    results.push({ name, path: outPath });
+  for (const result of generated) {
+    mkdirSync(join(outDir, result.name), { recursive: true });
+    writeFileSync(result.path, result.content, "utf-8");
   }
 
-  if (config.team) {
-    const orchestratorMd = generateOrchestrator(config);
+  return generated.map(({ name, path }) => ({ name, path }));
+}
 
-    if (config.team.orchestrator) {
-      const targetPath = join(outDir, config.team.orchestrator, "SKILL.md");
-      const existing = readFileSync(targetPath, "utf-8");
-      writeFileSync(targetPath, existing + "\n" + orchestratorMd, "utf-8");
+export function check(
+  config: Config,
+  bodies: Map<string, string>,
+  outDir: string
+): CheckResult[] {
+  const generated = generate(config, bodies, outDir);
+  const results: CheckResult[] = [];
+
+  for (const result of generated) {
+    if (!existsSync(result.path)) {
+      results.push({ name: result.name, path: result.path, status: "missing" });
+      continue;
+    }
+
+    const existing = readFileSync(result.path, "utf-8");
+    if (existing === result.content) {
+      results.push({ name: result.name, path: result.path, status: "ok" });
     } else {
-      const orchDir = join(outDir, "orchestrator");
-      mkdirSync(orchDir, { recursive: true });
-      const outPath = join(orchDir, "SKILL.md");
-      writeFileSync(outPath, orchestratorMd, "utf-8");
-      results.push({ name: "orchestrator", path: outPath });
+      results.push({ name: result.name, path: result.path, status: "stale" });
     }
   }
 

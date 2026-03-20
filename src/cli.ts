@@ -4,7 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { isAtomic, isComposed, loadConfig } from "./config.js";
-import { compile } from "./compiler.js";
+import { check, compile } from "./compiler.js";
 import { ConfigError, CompileError, GraphError, ResolveError } from "./errors.js";
 import { initProject } from "./init.js";
 import { listPipeline } from "./list.js";
@@ -32,6 +32,7 @@ Options:
   --config <path>   Config file (default: skillfold.yaml)
   --out-dir <path>  Output directory (default: build)
   --dir <path>      Target directory for init (default: .)
+  --check           Verify compiled output is up-to-date (exit 1 if stale)
   --help            Show this help
   --version         Show version`);
 }
@@ -41,6 +42,7 @@ interface Args {
   configPath: string;
   outDir: string;
   dir: string;
+  check: boolean;
   help: boolean;
   version: boolean;
 }
@@ -50,6 +52,7 @@ function parseArgs(argv: string[]): Args {
   let configPath = "skillfold.yaml";
   let outDir = "build";
   let dir = ".";
+  let checkMode = false;
   let help = false;
   let version = false;
 
@@ -77,6 +80,8 @@ function parseArgs(argv: string[]): Args {
       outDir = argv[++i];
     } else if (argv[i] === "--dir" && argv[i + 1]) {
       dir = argv[++i];
+    } else if (argv[i] === "--check") {
+      checkMode = true;
     } else if (argv[i] === "--help") {
       help = true;
     } else if (argv[i] === "--version") {
@@ -89,6 +94,7 @@ function parseArgs(argv: string[]): Args {
     configPath: resolve(configPath),
     outDir: resolve(outDir),
     dir: resolve(dir),
+    check: checkMode,
     help,
     version,
   };
@@ -196,11 +202,27 @@ async function main(): Promise<void> {
     const config = await loadConfig(args.configPath);
     const baseDir = dirname(args.configPath);
     const bodies = await resolveSkills(config, baseDir);
-    const results = compile(config, bodies, args.outDir);
 
-    console.log(`skillfold: compiled ${config.name}`);
-    for (const result of results) {
-      console.log(`  -> ${result.path}`);
+    if (args.check) {
+      const results = check(config, bodies, args.outDir);
+      const stale = results.filter((r) => r.status !== "ok");
+
+      if (stale.length === 0) {
+        console.log(`skillfold: ${config.name} output is up-to-date (${results.length} files)`);
+      } else {
+        console.error(`skillfold: ${config.name} output is stale`);
+        for (const result of stale) {
+          console.error(`  ${result.status}: ${result.path}`);
+        }
+        process.exit(1);
+      }
+    } else {
+      const results = compile(config, bodies, args.outDir);
+
+      console.log(`skillfold: compiled ${config.name}`);
+      for (const result of results) {
+        console.log(`  -> ${result.path}`);
+      }
     }
   } catch (err) {
     if (
