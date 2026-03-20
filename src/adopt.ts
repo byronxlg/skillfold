@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { stringify } from "yaml";
+import { parse, stringify } from "yaml";
 
 export interface AdoptedAgent {
   name: string;
@@ -25,16 +25,8 @@ function parseFrontmatter(content: string): { frontmatter: ParsedFrontmatter | n
   const match = content.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
   if (!match) return { frontmatter: null, body: content };
 
-  const pairs: ParsedFrontmatter = {};
-  for (const line of match[1].split("\n")) {
-    const colon = line.indexOf(":");
-    if (colon === -1) continue;
-    const key = line.slice(0, colon).trim();
-    const value = line.slice(colon + 1).trim();
-    pairs[key] = value;
-  }
-
-  return { frontmatter: pairs, body: match[2] };
+  const parsed = parse(match[1]) as ParsedFrontmatter | null;
+  return { frontmatter: parsed, body: match[2] };
 }
 
 function deriveDescription(name: string, body: string): string {
