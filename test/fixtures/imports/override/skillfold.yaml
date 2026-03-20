@@ -3,4 +3,5 @@ imports:
 
 name: override-pipeline
 skills:
-  common-skill: ./skills/common
+  atomic:
+    common-skill: ./skills/common

@@ -198,13 +198,13 @@ export function generateOrchestrator(config: Config): string {
   }
 
   // Execution Plan section
-  if (config.graph) {
+  if (config.team) {
     lines.push("");
     lines.push("## Execution Plan");
 
-    const stepMap = buildStepMap(config.graph.nodes, "");
+    const stepMap = buildStepMap(config.team.flow.nodes, "");
     const sections = renderNodes(
-      config.graph.nodes,
+      config.team.flow.nodes,
       stepMap,
       "",
       "###"

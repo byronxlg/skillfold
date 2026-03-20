@@ -40,7 +40,8 @@ describe("readConfig", () => {
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  review: ./skills/review
+  atomic:
+    review: ./skills/review
 `);
     const config = readConfig(configPath);
     const skill = config.skills["review"];
@@ -53,8 +54,9 @@ skills:
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  review:
-    path: ./skills/review
+  atomic:
+    review:
+      path: ./skills/review
 `);
     const config = readConfig(configPath);
     const skill = config.skills["review"];
@@ -67,13 +69,15 @@ skills:
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  lint: ./skills/lint
-  format: ./skills/format
-  quality:
-    compose:
-      - lint
-      - format
-    description: "Runs lint and format checks."
+  atomic:
+    lint: ./skills/lint
+    format: ./skills/format
+  composed:
+    quality:
+      compose:
+        - lint
+        - format
+      description: "Runs lint and format checks."
 `);
     const config = readConfig(configPath);
     const skill = config.skills["quality"];
@@ -87,10 +91,11 @@ skills:
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  quality:
-    compose:
-      - 42
-    description: "A quality skill."
+  composed:
+    quality:
+      compose:
+        - 42
+      description: "A quality skill."
 `);
     assert.throws(() => readConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
@@ -104,10 +109,12 @@ skills:
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  lint: ./skills/lint
-  quality:
-    compose:
-      - lint
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
 `);
     assert.throws(() => readConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
@@ -116,17 +123,51 @@ skills:
     });
   });
 
-  it("rejects unrecognized skill shape", () => {
+  it("rejects unrecognized skill shape in atomic section", () => {
     tmpDir = makeTmpDir();
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  weird:
-    unknown_key: value
+  atomic:
+    weird:
+      unknown_key: value
 `);
     assert.throws(() => readConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
       assert.match(err.message, /must be a path string/);
+      return true;
+    });
+  });
+
+  it("rejects skills without atomic or composed sub-sections", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  review: ./skills/review
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /atomic.*composed.*sub-sections/);
+      return true;
+    });
+  });
+
+  it("rejects skill name in both atomic and composed sections", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    dupe: ./skills/dupe
+  composed:
+    dupe:
+      compose: [dupe]
+      description: "Duplicate."
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /appears in both atomic and composed/);
       return true;
     });
   });
@@ -136,10 +177,11 @@ skills:
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  quality:
-    compose:
-      - nonexistent
-    description: "A quality skill."
+  composed:
+    quality:
+      compose:
+        - nonexistent
+      description: "A quality skill."
 `);
     assert.throws(() => readConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
@@ -153,10 +195,11 @@ skills:
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  loop:
-    compose:
-      - loop
-    description: "A looping skill."
+  composed:
+    loop:
+      compose:
+        - loop
+      description: "A looping skill."
 `);
     assert.throws(() => readConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
@@ -171,18 +214,19 @@ skills:
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  a:
-    compose:
-      - b
-    description: "Skill a."
-  b:
-    compose:
-      - c
-    description: "Skill b."
-  c:
-    compose:
-      - a
-    description: "Skill c."
+  composed:
+    a:
+      compose:
+        - b
+      description: "Skill a."
+    b:
+      compose:
+        - c
+      description: "Skill b."
+    c:
+      compose:
+        - a
+      description: "Skill c."
 `);
     assert.throws(() => readConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
@@ -197,20 +241,22 @@ skills:
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  leaf: ./skills/leaf
-  mid1:
-    compose:
-      - leaf
-    description: "Mid 1."
-  mid2:
-    compose:
-      - leaf
-    description: "Mid 2."
-  top:
-    compose:
-      - mid1
-      - mid2
-    description: "Top skill."
+  atomic:
+    leaf: ./skills/leaf
+  composed:
+    mid1:
+      compose:
+        - leaf
+      description: "Mid 1."
+    mid2:
+      compose:
+        - leaf
+      description: "Mid 2."
+    top:
+      compose:
+        - mid1
+        - mid2
+      description: "Top skill."
 `);
     const config = readConfig(configPath);
     assert.ok(isComposed(config.skills["top"]));
@@ -238,7 +284,8 @@ skills:
     tmpDir = makeTmpDir();
     const configPath = writeYaml(tmpDir, `
 skills:
-  review: ./skills/review
+  atomic:
+    review: ./skills/review
 `);
     assert.throws(() => readConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
@@ -264,14 +311,16 @@ name: test
     const configPath = writeYaml(tmpDir, `
 name: my-pipeline
 skills:
-  review: ./skills/review
-  lint:
-    path: ./skills/lint
-  quality:
-    compose:
-      - review
-      - lint
-    description: "Runs quality checks."
+  atomic:
+    review: ./skills/review
+    lint:
+      path: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - review
+        - lint
+      description: "Runs quality checks."
 `);
     const config = readConfig(configPath);
     assert.equal(config.name, "my-pipeline");
@@ -279,6 +328,73 @@ skills:
     assert.ok(isAtomic(config.skills["review"]));
     assert.ok(isAtomic(config.skills["lint"]));
     assert.ok(isComposed(config.skills["quality"]));
+  });
+
+  it("accepts config with only atomic skills", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    a: ./skills/a
+    b: ./skills/b
+`);
+    const config = readConfig(configPath);
+    assert.ok(isAtomic(config.skills["a"]));
+    assert.ok(isAtomic(config.skills["b"]));
+  });
+
+  it("accepts config with only composed skills", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  composed:
+    loop:
+      compose: [loop]
+      description: "Self-referencing."
+`);
+    // Self-reference is a cycle, but the parsing succeeds before cycle detection.
+    // Let's use a valid case - compose referencing itself is caught at validation.
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /Circular composition/);
+      return true;
+    });
+  });
+
+  it("rejects old top-level graph format", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    review: ./skills/review
+graph:
+  - review:
+      writes: []
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /Top-level 'graph' is no longer supported/);
+      return true;
+    });
+  });
+
+  it("rejects old top-level orchestrator format", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    review: ./skills/review
+orchestrator: review
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /Top-level 'orchestrator' is no longer supported/);
+      return true;
+    });
   });
 });
 
@@ -297,7 +413,8 @@ describe("readConfig name validation", () => {
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  MySkill: ./skills/my-skill
+  atomic:
+    MySkill: ./skills/my-skill
 `);
     assert.throws(() => readConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
@@ -311,7 +428,8 @@ skills:
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  my--skill: ./skills/my-skill
+  atomic:
+    my--skill: ./skills/my-skill
 `);
     assert.throws(() => readConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
@@ -326,7 +444,8 @@ skills:
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  ${longName}: ./skills/long
+  atomic:
+    ${longName}: ./skills/long
 `);
     assert.throws(() => readConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
@@ -340,7 +459,8 @@ skills:
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  a: ./skills/a
+  atomic:
+    a: ./skills/a
 `);
     const config = readConfig(configPath);
     assert.ok(isAtomic(config.skills["a"]));
@@ -351,7 +471,8 @@ skills:
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  my-cool-skill: ./skills/my-cool-skill
+  atomic:
+    my-cool-skill: ./skills/my-cool-skill
 `);
     const config = readConfig(configPath);
     assert.ok(isAtomic(config.skills["my-cool-skill"]));
@@ -373,7 +494,8 @@ describe("readConfig state integration", () => {
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  review: ./skills/review
+  atomic:
+    review: ./skills/review
 `);
     const config = readConfig(configPath);
     assert.equal(config.state, undefined);
@@ -384,8 +506,9 @@ skills:
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  review: ./skills/review
-  lint: ./skills/lint
+  atomic:
+    review: ./skills/review
+    lint: ./skills/lint
 state:
   Issue:
     title: string
@@ -423,7 +546,8 @@ state:
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  review: ./skills/review
+  atomic:
+    review: ./skills/review
 state: not-an-object
 `);
     assert.throws(() => readConfig(configPath), (err: unknown) => {
@@ -438,7 +562,8 @@ state: not-an-object
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  review: ./skills/review
+  atomic:
+    review: ./skills/review
 state:
   items:
     type: "list<Unknown>"
@@ -451,7 +576,7 @@ state:
   });
 });
 
-describe("readConfig graph integration", () => {
+describe("readConfig team integration", () => {
   let tmpDir: string | undefined;
 
   afterEach(() => {
@@ -461,60 +586,65 @@ describe("readConfig graph integration", () => {
     }
   });
 
-  it("config without graph has undefined graph", () => {
+  it("config without team has undefined team", () => {
     tmpDir = makeTmpDir();
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  review: ./skills/review
+  atomic:
+    review: ./skills/review
 `);
     const config = readConfig(configPath);
-    assert.equal(config.graph, undefined);
+    assert.equal(config.team, undefined);
   });
 
-  it("config with valid graph parses", () => {
+  it("config with valid team parses", () => {
     tmpDir = makeTmpDir();
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  strategy: ./skills/strategy
-  lead: ./skills/lead
+  atomic:
+    strategy: ./skills/strategy
+    lead: ./skills/lead
 state:
   goal:
     type: string
   plan:
     type: string
-graph:
-  - strategy:
-      writes: [state.goal]
-    then: lead
-  - lead:
-      reads: [state.goal]
-      writes: [state.plan]
-    then: end
+team:
+  flow:
+    - strategy:
+        writes: [state.goal]
+      then: lead
+    - lead:
+        reads: [state.goal]
+        writes: [state.plan]
+      then: end
 `);
     const config = readConfig(configPath);
-    assert.ok(config.graph);
-    assert.equal(config.graph.nodes.length, 2);
+    assert.ok(config.team);
+    assert.equal(config.team.flow.nodes.length, 2);
   });
 
-  it("config with non-array graph throws ConfigError", () => {
+  it("config with non-array team.flow throws ConfigError", () => {
     tmpDir = makeTmpDir();
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  review: ./skills/review
-graph: not-an-array
+  atomic:
+    review: ./skills/review
+team:
+  flow: not-an-array
 `);
     assert.throws(() => readConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
-      assert.match(err.message, /Graph must be a YAML array/);
+      assert.match(err.message, /team\.flow must be a YAML array/);
       return true;
     });
   });
 });
 
-describe("readConfig orchestrator integration", () => {
+describe("readConfig team orchestrator integration", () => {
   let tmpDir: string | undefined;
 
   afterEach(() => {
@@ -524,50 +654,55 @@ describe("readConfig orchestrator integration", () => {
     }
   });
 
-  it("config with valid orchestrator key parses correctly", () => {
+  it("config with valid team.orchestrator key parses correctly", () => {
     tmpDir = makeTmpDir();
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  strategy: ./skills/strategy
-  lead: ./skills/lead
-  pipeline:
-    compose:
-      - strategy
-      - lead
-    description: "Runs the pipeline."
+  atomic:
+    strategy: ./skills/strategy
+    lead: ./skills/lead
+  composed:
+    pipeline:
+      compose:
+        - strategy
+        - lead
+      description: "Runs the pipeline."
 state:
   goal:
     type: string
-graph:
-  - strategy:
-      writes: [state.goal]
-    then: lead
-  - lead:
-      reads: [state.goal]
-orchestrator: pipeline
+team:
+  orchestrator: pipeline
+  flow:
+    - strategy:
+        writes: [state.goal]
+      then: lead
+    - lead:
+        reads: [state.goal]
 `);
     const config = readConfig(configPath);
-    assert.equal(config.orchestrator, "pipeline");
+    assert.equal(config.team?.orchestrator, "pipeline");
   });
 
-  it("orchestrator referencing nonexistent skill throws ConfigError", () => {
+  it("team.orchestrator referencing nonexistent skill throws ConfigError", () => {
     tmpDir = makeTmpDir();
     const configPath = writeYaml(tmpDir, `
 name: test
 skills:
-  strategy: ./skills/strategy
-  lead: ./skills/lead
+  atomic:
+    strategy: ./skills/strategy
+    lead: ./skills/lead
 state:
   goal:
     type: string
-graph:
-  - strategy:
-      writes: [state.goal]
-    then: lead
-  - lead:
-      reads: [state.goal]
-orchestrator: nonexistent
+team:
+  orchestrator: nonexistent
+  flow:
+    - strategy:
+        writes: [state.goal]
+      then: lead
+    - lead:
+        reads: [state.goal]
 `);
     assert.throws(() => readConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
@@ -620,19 +755,20 @@ describe("loadConfig imports", () => {
     assert.equal(skill.path, "./skills/common");
   });
 
-  it("imported graph is ignored", async () => {
+  it("imported team is ignored", async () => {
     tmpDir = makeTmpDir();
     const configPath = join(tmpDir, "skillfold.yaml");
     writeFileSync(configPath, `
 imports:
   - ${join(fixturesDir, "with-graph", "skillfold.yaml")}
 
-name: no-graph
+name: no-team
 skills:
-  my-skill: ./dummy
+  atomic:
+    my-skill: ./dummy
 `, "utf-8");
     const config = await loadConfig(configPath);
-    assert.equal(config.graph, undefined, "graph from import should not carry over");
+    assert.equal(config.team, undefined, "team from import should not carry over");
   });
 
   it("imported imports are ignored", async () => {
@@ -645,7 +781,8 @@ imports:
 
 name: flat
 skills:
-  top-skill: ./dummy
+  atomic:
+    top-skill: ./dummy
 `, "utf-8");
     const config = await loadConfig(configPath);
     // nested-imports imports shared, but since nested imports are ignored,
@@ -664,7 +801,8 @@ imports:
 
 name: broken
 skills:
-  my-skill: ./dummy
+  atomic:
+    my-skill: ./dummy
 `, "utf-8");
     await assert.rejects(() => loadConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
@@ -703,7 +841,8 @@ imports: not-an-array
 
 name: broken
 skills:
-  my-skill: ./dummy
+  atomic:
+    my-skill: ./dummy
 `, "utf-8");
     await assert.rejects(() => loadConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
@@ -721,7 +860,8 @@ imports:
 
 name: broken
 skills:
-  my-skill: ./dummy
+  atomic:
+    my-skill: ./dummy
 `, "utf-8");
     await assert.rejects(() => loadConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);

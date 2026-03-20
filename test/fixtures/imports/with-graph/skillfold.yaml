@@ -1,9 +1,13 @@
 name: graph-config
 skills:
-  planner: ./dummy
+  atomic:
+    planner: ./dummy
+
 state:
   goal:
     type: string
-graph:
-  - planner:
-      writes: [state.goal]
+
+team:
+  flow:
+    - planner:
+        writes: [state.goal]

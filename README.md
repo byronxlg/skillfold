@@ -1,6 +1,6 @@
 # Skillfold
 
-Compiler for multi-agent AI pipelines. Define skills, compose them into agents, wire agents into execution graphs, and compile to standard `SKILL.md` files.
+Compiler for multi-agent AI pipelines. Define skills, compose them into agents, wire agents into execution flows, and compile to standard `SKILL.md` files.
 
 ## Quick start
 
@@ -18,27 +18,27 @@ Write a YAML config. The compiler produces one `SKILL.md` per agent.
 name: dev-team
 
 skills:
-  planning: ./skills/planning
-  coding: ./skills/coding
-  review: ./skills/review
+  atomic:
+    planning: ./skills/planning
+    coding: ./skills/coding
+    review: ./skills/review
 
-  architect:
-    compose: [planning]
-    description: "Designs systems and produces technical plans."
+  composed:
+    architect:
+      compose: [planning]
+      description: "Designs systems and produces technical plans."
 
-  engineer:
-    compose: [planning, coding]
-    description: "Implements the plan and writes tests."
+    engineer:
+      compose: [planning, coding]
+      description: "Implements the plan and writes tests."
 
-  reviewer:
-    compose: [review]
-    description: "Reviews code for correctness and clarity."
+    reviewer:
+      compose: [review]
+      description: "Reviews code for correctness and clarity."
 
-  orchestrator:
-    compose: [planning]
-    description: "Coordinates pipeline execution."
-
-orchestrator: orchestrator
+    orchestrator:
+      compose: [planning]
+      description: "Coordinates pipeline execution."
 
 state:
   Review:
@@ -54,24 +54,27 @@ state:
   review:
     type: Review
 
-graph:
-  - architect:
-      writes: [state.plan]
-    then: engineer
+team:
+  orchestrator: orchestrator
 
-  - engineer:
-      reads: [state.plan]
-      writes: [state.code]
-    then: reviewer
+  flow:
+    - architect:
+        writes: [state.plan]
+      then: engineer
 
-  - reviewer:
-      reads: [state.code]
-      writes: [state.review]
-    then:
-      - when: review.approved == false
-        to: engineer
-      - when: review.approved == true
-        to: end
+    - engineer:
+        reads: [state.plan]
+        writes: [state.code]
+      then: reviewer
+
+    - reviewer:
+        reads: [state.code]
+        writes: [state.review]
+      then:
+        - when: review.approved == false
+          to: engineer
+        - when: review.approved == true
+          to: end
 ```
 
 Run `npx skillfold` and you get:
@@ -125,14 +128,15 @@ Or run directly with `npx skillfold`.
 
 **Typed state** - Custom types, primitives, `list<Type>`, and external locations. Reads/writes validated at compile time.
 
-**Execution graphs** - Conditional routing, loops with exit conditions, parallel map over lists. All validated: skill refs, state paths, write conflicts, reachability.
+**Team flows** - Conditional routing, loops with exit conditions, parallel map over lists. All validated: skill refs, state paths, write conflicts, reachability.
 
-**Orchestrator generation** - Structured execution plan generated from the graph. Numbered steps, state table, conditional branches, map sub-steps.
+**Orchestrator generation** - Structured execution plan generated from the team flow. Numbered steps, state table, conditional branches, map sub-steps.
 
 **Remote skills** - Reference skills on GitHub by URL:
 ```yaml
 skills:
-  shared-review: https://github.com/org/skills/tree/main/code-review
+  atomic:
+    shared-review: https://github.com/org/skills/tree/main/code-review
 ```
 
 **Pipeline imports** - Import skills and state from other configs:
@@ -146,7 +150,7 @@ imports:
 
 ## Self-hosting
 
-Skillfold builds its own dev team. The `skillfold.yaml` in this repo defines a strategist, architect, engineer, and reviewer wired into an execution graph with a review loop. The compiled orchestrator manages the pipeline.
+Skillfold builds its own dev team. The `skillfold.yaml` in this repo defines a strategist, architect, engineer, and reviewer wired into a team flow with a review loop. The compiled orchestrator manages the pipeline.
 
 ## Config reference
 
@@ -154,16 +158,18 @@ Skillfold builds its own dev team. The `skillfold.yaml` in this repo defines a s
 
 ```yaml
 skills:
-  # Atomic: reference a directory with a SKILL.md
-  code-review: ./skills/code-review
+  atomic:
+    # Reference a directory with a SKILL.md
+    code-review: ./skills/code-review
 
-  # Remote: reference a GitHub directory
-  shared: https://github.com/org/repo/tree/main/skills/shared
+    # Reference a GitHub directory
+    shared: https://github.com/org/repo/tree/main/skills/shared
 
-  # Composed: concatenate atomic skill bodies
-  tech-lead:
-    compose: [strategic-thinking, task-decomposition, slack]
-    description: "Produces technical plans and breaks them into tasks."
+  composed:
+    # Concatenate atomic skill bodies
+    tech-lead:
+      compose: [strategic-thinking, task-decomposition, slack]
+      description: "Produces technical plans and breaks them into tasks."
 ```
 
 ### state
@@ -181,39 +187,42 @@ state:
       path: DEV/dev-board
 ```
 
-### graph
+### team
 
 ```yaml
-graph:
-  - planner:
-      writes: [state.plan]
-    then: worker
+team:
+  orchestrator: orchestrator   # composed skill that receives the execution plan
 
-  - worker:
-      reads: [state.plan]
-      writes: [state.output]
-    then: end
+  flow:
+    - planner:
+        writes: [state.plan]
+      then: worker
+
+    - worker:
+        reads: [state.plan]
+        writes: [state.output]
+      then: end
 ```
 
 Conditional transitions:
 ```yaml
-    then:
-      - when: review.approved == false
-        to: worker
-      - when: review.approved == true
-        to: end
+      then:
+        - when: review.approved == false
+          to: worker
+        - when: review.approved == true
+          to: end
 ```
 
 Parallel map:
 ```yaml
-  - map:
-      over: state.tasks
-      as: task
-      graph:
-        - engineer:
-            reads: [task.description]
-            writes: [task.output]
-          then: end
+    - map:
+        over: state.tasks
+        as: task
+        graph:
+          - engineer:
+              reads: [task.description]
+              writes: [task.output]
+            then: end
 ```
 
 ### imports
@@ -224,15 +233,7 @@ imports:
   - https://github.com/org/shared/tree/main/pipeline
 ```
 
-Imports bring in skills and state. Local config overrides imports on conflicts.
-
-### orchestrator
-
-```yaml
-orchestrator: orchestrator
-```
-
-Names a composed skill that receives the generated execution plan.
+Imports bring in skills and state. Team is local-only. Local config overrides imports on conflicts.
 
 ## CLI
 
@@ -241,6 +242,7 @@ skillfold [command] [options]
 
 Commands:
   init              Scaffold a new pipeline project
+  graph             Output Mermaid flowchart of the team flow
   (default)         Compile the pipeline config
 
 Options:
@@ -254,7 +256,7 @@ Options:
 ## Tests
 
 ```bash
-npm test          # 185 tests, node:test, no extra dependencies
+npm test          # 200 tests, node:test, no extra dependencies
 npx tsc --noEmit  # type check
 ```
 

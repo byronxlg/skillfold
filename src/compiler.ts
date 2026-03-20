@@ -68,11 +68,11 @@ export function compile(
     results.push({ name, path: outPath });
   }
 
-  if (config.graph) {
+  if (config.team) {
     const orchestratorMd = generateOrchestrator(config);
 
-    if (config.orchestrator) {
-      const targetPath = join(outDir, config.orchestrator, "SKILL.md");
+    if (config.team.orchestrator) {
+      const targetPath = join(outDir, config.team.orchestrator, "SKILL.md");
       const existing = readFileSync(targetPath, "utf-8");
       writeFileSync(targetPath, existing + "\n" + orchestratorMd, "utf-8");
     } else {

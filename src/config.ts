@@ -19,20 +19,26 @@ export interface ComposedSkill {
 
 export type SkillEntry = AtomicSkill | ComposedSkill;
 
+export interface TeamConfig {
+  orchestrator?: string;
+  flow: Graph;
+}
+
 export interface Config {
   name: string;
   skills: Record<string, SkillEntry>;
   state?: StateSchema;
-  graph?: Graph;
-  orchestrator?: string;
+  team?: TeamConfig;
 }
 
 export interface RawConfig {
   name: string;
   skills: Record<string, SkillEntry>;
   rawState?: Record<string, unknown>;
-  rawGraph?: unknown[];
-  orchestrator?: string;
+  rawTeam?: {
+    orchestrator?: string;
+    rawFlow: unknown[];
+  };
   imports?: string[];
 }
 
@@ -44,33 +50,14 @@ export function isComposed(skill: SkillEntry): skill is ComposedSkill {
   return "compose" in skill;
 }
 
-function normalizeSkills(
+function normalizeAtomicSkills(
   raw: Record<string, unknown>
-): Record<string, SkillEntry> {
-  const skills: Record<string, SkillEntry> = {};
+): Record<string, AtomicSkill> {
+  const skills: Record<string, AtomicSkill> = {};
 
   for (const [name, value] of Object.entries(raw)) {
     if (typeof value === "string") {
-      // Shorthand: skill-name: ./path
       skills[name] = { path: value };
-    } else if (
-      typeof value === "object" &&
-      value !== null &&
-      "compose" in value
-    ) {
-      const compose = (value as { compose: unknown }).compose;
-      if (!Array.isArray(compose) || !compose.every((c) => typeof c === "string")) {
-        throw new ConfigError(
-          `Skill "${name}": compose must be an array of skill names`
-        );
-      }
-      const description = (value as { description?: unknown }).description;
-      if (typeof description !== "string" || description.length === 0 || description.length > 1024) {
-        throw new ConfigError(
-          `Skill "${name}": composed skills must have a description`
-        );
-      }
-      skills[name] = { compose, description };
     } else if (
       typeof value === "object" &&
       value !== null &&
@@ -83,9 +70,42 @@ function normalizeSkills(
       skills[name] = { path };
     } else {
       throw new ConfigError(
-        `Skill "${name}": must be a path string, or an object with "path" or "compose"`
+        `Skill "${name}": must be a path string, or an object with "path"`
       );
     }
+  }
+
+  return skills;
+}
+
+function normalizeComposedSkills(
+  raw: Record<string, unknown>
+): Record<string, ComposedSkill> {
+  const skills: Record<string, ComposedSkill> = {};
+
+  for (const [name, value] of Object.entries(raw)) {
+    if (
+      typeof value !== "object" ||
+      value === null ||
+      !("compose" in value)
+    ) {
+      throw new ConfigError(
+        `Skill "${name}": composed skills must have a "compose" field`
+      );
+    }
+    const compose = (value as { compose: unknown }).compose;
+    if (!Array.isArray(compose) || !compose.every((c) => typeof c === "string")) {
+      throw new ConfigError(
+        `Skill "${name}": compose must be an array of skill names`
+      );
+    }
+    const description = (value as { description?: unknown }).description;
+    if (typeof description !== "string" || description.length === 0 || description.length > 1024) {
+      throw new ConfigError(
+        `Skill "${name}": composed skills must have a description`
+      );
+    }
+    skills[name] = { compose, description };
   }
 
   return skills;
@@ -168,7 +188,36 @@ export function parseRawConfig(content: string): RawConfig {
     throw new ConfigError("Config must have a 'skills' field (object)");
   }
 
-  const skills = normalizeSkills(raw.skills);
+  if (!raw.skills.atomic && !raw.skills.composed) {
+    throw new ConfigError(
+      "Skills must have 'atomic' and/or 'composed' sub-sections"
+    );
+  }
+
+  let skills: Record<string, SkillEntry> = {};
+
+  if (raw.skills.atomic !== undefined) {
+    if (typeof raw.skills.atomic !== "object" || raw.skills.atomic === null) {
+      throw new ConfigError("skills.atomic must be an object");
+    }
+    skills = normalizeAtomicSkills(raw.skills.atomic as Record<string, unknown>);
+  }
+
+  if (raw.skills.composed !== undefined) {
+    if (typeof raw.skills.composed !== "object" || raw.skills.composed === null) {
+      throw new ConfigError("skills.composed must be an object");
+    }
+    const composed = normalizeComposedSkills(raw.skills.composed as Record<string, unknown>);
+    for (const name of Object.keys(composed)) {
+      if (name in skills) {
+        throw new ConfigError(
+          `Skill "${name}" appears in both atomic and composed sections`
+        );
+      }
+    }
+    skills = { ...skills, ...composed };
+  }
+
   validateNames(skills);
 
   const result: RawConfig = { name: raw.name, skills };
@@ -181,17 +230,35 @@ export function parseRawConfig(content: string): RawConfig {
   }
 
   if (raw.graph !== undefined) {
-    if (!Array.isArray(raw.graph)) {
-      throw new ConfigError("Graph must be a YAML array");
-    }
-    result.rawGraph = raw.graph;
+    throw new ConfigError(
+      "Top-level 'graph' is no longer supported. Move it to 'team.flow'."
+    );
   }
 
   if (raw.orchestrator !== undefined) {
-    if (typeof raw.orchestrator !== "string") {
-      throw new ConfigError("Orchestrator must be a string (skill name)");
+    throw new ConfigError(
+      "Top-level 'orchestrator' is no longer supported. Move it to 'team.orchestrator'."
+    );
+  }
+
+  if (raw.team !== undefined) {
+    if (typeof raw.team !== "object" || raw.team === null) {
+      throw new ConfigError("Team must be a YAML object");
     }
-    result.orchestrator = raw.orchestrator;
+    if (!raw.team.flow) {
+      throw new ConfigError("Team must have a 'flow' field");
+    }
+    if (!Array.isArray(raw.team.flow)) {
+      throw new ConfigError("team.flow must be a YAML array");
+    }
+    const rawTeam: NonNullable<RawConfig["rawTeam"]> = { rawFlow: raw.team.flow };
+    if (raw.team.orchestrator !== undefined) {
+      if (typeof raw.team.orchestrator !== "string") {
+        throw new ConfigError("team.orchestrator must be a string (skill name)");
+      }
+      rawTeam.orchestrator = raw.team.orchestrator;
+    }
+    result.rawTeam = rawTeam;
   }
 
   if (raw.imports !== undefined) {
@@ -219,19 +286,21 @@ export function validateAndBuild(raw: RawConfig): Config {
     config.state = parseState(raw.rawState, skillNames);
   }
 
-  if (raw.rawGraph !== undefined) {
-    const graph = parseGraph(raw.rawGraph);
+  if (raw.rawTeam !== undefined) {
+    const graph = parseGraph(raw.rawTeam.rawFlow);
     validateGraph(graph, raw.skills, config.state);
-    config.graph = graph;
-  }
+    const team: TeamConfig = { flow: graph };
 
-  if (raw.orchestrator !== undefined) {
-    if (!(raw.orchestrator in raw.skills)) {
-      throw new ConfigError(
-        `Orchestrator references unknown skill "${raw.orchestrator}"`
-      );
+    if (raw.rawTeam.orchestrator !== undefined) {
+      if (!(raw.rawTeam.orchestrator in raw.skills)) {
+        throw new ConfigError(
+          `Orchestrator references unknown skill "${raw.rawTeam.orchestrator}"`
+        );
+      }
+      team.orchestrator = raw.rawTeam.orchestrator;
     }
-    config.orchestrator = raw.orchestrator;
+
+    config.team = team;
   }
 
   return config;
@@ -321,8 +390,7 @@ async function resolveImports(
     name: raw.name,
     skills: mergedSkills,
     rawState: mergedState,
-    rawGraph: raw.rawGraph,
-    orchestrator: raw.orchestrator,
+    rawTeam: raw.rawTeam,
     // imports consumed
   };
 }

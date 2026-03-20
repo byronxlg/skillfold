@@ -75,34 +75,36 @@ State is backed by external systems — the goal and plan live in Slack, tasks l
 ```yaml
 name: dev-pipeline
 
-# Atomic skills — referenced by folder path or URL
-# Composed skills — recursive combinations of atomic skills
-# An agent is any skill referenced in the graph — no special declaration needed
 skills:
-  strategic-thinking: ./skills/strategic-thinking
-  task-decomposition: ./skills/task-decomposition
-  code-generation: ./skills/code-generation
-  code-review: ./skills/code-review
-  slack: ./skills/slack
-  confluence: ./skills/confluence
-  jira: ./skills/jira
+  # Atomic skills - referenced by folder path or URL
+  atomic:
+    strategic-thinking: ./skills/strategic-thinking
+    task-decomposition: ./skills/task-decomposition
+    code-generation: ./skills/code-generation
+    code-review: ./skills/code-review
+    slack: ./skills/slack
+    confluence: ./skills/confluence
+    jira: ./skills/jira
 
-  strategy:
-    compose: [strategic-thinking, slack]
+  # Composed skills - recursive combinations of atomic skills
+  # An agent is any skill referenced in the team flow
+  composed:
+    strategy:
+      compose: [strategic-thinking, slack]
 
-  tech-lead:
-    compose: [strategic-thinking, task-decomposition, slack, jira]
+    tech-lead:
+      compose: [strategic-thinking, task-decomposition, slack, jira]
 
-  senior-engineer:
-    compose: [task-decomposition, code-generation]
+    senior-engineer:
+      compose: [task-decomposition, code-generation]
 
-  reviewer:
-    compose: [code-review]
+    reviewer:
+      compose: [code-review]
 
-  orchestrator:
-    compose: [slack, confluence, jira]
+    orchestrator:
+      compose: [slack, confluence, jira]
 
-# State — typed schema, defaults to local file unless location declared
+# State - typed schema, defaults to local file unless location declared
 state:
   Task:
     description: string
@@ -128,36 +130,40 @@ state:
       skill: jira
       path: DEV/dev-board
 
-# Graph — directed graph with typed state transitions
-# Cycles are valid when every cycle has an explicit exit condition
-# map always parallelizes — sequential iteration is a graph loop
-graph:
-  - strategy:
-      writes: [state.goal]
-    then: tech-lead
+# Team - orchestrator and execution flow
+team:
+  orchestrator: orchestrator
 
-  - tech-lead:
-      reads: [state.goal]
-      writes: [state.plan, state.tasks]
-    then: map
+  # Flow - directed graph with typed state transitions
+  # Cycles are valid when every cycle has an explicit exit condition
+  # map always parallelizes - sequential iteration is a flow loop
+  flow:
+    - strategy:
+        writes: [state.goal]
+      then: tech-lead
 
-  - map:
-      over: state.tasks
-      as: task
-      graph:
-        - senior-engineer:
-            reads: [task.description]
-            writes: [task.output]
-          then: reviewer
+    - tech-lead:
+        reads: [state.goal]
+        writes: [state.plan, state.tasks]
+      then: map
 
-        - reviewer:
-            reads: [task.output]
-            writes: [task.approved]
-          then:
-            - when: task.approved == false
-              to: senior-engineer
-            - when: task.approved == true
-              to: end
+    - map:
+        over: state.tasks
+        as: task
+        graph:
+          - senior-engineer:
+              reads: [task.description]
+              writes: [task.output]
+            then: reviewer
+
+          - reviewer:
+              reads: [task.output]
+              writes: [task.approved]
+            then:
+              - when: task.approved == false
+                to: senior-engineer
+              - when: task.approved == true
+                to: end
 ```
 
 ---
