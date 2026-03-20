@@ -3,6 +3,14 @@ import { ConfigError, ResolveError } from "./errors.js";
 const GITHUB_TREE_RE =
   /^https:\/\/github\.com\/([^/]+)\/([^/]+)\/tree\/([^/]+)\/(.+)$/;
 
+export function getGitHubHeaders(): HeadersInit {
+  const token = process.env.GITHUB_TOKEN;
+  if (token) {
+    return { Authorization: `token ${token}` };
+  }
+  return {};
+}
+
 export interface GitHubUrlParts {
   owner: string;
   repo: string;
@@ -48,7 +56,7 @@ export async function fetchRemoteSkill(
 
   let response: Response;
   try {
-    response = await fetch(rawUrl);
+    response = await fetch(rawUrl, { headers: getGitHubHeaders() });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     throw new ResolveError(name, `Network error fetching ${rawUrl}: ${message}`);
@@ -84,7 +92,7 @@ export async function fetchRemoteConfig(url: string): Promise<string> {
 
   let response: Response;
   try {
-    response = await fetch(rawUrl);
+    response = await fetch(rawUrl, { headers: getGitHubHeaders() });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     throw new ConfigError(`Network error fetching import from ${rawUrl}: ${message}`);

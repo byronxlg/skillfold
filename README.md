@@ -144,6 +144,9 @@ skills:
     shared: https://github.com/org/repo/tree/main/skills/shared
 ```
 
+> [!TIP]
+> Set `GITHUB_TOKEN` in your environment to fetch skills from private repositories.
+
 **Pipeline Imports** --
 Share skills and state across configs. Team flows stay local.
 
