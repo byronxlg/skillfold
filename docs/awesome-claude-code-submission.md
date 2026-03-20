@@ -39,10 +39,10 @@ npx skillfold --target claude-code
 
 Inspect the output - you'll see `.claude/agents/planner.md`, `.claude/agents/engineer.md`, `.claude/agents/reviewer.md` with composed skill instructions and YAML frontmatter.
 
-To see the generated orchestrator execution plan:
+To see a composed agent with multiple skills (planning + code-writing + testing):
 
 ```bash
-cat .claude/agents/planner.md
+cat .claude/agents/engineer.md
 ```
 
 To adopt an existing Claude Code project that already has agents in `.claude/agents/`:
@@ -68,19 +68,7 @@ Install the skillfold plugin for Claude Code:
 npm install skillfold
 ```
 
-Add the plugin to `.claude/settings.json`:
-
-```json
-{
-  "permissions": {
-    "allow": [
-      "node_modules/skillfold/plugin"
-    ]
-  }
-}
-```
-
-Then use the `/skillfold` slash command in Claude Code to compile your pipeline.
+The plugin at `node_modules/skillfold/plugin/` is auto-discovered by Claude Code. Use the `/skillfold` slash command to compile your pipeline.
 
 Alternatively, compile directly to Claude Code agent layout without the plugin:
 
