@@ -6,9 +6,7 @@
 
 Compiler for multi-agent AI pipelines. Define skills, compose them into agents, wire agents into execution flows, and compile to standard `SKILL.md` files.
 
-## Before / After
-
-Without skillfold, every agent gets a hand-written `SKILL.md`. Shared instructions are copy-pasted across files. Adding a skill means editing every agent that uses it.
+**Before and after** - without skillfold, each agent's SKILL.md is hand-maintained and kept in sync manually:
 
 ```
 # Without skillfold                  # With skillfold
@@ -31,9 +29,13 @@ npx skillfold        # compile it
 
 Output: `build/planner/SKILL.md`, `build/worker/SKILL.md`, `build/orchestrator/SKILL.md`
 
-## How It Works
+---
+
+## How Skillfold Works
 
 Write one YAML config. The compiler produces one `SKILL.md` per agent.
+
+### Define, Compose, Compile
 
 ```yaml
 name: dev-team
@@ -86,6 +88,10 @@ build/
 
 The `engineer` agent's `SKILL.md` contains the concatenated bodies of `planning` and `coding`, plus YAML frontmatter with its name and description.
 
+Every output file is a valid `SKILL.md` per the [Agent Skills standard](https://agentskills.io/specification).
+
+### Orchestrator Generation
+
 Add `team.orchestrator` to generate an execution plan automatically:
 
 ```yaml
@@ -112,35 +118,21 @@ Then:
 - If `review.approved == true`: end
 ```
 
-Every output file is a valid `SKILL.md` per the [Agent Skills standard](https://agentskills.io/specification).
+### Features
 
-## Features
+**Composition** --
+Atomic skills are reusable instruction fragments. Composed skills concatenate them in order, recursively. Reference remote skills by GitHub URL.
 
-**Composition**
-- Atomic skills define reusable instruction fragments
-- Composed skills concatenate atomic bodies in declared order
-- Composition is recursive - composed skills can include other composed skills
-- Remote skills referenced by GitHub URL
+**Validation** --
+Typed state schema with custom types, primitives, and `list<Type>`. State reads and writes validated at compile time. Write conflict detection. Cycle exit condition enforcement.
 
-**Validation**
-- Typed state schema with custom types, primitives, and `list<Type>`
-- State reads/writes validated at compile time
-- Write conflict detection across agents
-- Cycle exit condition enforcement
+**Team Flows** --
+Conditional routing with `when` expressions. Loops with required exit conditions. Parallel `map` over typed lists. Reachability analysis for all flow nodes.
 
-**Team Flows**
-- Conditional routing with `when` expressions
-- Loops with required exit conditions
-- Parallel `map` over typed lists
-- Reachability analysis for all flow nodes
+**Tooling** --
+`skillfold init` scaffolds a starter pipeline. `skillfold graph` outputs a Mermaid flowchart. Pipeline imports share skills and state across configs. Spec-compliant output with YAML frontmatter.
 
-**Tooling**
-- `skillfold init` scaffolds a starter pipeline
-- `skillfold graph` outputs a Mermaid flowchart of the team flow
-- Pipeline imports to share skills and state across configs
-- Spec-compliant output with YAML frontmatter
-
-## Shared Library
+### Shared Library
 
 Skillfold ships with 10 generic skills you can import into any pipeline:
 
@@ -170,7 +162,7 @@ Then reference them by name in your composed skills. Three ready-made example co
 - **content-pipeline** - Map/parallel pattern over topics (researcher, writer, editor)
 - **code-review-bot** - Minimal two-agent flow (analyzer, reporter)
 
-## Self-Hosting
+### Self-Hosting
 
 Skillfold builds its own dev team. The [`skillfold.yaml`](skillfold.yaml) in this repo defines five agents:
 
@@ -186,7 +178,11 @@ The reviewer feeds back to the engineer when `review.approved == false`, creatin
 
 State is mapped to real infrastructure - plans live in GitHub Discussions, tasks become GitHub Issues, implementations are pull requests, and reviews are PR reviews. See [`skillfold.yaml`](skillfold.yaml) for the full config.
 
-## Install
+---
+
+## Reference
+
+### Install
 
 ```bash
 npm install -g skillfold
@@ -194,7 +190,7 @@ npm install -g skillfold
 
 Or run directly with `npx skillfold`. Requires Node.js 20+.
 
-## CLI
+### CLI
 
 ```
 skillfold [command] [options]
@@ -212,11 +208,11 @@ Options:
   --version         Show version
 ```
 
-## Config Reference
+### Config
 
 Full specification in [BRIEF.md](BRIEF.md).
 
-### skills
+#### skills
 
 ```yaml
 skills:
@@ -229,7 +225,7 @@ skills:
       description: "Produces plans and reviews code."
 ```
 
-### state
+#### state
 
 ```yaml
 state:
@@ -243,7 +239,7 @@ state:
       path: DEV/dev-board
 ```
 
-### team
+#### team
 
 ```yaml
 team:
@@ -260,7 +256,7 @@ team:
 
 Conditional transitions, parallel map, and imports are documented in [BRIEF.md](BRIEF.md).
 
-## Tests
+### Tests
 
 ```bash
 npm test          # 238 tests, node:test, no extra dependencies
