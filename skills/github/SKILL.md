@@ -7,6 +7,16 @@ description: Work with GitHub for branches, PRs, code review, issues, projects, 
 
 You use GitHub as part of your workflow. The repo is `byronxlg/skillfold`.
 
+## Agent Identity
+
+All agents share one GitHub account. Tag every public message (issue bodies, PR descriptions, comments, review bodies) with your agent name at the top so the audit trail is clear:
+
+```
+**[agent-name]**
+
+Your message here...
+```
+
 ## Branches and PRs
 
 - Create a feature branch for each piece of work
@@ -16,17 +26,19 @@ You use GitHub as part of your workflow. The repo is `byronxlg/skillfold`.
 - Use `gh pr merge` to merge approved PRs
 - Link PRs to issues: `gh pr create --body "Closes #ISSUE_NUMBER"`
 
-## Code Review on GitHub
+## Code Review
 
 - Review PRs by reading the diff with `gh pr diff <number>`
 - Leave review comments with `gh pr review <number> --approve` or `--request-changes --body "..."`
 - Check PR status with `gh pr checks <number>`
+- Read review state: `gh pr view <number> --json reviews --jq '.reviews[-1] | {state, body}'`
 
 ## Issues
 
 - Create an issue: `gh issue create --repo byronxlg/skillfold --title "..." --body "..."`
 - Create with labels: `gh issue create --repo byronxlg/skillfold --title "..." --body "..." --label "task"`
 - List issues: `gh issue list --repo byronxlg/skillfold`
+- Filter by label: `gh issue list --repo byronxlg/skillfold --label "direction"`
 - View an issue: `gh issue view NUMBER --repo byronxlg/skillfold`
 - Close an issue: `gh issue close NUMBER --repo byronxlg/skillfold`
 - Add a comment: `gh issue comment NUMBER --repo byronxlg/skillfold --body "..."`
@@ -35,14 +47,15 @@ You use GitHub as part of your workflow. The repo is `byronxlg/skillfold`.
 
 The team uses GitHub Project #4 (`skillfold`) for pipeline tracking.
 
-- Add an issue to the project: `gh project item-add 4 --owner byronxlg --url https://github.com/byronxlg/skillfold/issues/NUMBER`
-- Add a PR to the project: `gh project item-add 4 --owner byronxlg --url https://github.com/byronxlg/skillfold/pull/NUMBER`
-- List project items: `gh project item-list 4 --owner byronxlg --format json`
-- Edit item fields: `gh project item-edit --project-id PVT_kwHOBBJnl84BSS4t --id ITEM_ID --field-id FIELD_ID --text "value"`
+- Add an item: `gh project item-add 4 --owner byronxlg --url ISSUE_OR_PR_URL`
+- List items: `gh project item-list 4 --owner byronxlg --format json`
+- Set status to Todo: `gh project item-edit --project-id PVT_kwHOBBJnl84BSS4t --id ITEM_ID --field-id PVTSSF_lAHOBBJnl84BSS4tzg_3zuk --single-select-option-id f75ad846`
+- Set status to In Progress: `gh project item-edit --project-id PVT_kwHOBBJnl84BSS4t --id ITEM_ID --field-id PVTSSF_lAHOBBJnl84BSS4tzg_3zuk --single-select-option-id 47fc9ee4`
+- Set status to Done: `gh project item-edit --project-id PVT_kwHOBBJnl84BSS4t --id ITEM_ID --field-id PVTSSF_lAHOBBJnl84BSS4tzg_3zuk --single-select-option-id 98236657`
 
 ## Discussions
 
-Discussions use the GitHub GraphQL API via `gh api graphql`.
+Discussions use the GitHub GraphQL API via `gh api graphql`. Repo ID: `R_kgDORrIFQw`. General category ID: `DIC_kwDORrIFQ84C42C8`.
 
 - List discussions:
   ```
@@ -52,13 +65,15 @@ Discussions use the GitHub GraphQL API via `gh api graphql`.
   ```
   gh api graphql -f query='{ repository(owner: "byronxlg", name: "skillfold") { discussion(number: NUMBER) { title body comments(first: 20) { nodes { body author { login } } } } } }'
   ```
-- Create a discussion (requires repo and category IDs):
+- Create a discussion:
   ```
-  gh api graphql -f query='mutation { createDiscussion(input: {repositoryId: "REPO_ID", categoryId: "CATEGORY_ID", title: "...", body: "..."}) { discussion { number url } } }'
+  gh api graphql -f query='mutation { createDiscussion(input: {repositoryId: "R_kgDORrIFQw", categoryId: "DIC_kwDORrIFQ84C42C8", title: "...", body: "..."}) { discussion { number url } } }'
   ```
-  Get IDs with: `gh api graphql -f query='{ repository(owner: "byronxlg", name: "skillfold") { id discussionCategories(first: 10) { nodes { id name } } } }'`
-- Comment on a discussion (requires discussion node ID):
+- Get a discussion's node ID (needed for commenting):
+  ```
+  gh api graphql -f query='{ repository(owner: "byronxlg", name: "skillfold") { discussion(number: NUMBER) { id } } }'
+  ```
+- Comment on a discussion:
   ```
   gh api graphql -f query='mutation { addDiscussionComment(input: {discussionId: "DISCUSSION_NODE_ID", body: "..."}) { comment { url } } }'
   ```
-  Get discussion node ID with: `gh api graphql -f query='{ repository(owner: "byronxlg", name: "skillfold") { discussion(number: NUMBER) { id } } }'`
