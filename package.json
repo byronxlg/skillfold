@@ -1,12 +1,12 @@
 {
   "name": "skillfold",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Compiler for multi-agent AI pipelines. Compose skills, wire team flows, generate orchestrators.",
   "type": "module",
   "bin": {
     "skillfold": "./dist/cli.js"
   },
-  "files": ["dist"],
+  "files": ["dist", "library"],
   "keywords": ["agent", "skills", "pipeline", "compiler", "multi-agent", "orchestrator", "skill-composition"],
   "repository": {
     "type": "git",
