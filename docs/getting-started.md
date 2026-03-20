@@ -4,10 +4,10 @@ This tutorial walks you from zero to a compiled multi-agent pipeline. By the end
 
 ## 1. Install
 
-Install skillfold from GitHub (the npm registry may be behind the latest version):
+Install skillfold from npm:
 
 ```bash
-npm install github:byronxlg/skillfold
+npm install skillfold
 ```
 
 Requires Node.js 20+. Verify with `npx skillfold --version`.
