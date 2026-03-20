@@ -151,10 +151,10 @@ Located in `library/examples/`:
 - Platform integration guide (`docs/integrations.md`) for Claude Code, Cursor, VS Code Copilot, Codex, Gemini CLI
 - Automated npm publish via GitHub Actions (`.github/workflows/publish.yml`, triggered on release)
 - Claude Code plugin with 11 library skills and `/skillfold` slash command (`plugin/`)
-- `--target claude-code` output mode generating `.claude/agents/*.md` and `.claude/skills/{name}/SKILL.md`
+- `--target claude-code` output mode generating `.claude/agents/*.md`, `.claude/skills/{name}/SKILL.md`, and `.claude/commands/run-pipeline.md`
 - `skillfold plugin` command for packaging pipelines as distributable Claude Code plugins
 - `skillfold adopt` command for adopting existing Claude Code agents into a pipeline
-- Test suite with 318 tests across 58 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, adopt, library, validate, list, watch, and e2e modules
+- Test suite with 322 tests across 58 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, adopt, library, validate, list, watch, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next
