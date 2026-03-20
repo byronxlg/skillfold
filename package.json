@@ -14,7 +14,7 @@
   "bin": {
     "skillfold": "./dist/cli.js"
   },
-  "files": ["dist", "library", "skillfold.schema.json"],
+  "files": ["dist", "library", "plugin", "skillfold.schema.json"],
   "keywords": ["agent", "skills", "pipeline", "compiler", "multi-agent", "orchestrator", "skill-composition"],
   "agentskills": {
     "skills": [
@@ -44,6 +44,7 @@
   "scripts": {
     "dev": "tsx src/cli.ts",
     "build": "tsc -p tsconfig.build.json",
+    "build:plugin": "node scripts/build-plugin.mjs",
     "test": "tsx --test src/*.test.ts",
     "start": "node dist/cli.js"
   },
