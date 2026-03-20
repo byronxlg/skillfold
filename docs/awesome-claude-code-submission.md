@@ -69,7 +69,7 @@ pre-runs that evaluation against skillfold and documents the results.
 
 | Dimension | What it checks | Assessment |
 |---|---|---|
-| Code quality | Structure, readability, correctness, consistency | Pass - TypeScript strict mode, ESM, consistent conventions, 322 tests |
+| Code quality | Structure, readability, correctness, consistency | Pass - TypeScript strict mode, ESM, consistent conventions, 328 tests |
 | Security / safety | Implicit execution, file/network access, credentials | Pass - Pure compiler, no hooks, no persistent state, no credential storage |
 | Documentation / transparency | Docs match implementation, side effects disclosed | Pass - README, getting-started guide, integration guide, JSON Schema |
 | Functionality / scope | Does what it claims, breadth of features | Pass - Compiles YAML to SKILL.md and Claude Code agents as advertised |
