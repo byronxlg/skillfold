@@ -10,7 +10,7 @@
 
 One YAML config. One command. Every agent gets a compiled [SKILL.md](https://agentskills.io/specification).
 
-Works with [Claude Code](https://claude.ai/code), [Cursor](https://cursor.com), [VS Code](https://code.visualstudio.com), [GitHub Copilot](https://github.com), [OpenAI Codex](https://developers.openai.com/codex), [Gemini CLI](https://geminicli.com), and [25+ more](https://agentskills.io).
+Works with [Claude Code](https://claude.ai/code), [Cursor](https://cursor.com), [VS Code](https://code.visualstudio.com), [GitHub Copilot](https://github.com), [OpenAI Codex](https://developers.openai.com/codex), [Gemini CLI](https://geminicli.com), and [30+ more](https://agentskills.io).
 
 [Quick Start](#quick-start) | [How It Works](#how-it-works) | [Features](#features) | [Library](#shared-library) | [Reference](#reference)
 
@@ -24,6 +24,8 @@ npx skillfold        # compile it
 ```
 
 ## Quick Start
+
+For a step-by-step walkthrough, see the [Getting Started](docs/getting-started.md) guide.
 
 Define skills, compose them into agents, wire agents into a team flow, and compile:
 
@@ -207,6 +209,12 @@ The reviewer feeds back to the engineer when `review.approved == false`, creatin
 ```bash
 npm install -g skillfold    # global install
 npx skillfold               # or run directly
+```
+
+The npm registry may lag behind the latest release. To install directly from GitHub:
+
+```bash
+npm install github:byronxlg/skillfold
 ```
 
 Requires Node.js 20+. Single dependency: `yaml`.
