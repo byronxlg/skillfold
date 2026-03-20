@@ -1,12 +1,12 @@
 import { afterEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 
 import type { Config } from "./config.js";
 import { CompileError } from "./errors.js";
-import { compile } from "./compiler.js";
+import { check, compile } from "./compiler.js";
 import type { Graph } from "./graph.js";
 import type { StateSchema } from "./state.js";
 
@@ -282,5 +282,96 @@ describe("compile", () => {
     assert.equal(lines[1], "name: agent");
     assert.equal(lines[2], "description: An agent that does things.");
     assert.equal(lines[3], "---");
+  });
+});
+
+describe("check", () => {
+  let tmpDir: string | undefined;
+
+  afterEach(() => {
+    if (tmpDir) {
+      rmSync(tmpDir, { recursive: true, force: true });
+      tmpDir = undefined;
+    }
+  });
+
+  function makeConfig(): { config: Config; bodies: Map<string, string> } {
+    const config: Config = {
+      name: "test",
+      skills: {
+        lint: { path: "./skills/lint" },
+        format: { path: "./skills/format" },
+        quality: { compose: ["lint", "format"], description: "Runs quality checks." },
+      },
+    };
+    const bodies = new Map<string, string>();
+    bodies.set("lint", "Run the linter.");
+    bodies.set("format", "Format the code.");
+    return { config, bodies };
+  }
+
+  it("returns ok when compiled output matches on disk", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+    const { config, bodies } = makeConfig();
+
+    compile(config, bodies, outDir);
+    const results = check(config, bodies, outDir);
+
+    assert.equal(results.length, 1);
+    assert.equal(results[0].name, "quality");
+    assert.equal(results[0].status, "ok");
+  });
+
+  it("returns stale when on-disk content differs", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+    const { config, bodies } = makeConfig();
+
+    compile(config, bodies, outDir);
+    writeFileSync(join(outDir, "quality", "SKILL.md"), "old content", "utf-8");
+    const results = check(config, bodies, outDir);
+
+    assert.equal(results.length, 1);
+    assert.equal(results[0].status, "stale");
+  });
+
+  it("returns missing when output file does not exist", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+    const { config, bodies } = makeConfig();
+
+    const results = check(config, bodies, outDir);
+
+    assert.equal(results.length, 1);
+    assert.equal(results[0].status, "missing");
+  });
+
+  it("checks orchestrator output when team is defined", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const graph: Graph = {
+      nodes: [
+        { skill: "worker", reads: [], writes: [] },
+      ],
+    };
+
+    const config: Config = {
+      name: "orch-test",
+      skills: {
+        worker: { path: "./skills/worker" },
+      },
+      team: { flow: graph },
+    };
+
+    const bodies = new Map<string, string>();
+
+    compile(config, bodies, outDir);
+    const results = check(config, bodies, outDir);
+
+    const orchResult = results.find((r) => r.name === "orchestrator");
+    assert.ok(orchResult);
+    assert.equal(orchResult.status, "ok");
   });
 });

@@ -235,6 +235,7 @@ Options:
   --config <path>   Config file (default: skillfold.yaml)
   --out-dir <path>  Output directory (default: build)
   --dir <path>      Target directory for init (default: .)
+  --check           Verify compiled output is up-to-date (exit 1 if stale)
   --help            Show this help
   --version         Show version
 ```
@@ -305,7 +306,7 @@ Conditional transitions, parallel map, and imports are documented in [BRIEF.md](
 ### Tests
 
 ```bash
-npm test          # 253 tests, node:test, no extra dependencies
+npm test          # 257 tests, node:test, no extra dependencies
 npx tsc --noEmit  # type check
 ```
 

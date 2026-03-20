@@ -11,6 +11,7 @@ Configuration language and compiler for multi-agent AI pipelines. Compiles YAML 
 
 - **Run compiler**: `npx tsx src/cli.ts`
 - **Validate config**: `npx tsx src/cli.ts validate`
+- **Check output is current**: `npx tsx src/cli.ts --check`
 - **List pipeline**: `npx tsx src/cli.ts list`
 - **Run with custom config**: `npx tsx src/cli.ts --config path.yaml --out-dir out/`
 - **Build**: `npm run build`
@@ -134,6 +135,7 @@ Located in `library/examples/`:
 - `skillfold list` command for pipeline introspection (skills, state, team flow)
 - Getting-started tutorial (`docs/getting-started.md`) walking users from install to compiled pipeline
 - JSON Schema (`skillfold.schema.json`) for IDE autocompletion and config validation
+- `--check` flag for CI integration (verifies compiled output is up-to-date without writing)
 - Automated npm publish via GitHub Actions (`.github/workflows/publish.yml`, triggered on release)
 - Test suite covering config, resolver, compiler, state, graph, orchestrator, visualize, remote, init, library, validate, list, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
