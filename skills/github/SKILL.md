@@ -33,12 +33,12 @@ You use GitHub as part of your workflow. The repo is `byronxlg/skillfold`.
 
 ## Projects
 
-The team uses GitHub Project #3 (`agentlog`) for pipeline tracking.
+The team uses GitHub Project #4 (`skillfold`) for pipeline tracking.
 
-- Add an issue to the project: `gh project item-add 3 --owner byronxlg --url https://github.com/byronxlg/skillfold/issues/NUMBER`
-- Add a PR to the project: `gh project item-add 3 --owner byronxlg --url https://github.com/byronxlg/skillfold/pull/NUMBER`
-- List project items: `gh project item-list 3 --owner byronxlg --format json`
-- Edit item fields: `gh project item-edit --project-id PVT_kwHOBBJnl84BRt4O --id ITEM_ID --field-id FIELD_ID --text "value"`
+- Add an issue to the project: `gh project item-add 4 --owner byronxlg --url https://github.com/byronxlg/skillfold/issues/NUMBER`
+- Add a PR to the project: `gh project item-add 4 --owner byronxlg --url https://github.com/byronxlg/skillfold/pull/NUMBER`
+- List project items: `gh project item-list 4 --owner byronxlg --format json`
+- Edit item fields: `gh project item-edit --project-id PVT_kwHOBBJnl84BSS4t --id ITEM_ID --field-id FIELD_ID --text "value"`
 
 ## Discussions
 
