@@ -343,7 +343,7 @@ function mergeRawState(
   return { ...base, ...overlay };
 }
 
-// Resolve imports: load each import, merge skills and state, ignore graph/orchestrator/imports
+// Resolve imports: load each import, merge skills and state, ignore team/imports
 async function resolveImports(
   raw: RawConfig,
   baseDir: string,

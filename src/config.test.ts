@@ -344,7 +344,7 @@ skills:
     assert.ok(isAtomic(config.skills["b"]));
   });
 
-  it("accepts config with only composed skills", () => {
+  it("composed-only config still validates cycles", () => {
     tmpDir = makeTmpDir();
     const configPath = writeYaml(tmpDir, `
 name: test
@@ -354,8 +354,6 @@ skills:
       compose: [loop]
       description: "Self-referencing."
 `);
-    // Self-reference is a cycle, but the parsing succeeds before cycle detection.
-    // Let's use a valid case - compose referencing itself is caught at validation.
     assert.throws(() => readConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
       assert.match(err.message, /Circular composition/);
@@ -642,6 +640,59 @@ team:
       return true;
     });
   });
+
+  it("non-object team throws ConfigError", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    review: ./skills/review
+team: not-an-object
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /Team must be a YAML object/);
+      return true;
+    });
+  });
+
+  it("team without flow throws ConfigError", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    review: ./skills/review
+team:
+  orchestrator: review
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /Team must have a 'flow' field/);
+      return true;
+    });
+  });
+
+  it("non-string team.orchestrator throws ConfigError", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    review: ./skills/review
+team:
+  orchestrator: 42
+  flow:
+    - review:
+        writes: []
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /team\.orchestrator must be a string/);
+      return true;
+    });
+  });
 });
 
 describe("readConfig team orchestrator integration", () => {
@@ -760,7 +811,7 @@ describe("loadConfig imports", () => {
     const configPath = join(tmpDir, "skillfold.yaml");
     writeFileSync(configPath, `
 imports:
-  - ${join(fixturesDir, "with-graph", "skillfold.yaml")}
+  - ${join(fixturesDir, "with-team", "skillfold.yaml")}
 
 name: no-team
 skills:

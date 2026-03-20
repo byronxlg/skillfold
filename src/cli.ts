@@ -22,7 +22,7 @@ Usage: skillfold [command] [options]
 
 Commands:
   init              Scaffold a new pipeline project
-  graph             Output Mermaid flowchart of the execution graph
+  graph             Output Mermaid flowchart of the team flow
   (default)         Compile the pipeline config
 
 Options:
