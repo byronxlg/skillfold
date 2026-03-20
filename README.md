@@ -212,12 +212,6 @@ npm install -g skillfold    # global install
 npx skillfold               # or run directly
 ```
 
-The npm registry may lag behind the latest release. To install directly from GitHub:
-
-```bash
-npm install github:byronxlg/skillfold
-```
-
 Requires Node.js 20+. Single dependency: `yaml`.
 
 ### CLI
