@@ -112,9 +112,8 @@ npx skillfold --target claude-code
     engineer.md
     reviewer.md
   skills/
-    planning/SKILL.md
-    coding/SKILL.md
-    review/SKILL.md
+    engineer/SKILL.md
+    reviewer/SKILL.md
 ```
 
 Skillfold also ships a built-in Claude Code plugin at `node_modules/skillfold/plugin/` with the shared library skills and a `/skillfold` slash command. To package your own pipeline as a distributable plugin:
