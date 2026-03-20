@@ -445,6 +445,8 @@ The flow runs: strategist -> architect -> engineer -> reviewer. The reviewer fee
 > [!NOTE]
 > State is mapped to real infrastructure: plans live in GitHub Discussions, tasks become GitHub Issues, implementations are pull requests, and reviews are PR reviews.
 
+Browse the [Discussions](https://github.com/byronxlg/skillfold/discussions) for direction and planning posts, [Issues](https://github.com/byronxlg/skillfold/issues?q=label%3Atask) for pipeline-generated tasks, and [Pull Requests](https://github.com/byronxlg/skillfold/pulls?q=is%3Apr) for reviewed implementations - all produced by the pipeline above.
+
 ---
 
 ## Reference
