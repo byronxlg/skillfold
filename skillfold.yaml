@@ -12,6 +12,7 @@ skills:
     product-strategy: ./skills/product-strategy
     github: ./skills/github
     skillfold-context: ./skills/skillfold-context
+    moltbook: ./skills/moltbook
 
   composed:
     strategist:
@@ -27,8 +28,8 @@ skills:
       description: "Designs project-facing content like READMEs, docs, and landing pages for visual impact and clarity."
 
     marketer:
-      compose: [skillfold-context, product-strategy, design, github]
-      description: "Positions the project for adoption through messaging, content, and outreach."
+      compose: [skillfold-context, product-strategy, design, moltbook, github]
+      description: "Engages with the agent community on Moltbook and positions the project for adoption."
 
     engineer:
       compose: [skillfold-context, code-generation, testing, github]
@@ -108,4 +109,8 @@ team:
         - when: review.approved == false
           to: engineer
         - when: review.approved == true
-          to: end
+          to: marketer
+
+    - marketer:
+        reads: [state.direction, state.implementation]
+      then: end
