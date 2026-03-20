@@ -51,8 +51,8 @@ Install the skillfold plugin:
 npm install skillfold
 ```
 
-Then tell Claude Code: "Use /skillfold to compile the pipeline and show me the generated agents."
+Then tell Claude Code: "Use /skillfold to compile the pipeline and show me the generated agents." After compiling with `--target claude-code`, a `/run-pipeline` slash command is generated that orchestrates the compiled agents.
 
 **Additional Comments:**
 
-Every other orchestrator in the awesome-claude-code list is a runtime tool - it launches agents, manages sessions, and coordinates execution while agents run. Skillfold is the only compile-time tool in the category. It validates skill references, state types, write conflicts, and cycle exit conditions at build time, then produces plain Markdown files that Claude Code reads natively. There is no process to run, no server to start, and no SDK to integrate. The compiler has 318 tests, a single dependency (yaml), and runs on Node 20+.
+Every other orchestrator in the awesome-claude-code list is a runtime tool - it launches agents, manages sessions, and coordinates execution while agents run. Skillfold is the only compile-time tool in the category. It validates skill references, state types, write conflicts, and cycle exit conditions at build time, then produces plain Markdown files that Claude Code reads natively. When a pipeline has a team flow, the compiler also generates an executable `/run-pipeline` command that orchestrates the agents with a step-by-step execution plan, state table, and Agent tool invocations. There is no process to run, no server to start, and no SDK to integrate. The compiler has 322 tests, a single dependency (yaml), and runs on Node 20+.
