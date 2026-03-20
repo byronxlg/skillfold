@@ -338,7 +338,7 @@ Conditional transitions, parallel map, and imports are documented in [BRIEF.md](
 ### Tests
 
 ```bash
-npm test          # 260 tests, node:test, no extra dependencies
+npm test          # 271 tests, node:test, no extra dependencies
 npx tsc --noEmit  # type check
 ```
 
