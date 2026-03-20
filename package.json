@@ -8,6 +8,21 @@
   },
   "files": ["dist", "library", "skillfold.schema.json"],
   "keywords": ["agent", "skills", "pipeline", "compiler", "multi-agent", "orchestrator", "skill-composition"],
+  "agentskills": {
+    "skills": [
+      { "name": "planning", "path": "./library/skills/planning" },
+      { "name": "research", "path": "./library/skills/research" },
+      { "name": "decision-making", "path": "./library/skills/decision-making" },
+      { "name": "code-writing", "path": "./library/skills/code-writing" },
+      { "name": "code-review", "path": "./library/skills/code-review" },
+      { "name": "testing", "path": "./library/skills/testing" },
+      { "name": "writing", "path": "./library/skills/writing" },
+      { "name": "summarization", "path": "./library/skills/summarization" },
+      { "name": "github-workflow", "path": "./library/skills/github-workflow" },
+      { "name": "file-management", "path": "./library/skills/file-management" },
+      { "name": "skillfold-cli", "path": "./library/skills/skillfold-cli" }
+    ]
+  },
   "homepage": "https://github.com/byronxlg/skillfold",
   "bugs": "https://github.com/byronxlg/skillfold/issues",
   "repository": {
