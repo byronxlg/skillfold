@@ -27,7 +27,7 @@ Skillfold compiles a single YAML config into the right SKILL.md for each agent. 
 Get a working pipeline in under 60 seconds:
 
 ```bash
-npx skillfold init --dir my-team
+npx skillfold init my-team
 cd my-team
 npx skillfold
 ```
@@ -57,17 +57,24 @@ skills:
     coding: ./skills/coding
     reviewing: ./skills/reviewing
   composed:
+    planner:
+      compose: [planning]
+      description: "Analyzes the goal and produces a structured plan."
     engineer:
       compose: [planning, coding]
       description: "Implements the plan, writes code and tests."
     reviewer:
       compose: [reviewing]
-      description: "Reviews code for correctness."
+      description: "Reviews code for correctness, clarity, and security."
+    orchestrator:
+      compose: [planning]
+      description: "Coordinates pipeline execution."
 
 state:
   Review:
     approved: bool
     feedback: string
+  plan: { type: string }
   code: { type: string }
   review: { type: Review }
 

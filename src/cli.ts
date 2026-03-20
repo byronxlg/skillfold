@@ -62,6 +62,11 @@ function parseArgs(argv: string[]): Args {
   if (argv.length > 0 && argv[0] === "init") {
     command = "init";
     i = 1;
+    // Support positional dir: skillfold init <dir>
+    if (argv.length > 1 && argv[1] && !argv[1].startsWith("-")) {
+      dir = argv[1];
+      i = 2;
+    }
   } else if (argv.length > 0 && argv[0] === "graph") {
     command = "graph";
     i = 1;
