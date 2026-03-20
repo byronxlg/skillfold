@@ -32,13 +32,13 @@ Works with [Claude Code](https://claude.ai/code), [Cursor](https://cursor.com), 
 
 <div align="center">
 
-[Quick Start](#quick-start) | [How Is This Different?](#how-is-this-different) | [How It Works](#how-it-works) | [Features](#features) | [Library](#shared-library) | [Reference](#reference)
+[Quick Start](#quick-start) | [How Is This Different?](#how-is-this-different) | [How It Works](#how-it-works) | [Features](#features) | [Library](#shared-library) | [Integrations](docs/integrations.md) | [Reference](#reference)
 
 </div>
 
 ## Quick Start
 
-For a step-by-step walkthrough, see the [Getting Started](docs/getting-started.md) guide.
+For a step-by-step walkthrough, see the [Getting Started](docs/getting-started.md) guide. To compile directly to your platform, see the [Integration Guide](docs/integrations.md).
 
 Define skills, compose them into agents, wire agents into a team flow, and compile:
 
@@ -202,13 +202,19 @@ Skillfold ships with **11 generic skills** you can import into any pipeline:
 | file-management | Read, create, edit, and organize files |
 | skillfold-cli | Use the skillfold compiler to manage pipeline configs |
 
-Three ready-made example configs are included in [`library/examples/`](library/examples/):
+Three ready-made example configs are included as templates:
 
-| Example | Pattern |
-|---------|---------|
+| Template | Pattern |
+|----------|---------|
 | **dev-team** | Linear pipeline with review loop (planner, engineer, reviewer) |
 | **content-pipeline** | Map/parallel pattern over topics (researcher, writer, editor) |
 | **code-review-bot** | Minimal two-agent flow (analyzer, reporter) |
+
+Start from any template with `skillfold init --template <name>`:
+
+```bash
+npx skillfold init my-team --template dev-team
+```
 
 ---
 
@@ -257,12 +263,13 @@ Commands:
   graph             Output Mermaid flowchart of the team flow
 
 Options:
-  --config <path>   Config file (default: skillfold.yaml)
-  --out-dir <path>  Output directory (default: build)
-  --dir <path>      Target directory for init (default: .)
-  --check           Verify compiled output is up-to-date (exit 1 if stale)
-  --help            Show this help
-  --version         Show version
+  --config <path>      Config file (default: skillfold.yaml)
+  --out-dir <path>     Output directory (default: build)
+  --dir <path>         Target directory for init (default: .)
+  --template <name>    Start from a library template (init only)
+  --check              Verify compiled output is up-to-date (exit 1 if stale)
+  --help               Show this help
+  --version            Show version
 ```
 
 ### Config
