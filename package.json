@@ -8,6 +8,8 @@
   },
   "files": ["dist", "library"],
   "keywords": ["agent", "skills", "pipeline", "compiler", "multi-agent", "orchestrator", "skill-composition"],
+  "homepage": "https://github.com/byronxlg/skillfold",
+  "bugs": "https://github.com/byronxlg/skillfold/issues",
   "repository": {
     "type": "git",
     "url": "https://github.com/byronxlg/skillfold.git"
