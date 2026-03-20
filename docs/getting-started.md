@@ -15,68 +15,94 @@ Requires Node.js 20+. Verify with `npx skillfold --version`.
 ## 2. Scaffold a starter pipeline
 
 ```bash
-mkdir my-project && cd my-project
-npx skillfold init
+npx skillfold init my-project
+cd my-project
 ```
 
-This creates `skillfold.yaml`, `skills/plan/SKILL.md`, and `skills/execute/SKILL.md`.
+This creates:
+
+```
+my-project/
+  skillfold.yaml
+  skills/planning/SKILL.md
+  skills/coding/SKILL.md
+  skills/reviewing/SKILL.md
+```
+
+Each skill directory contains a `SKILL.md` file with YAML frontmatter and instructions.
 
 ## 3. Understand the generated config
 
-Open `skillfold.yaml`. It defines a two-agent pipeline:
+Open `skillfold.yaml`. It defines a four-agent pipeline with a review loop:
 
 ```yaml
-# yaml-language-server: $schema=node_modules/skillfold/skillfold.schema.json
 name: my-pipeline
-
-# To import shared skills from the skillfold library, uncomment:
-# imports:
-#   - node_modules/skillfold/library/skillfold.yaml
 
 skills:
   atomic:
-    plan: ./skills/plan
-    execute: ./skills/execute
+    planning: ./skills/planning
+    coding: ./skills/coding
+    reviewing: ./skills/reviewing
 
   composed:
     planner:
-      compose: [plan]
-      description: "Analyzes the goal and produces a plan."
+      compose: [planning]
+      description: "Analyzes the goal and produces a structured plan."
 
-    worker:
-      compose: [plan, execute]
-      description: "Executes tasks from the plan."
+    engineer:
+      compose: [planning, coding]
+      description: "Implements the plan, writes code and tests."
+
+    reviewer:
+      compose: [reviewing]
+      description: "Reviews code for correctness, clarity, and security."
 
     orchestrator:
-      compose: [plan]
+      compose: [planning]
       description: "Coordinates pipeline execution."
 
 state:
-  goal:
+  Review:
+    approved: bool
+    feedback: string
+
+  plan:
     type: string
 
-  result:
+  code:
     type: string
+
+  review:
+    type: Review
 
 team:
   orchestrator: orchestrator
 
   flow:
     - planner:
-        writes: [state.goal]
-      then: worker
+        writes: [state.plan]
+      then: engineer
 
-    - worker:
-        reads: [state.goal]
-        writes: [state.result]
-      then: end
+    - engineer:
+        reads: [state.plan]
+        writes: [state.code]
+      then: reviewer
+
+    - reviewer:
+        reads: [state.code]
+        writes: [state.review]
+      then:
+        - when: review.approved == false
+          to: engineer
+        - when: review.approved == true
+          to: end
 ```
 
 There are three layers:
 
-- **skills** - Two atomic skills (`plan`, `execute`) and three composed agents. The `worker` agent composes both `plan` and `execute`, so its compiled SKILL.md contains both skill bodies concatenated in order.
-- **state** - Two typed fields: `goal` and `result`, both strings.
-- **team** - A linear flow where `planner` writes the goal, then `worker` reads it and writes the result. The `orchestrator` gets a generated execution plan appended to its SKILL.md.
+- **skills** - Three atomic skills (`planning`, `coding`, `reviewing`) and four composed agents. The `engineer` agent composes both `planning` and `coding`, so its compiled SKILL.md contains both skill bodies concatenated in order.
+- **state** - A `Review` custom type with `approved` and `feedback` fields, plus three state fields: `plan`, `code`, and `review`. The compiler validates that every read and write references a real field.
+- **team** - A flow where `planner` writes the plan, `engineer` reads it and writes code, and `reviewer` reads the code and writes a review. The reviewer transitions conditionally: back to `engineer` if not approved, or to `end` if approved. Skillfold validates that every cycle has an exit condition.
 
 ## 4. Compile and examine output
 
@@ -90,12 +116,15 @@ This produces compiled SKILL.md files in `build/`:
 
 ```
 build/
-  planner/SKILL.md
-  worker/SKILL.md
-  orchestrator/SKILL.md
+  planner/SKILL.md       # planning body
+  engineer/SKILL.md      # planning + coding bodies, composed
+  reviewer/SKILL.md      # reviewing body
+  orchestrator/SKILL.md  # planning body + generated execution plan
 ```
 
-Each file is a valid SKILL.md per the [Agent Skills standard](https://agentskills.io/specification), with YAML frontmatter and concatenated skill bodies. The `worker/SKILL.md` contains both the `plan` and `execute` skill content.
+Each file is a valid SKILL.md per the [Agent Skills standard](https://agentskills.io/specification), with YAML frontmatter and concatenated skill bodies. The `engineer/SKILL.md` contains both the `planning` and `coding` skill content.
+
+Open `build/orchestrator/SKILL.md` to see the generated execution plan with numbered steps, a state table, and the conditional review loop.
 
 You can also inspect the pipeline without compiling:
 
@@ -105,144 +134,76 @@ npx skillfold list       # display a structured summary
 npx skillfold graph      # output a Mermaid flowchart
 ```
 
-## 5. Enhance the pipeline
+## 5. Import library skills
 
-Now extend the pipeline by adding a reviewer with a conditional review loop. This demonstrates conditional routing and cycle exit conditions.
-
-First, create a new atomic skill:
-
-```bash
-mkdir -p skills/review
-```
-
-Write `skills/review/SKILL.md`:
-
-```markdown
----
-name: review
-description: Review work and provide feedback.
----
-
-# Review
-
-You review the worker's output for correctness and completeness. Approve if the work meets requirements, or provide feedback for revision.
-```
-
-Next, update `skillfold.yaml` with the following changes:
-
-Add `review` to the atomic skills and a new `reviewer` composed skill:
-
-```yaml
-skills:
-  atomic:
-    plan: ./skills/plan
-    execute: ./skills/execute
-    review: ./skills/review          # new
-
-  composed:
-    # ... keep planner, worker, orchestrator ...
-    reviewer:                        # new
-      compose: [review]
-      description: "Reviews work for correctness."
-```
-
-Add a `Review` custom type and a `review` field to state:
-
-```yaml
-state:
-  Review:              # custom type definition
-    approved: bool
-    feedback: string
-  goal: { type: string }
-  result: { type: string }
-  review: { type: Review }
-```
-
-Update the team flow so `worker` transitions to `reviewer`, with conditional routing back:
-
-```yaml
-team:
-  orchestrator: orchestrator
-  flow:
-    - planner:
-        writes: [state.goal]
-      then: worker
-    - worker:
-        reads: [state.goal]
-        writes: [state.result]
-      then: reviewer             # was: end
-    - reviewer:
-        reads: [state.result]
-        writes: [state.review]
-      then:
-        - when: review.approved == true
-          to: end
-        - when: review.approved == false
-          to: worker
-```
-
-Key changes:
-
-- **New skill**: `review` atomic skill with its own SKILL.md.
-- **Custom type**: `Review` has `approved` (bool) and `feedback` (string).
-- **Conditional routing**: The reviewer transitions to `end` when approved, or loops back to `worker` when not. Skillfold validates that every cycle has an exit condition.
-
-Compile again to verify:
-
-```bash
-npx skillfold
-```
-
-The `build/` directory now includes `reviewer/SKILL.md`, and the orchestrator's SKILL.md contains a generated execution plan reflecting the review loop.
-
-## 6. Validate your config
-
-Use `skillfold validate` to check for errors without producing output:
-
-```bash
-npx skillfold validate
-```
-
-Validation catches:
-- Missing skill references in compositions
-- Undefined state paths in reads/writes
-- Write conflicts (two agents writing the same state field)
-- Cycles without exit conditions
-- Unreachable flow nodes
-- Invalid when-clause expressions
-
-## 7. Use the shared library
-
-Skillfold ships with 11 generic skills you can import instead of writing from scratch: `planning`, `research`, `decision-making`, `code-writing`, `code-review`, `testing`, `writing`, `summarization`, `github-workflow`, `file-management`, and `skillfold-cli`.
-
-To use them, uncomment the imports line in your config:
+Skillfold ships with 11 generic skills you can use instead of writing your own. Uncomment the imports line in your config:
 
 ```yaml
 imports:
   - node_modules/skillfold/library/skillfold.yaml
 ```
 
-Then reference library skills directly in your compositions:
+Now you can reference library skills in your compositions. For example, replace the local `planning` and `coding` skills with the richer library versions:
 
 ```yaml
 skills:
+  atomic:
+    reviewing: ./skills/reviewing
+
   composed:
+    planner:
+      compose: [planning]
+      description: "Analyzes the goal and produces a structured plan."
+
     engineer:
       compose: [planning, code-writing, testing]
-      description: "Implements the plan by writing production code and tests."
+      description: "Implements the plan, writes code and tests."
+
+    reviewer:
+      compose: [code-review]
+      description: "Reviews code for correctness, clarity, and security."
+
+    orchestrator:
+      compose: [planning]
+      description: "Coordinates pipeline execution."
 ```
 
-Three example configs in `library/examples/` show common patterns:
+The import makes all 11 library skills available: `planning`, `research`, `decision-making`, `code-writing`, `code-review`, `testing`, `writing`, `summarization`, `github-workflow`, `file-management`, and `skillfold-cli`.
 
-- **dev-team** - Linear pipeline with a review loop
-- **content-pipeline** - Parallel map over a list of topics
-- **code-review-bot** - Minimal two-agent flow
+## 6. Start from a template
+
+If you prefer starting from a real-world pattern instead of the minimal starter:
+
+```bash
+npx skillfold init my-team --template dev-team
+```
+
+Available templates:
+
+| Template | Pattern |
+|----------|---------|
+| **dev-team** | Linear pipeline with review loop (planner, engineer, reviewer) |
+| **content-pipeline** | Map/parallel pattern over topics (researcher, writer, editor) |
+| **code-review-bot** | Minimal two-agent flow (analyzer, reporter) |
+
+Templates use library skills via imports, so they work out of the box with no local skill directories needed.
+
+## 7. Deploy to your platform
+
+Compile directly to where your platform reads skills. See the [Integration Guide](integrations.md) for all platforms.
+
+```bash
+npx skillfold --out-dir .claude/skills     # Claude Code
+npx skillfold --out-dir .agents/skills     # cross-platform
+npx skillfold --out-dir .github/skills     # VS Code Copilot
+npx skillfold --out-dir .gemini/skills     # Gemini CLI
+```
 
 ## 8. Next steps
 
 - Read the full config specification in [BRIEF.md](../BRIEF.md)
 - Explore the [shared library examples](../library/examples/) for real pipeline patterns
 - Use `skillfold graph` to visualize your team flow as a Mermaid diagram
-- Add `team.orchestrator` to generate execution plans automatically
 - Try parallel `map` to process lists of items concurrently
+- Add `skillfold --check` to CI to verify compiled output stays in sync
 - Set `GITHUB_TOKEN` to reference skills from private GitHub repositories
