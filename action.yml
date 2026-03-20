@@ -17,12 +17,15 @@ runs:
   steps:
     - name: Skillfold --check
       shell: bash
+      env:
+        INPUT_CONFIG: ${{ inputs.config }}
+        INPUT_TARGET: ${{ inputs.target }}
       run: |
-        cmd="npx skillfold --check"
-        if [ -n "${{ inputs.config }}" ]; then
-          cmd="$cmd --config ${{ inputs.config }}"
+        args=(--check)
+        if [ -n "$INPUT_CONFIG" ]; then
+          args+=(--config "$INPUT_CONFIG")
         fi
-        if [ -n "${{ inputs.target }}" ]; then
-          cmd="$cmd --target ${{ inputs.target }}"
+        if [ -n "$INPUT_TARGET" ]; then
+          args+=(--target "$INPUT_TARGET")
         fi
-        $cmd
+        npx skillfold "${args[@]}"
