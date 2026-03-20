@@ -10,6 +10,8 @@
 
 One YAML config. One command. Every agent gets a compiled [SKILL.md](https://agentskills.io/specification).
 
+Works with [Claude Code](https://claude.ai/code), [Cursor](https://cursor.com), [VS Code](https://code.visualstudio.com), [GitHub Copilot](https://github.com), [OpenAI Codex](https://developers.openai.com/codex), [Gemini CLI](https://geminicli.com), and [25+ more](https://agentskills.io).
+
 [Quick Start](#quick-start) | [How It Works](#how-it-works) | [Features](#features) | [Library](#shared-library) | [Reference](#reference)
 
 </div>
@@ -90,6 +92,8 @@ Skillfold has three layers, each building on the last:
 | **Skills** | Atomic skill directories + composition rules | Concatenates skill bodies in order, recursively |
 | **State** | Typed schema with custom types and external locations | Validates reads/writes at compile time |
 | **Team** | Execution flow with conditionals, loops, and parallel map | Generates orchestrator plan, checks reachability |
+
+Compiled output is portable across [30+ platforms](https://agentskills.io) that support the Agent Skills standard.
 
 <details>
 <summary><strong>Generated orchestrator output</strong></summary>
