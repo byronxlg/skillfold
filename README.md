@@ -486,6 +486,25 @@ Options:
   --version            Show version
 ```
 
+### CI Integration
+
+Add skillfold's `--check` flag to CI so stale compiled output fails the build. The repo ships a reusable GitHub Action:
+
+```yaml
+name: Skillfold
+on: [push, pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - uses: byronxlg/skillfold@v1
+```
+
 ### Config
 
 Three top-level sections. Full specification in [BRIEF.md](BRIEF.md). A [JSON Schema](skillfold.schema.json) is available for IDE autocompletion.

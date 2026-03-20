@@ -47,6 +47,7 @@ dist/             - tsc compiled JS (npm package, gitignored)
 build/            - Compiled skill output (default --out-dir, gitignored)
 skillfold.yaml         - Pipeline config for the dev team itself
 skillfold.schema.json  - JSON Schema for config validation and IDE autocompletion
+action.yml             - Reusable GitHub Action for CI integration (skillfold --check)
 BRIEF.md               - Full design brief
 ```
 
