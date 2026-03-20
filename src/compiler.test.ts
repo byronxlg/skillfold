@@ -6,7 +6,7 @@ import { tmpdir } from "node:os";
 
 import type { Config } from "./config.js";
 import { CompileError } from "./errors.js";
-import { check, compile } from "./compiler.js";
+import { check, compile, computeStats } from "./compiler.js";
 import type { Graph } from "./graph.js";
 import type { StateSchema } from "./state.js";
 
@@ -671,5 +671,153 @@ describe("check", () => {
     const orchResult = results.find((r) => r.name === "orchestrator");
     assert.ok(orchResult);
     assert.equal(orchResult.status, "ok");
+  });
+});
+
+describe("computeStats", () => {
+  it("counts shared skills when 2+ agents use the same atomic skill", () => {
+    const config: Config = {
+      name: "test",
+      skills: {
+        planning: { path: "./skills/planning" },
+        coding: { path: "./skills/coding" },
+        review: { path: "./skills/review" },
+        planner: { compose: ["planning", "coding"], description: "Plans and codes." },
+        reviewer: { compose: ["coding", "review"], description: "Reviews code." },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("planning", "Plan line 1\nPlan line 2");
+    bodies.set("coding", "Code line 1\nCode line 2\nCode line 3");
+    bodies.set("review", "Review line 1");
+
+    const stats = computeStats(config, bodies);
+
+    assert.equal(stats.agents, 2);
+    assert.equal(stats.skills, 3);
+    assert.equal(stats.shared, 1); // coding is shared
+    // coding has 3 lines, used by 2 agents -> (2-1)*3 = 3
+    assert.equal(stats.linesDeduplicated, 3);
+  });
+
+  it("reports zero shared skills when no atomic skill appears in 2+ agents", () => {
+    const config: Config = {
+      name: "test",
+      skills: {
+        planning: { path: "./skills/planning" },
+        coding: { path: "./skills/coding" },
+        planner: { compose: ["planning"], description: "Plans." },
+        coder: { compose: ["coding"], description: "Codes." },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("planning", "Plan body");
+    bodies.set("coding", "Code body");
+
+    const stats = computeStats(config, bodies);
+
+    assert.equal(stats.agents, 2);
+    assert.equal(stats.skills, 2);
+    assert.equal(stats.shared, 0);
+    assert.equal(stats.linesDeduplicated, 0);
+  });
+
+  it("counts line deduplication across multiple shared skills", () => {
+    const config: Config = {
+      name: "test",
+      skills: {
+        a: { path: "./skills/a" },
+        b: { path: "./skills/b" },
+        c: { path: "./skills/c" },
+        agent1: { compose: ["a", "b", "c"], description: "Agent 1." },
+        agent2: { compose: ["a", "b"], description: "Agent 2." },
+        agent3: { compose: ["a", "c"], description: "Agent 3." },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("a", "Line 1\nLine 2"); // 2 lines, used by 3 agents -> (3-1)*2 = 4
+    bodies.set("b", "Line 1");          // 1 line, used by 2 agents -> (2-1)*1 = 1
+    bodies.set("c", "Line 1\nLine 2\nLine 3"); // 3 lines, used by 2 agents -> (2-1)*3 = 3
+
+    const stats = computeStats(config, bodies);
+
+    assert.equal(stats.agents, 3);
+    assert.equal(stats.skills, 3);
+    assert.equal(stats.shared, 3); // all three are shared
+    assert.equal(stats.linesDeduplicated, 8); // 4 + 1 + 3
+  });
+
+  it("handles a single agent with no sharing possible", () => {
+    const config: Config = {
+      name: "test",
+      skills: {
+        planning: { path: "./skills/planning" },
+        coding: { path: "./skills/coding" },
+        solo: { compose: ["planning", "coding"], description: "Solo agent." },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("planning", "Plan body");
+    bodies.set("coding", "Code body");
+
+    const stats = computeStats(config, bodies);
+
+    assert.equal(stats.agents, 1);
+    assert.equal(stats.skills, 2);
+    assert.equal(stats.shared, 0);
+    assert.equal(stats.linesDeduplicated, 0);
+  });
+
+  it("handles recursive composition when counting atomic skills", () => {
+    const config: Config = {
+      name: "test",
+      skills: {
+        a: { path: "./skills/a" },
+        b: { path: "./skills/b" },
+        inner: { compose: ["a", "b"], description: "Inner." },
+        agent1: { compose: ["inner"], description: "Uses inner." },
+        agent2: { compose: ["a"], description: "Uses a directly." },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("a", "A line 1\nA line 2");
+    bodies.set("b", "B line 1");
+
+    const stats = computeStats(config, bodies);
+
+    // agent1 uses a, b (via inner); agent2 uses a
+    // inner is also composed but not a top-level agent output... actually it IS composed
+    // so inner, agent1, agent2 are all agents (3 composed skills)
+    assert.equal(stats.agents, 3);
+    assert.equal(stats.skills, 2); // a, b
+    // a is used by inner, agent1 (via inner), agent2 -> 3 agents
+    // b is used by inner, agent1 (via inner) -> 2 agents
+    assert.equal(stats.shared, 2); // both a and b are shared
+    // a: (3-1)*2 = 4, b: (2-1)*1 = 1
+    assert.equal(stats.linesDeduplicated, 5);
+  });
+
+  it("returns zero agents when config has no composed skills", () => {
+    const config: Config = {
+      name: "test",
+      skills: {
+        planning: { path: "./skills/planning" },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("planning", "Plan body");
+
+    const stats = computeStats(config, bodies);
+
+    assert.equal(stats.agents, 0);
+    assert.equal(stats.skills, 0);
+    assert.equal(stats.shared, 0);
+    assert.equal(stats.linesDeduplicated, 0);
   });
 });
