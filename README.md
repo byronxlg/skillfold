@@ -36,6 +36,8 @@ Works with [Claude Code](https://claude.ai/code), [Cursor](https://cursor.com), 
 
 </div>
 
+<!-- DEMO_RECORDING: Insert terminal recording (GIF/SVG) here -->
+
 ## Already Using Claude Code?
 
 If you have agents in `.claude/agents/`, skillfold can adopt them:
