@@ -60,13 +60,15 @@ describe("validate: valid configs", () => {
 });
 
 describe("validate: invalid configs", () => {
-  it("rejects config missing skills section", () => {
+  it("rejects config missing skills section", async () => {
+    const { parseRawConfig, validateAndBuild } = await import("./config.js");
     assert.throws(
-      () => {
-        const { parseRawConfig } = require("./config.js");
-        parseRawConfig("name: bad\n");
-      },
-      // readConfig wraps this - test at a higher level
+      () => validateAndBuild(parseRawConfig("name: bad\n")),
+      (err: Error) => {
+        assert.ok(err instanceof ConfigError);
+        assert.ok(err.message.includes("skills"));
+        return true;
+      }
     );
   });
 
