@@ -29,7 +29,7 @@ Earliest submission date: March 26, 2026 (7-day repo age requirement met).
 
 **Description:**
 
-Compile-time pipeline compiler that turns YAML config into Claude Code agents. Atomic skills compose into agents, team flows define typed execution graphs with conditional routing and parallel map, and `--target claude-code` compiles everything to `.claude/agents/*.md` with no runtime or daemon. Single dependency, 322 tests.
+Compile-time pipeline compiler that turns YAML config into Claude Code agents. Atomic skills compose into agents, team flows define typed execution graphs with conditional routing and parallel map, and `--target claude-code` compiles everything to `.claude/agents/*.md` with no runtime or daemon. Single dependency, 328 tests.
 
 **Validate Claims:**
 
@@ -55,7 +55,7 @@ Then tell Claude Code: "Use /skillfold to compile the pipeline and show me the g
 
 **Additional Comments:**
 
-Every other orchestrator in the awesome-claude-code list is a runtime tool - it launches agents, manages sessions, and coordinates execution while agents run. Skillfold is the only compile-time tool in the category. It validates skill references, state types, write conflicts, and cycle exit conditions at build time, then produces plain Markdown files that Claude Code reads natively. When a pipeline has a team flow, the compiler also generates an executable `/run-pipeline` command that orchestrates the agents with a step-by-step execution plan, state table, and Agent tool invocations. There is no process to run, no server to start, and no SDK to integrate. The compiler has 322 tests, a single dependency (yaml), and runs on Node 20+.
+Every other orchestrator in the awesome-claude-code list is a runtime tool - it launches agents, manages sessions, and coordinates execution while agents run. Skillfold is the only compile-time tool in the category. It validates skill references, state types, write conflicts, and cycle exit conditions at build time, then produces plain Markdown files that Claude Code reads natively. When a pipeline has a team flow, the compiler also generates an executable `/run-pipeline` command that orchestrates the agents with a step-by-step execution plan, state table, and Agent tool invocations. There is no process to run, no server to start, and no SDK to integrate. The compiler has 328 tests, a single dependency (yaml), and runs on Node 20+.
 
 ---
 
@@ -89,7 +89,7 @@ scoring criteria helps confirm Skillfold is ready.
   stored or logged.
 - **Single dependency** - The only runtime dependency is `yaml` (YAML parser).
   No transitive dependency tree to audit.
-- **322 tests** across 58 suites, run with `node:test` (zero test framework
+- **328 tests** across 59 suites, run with `node:test` (zero test framework
   dependencies).
 - **MIT license**, clearly stated in LICENSE and package.json.
 - **CI on Node 20 + 22** via GitHub Actions, with `--check` flag for verifying
