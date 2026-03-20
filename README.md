@@ -10,7 +10,7 @@
 
 One YAML config. One command. Every agent gets a compiled [SKILL.md](https://agentskills.io/specification).
 
-Works with [Claude Code](https://claude.ai/code), [Cursor](https://cursor.com), [VS Code](https://code.visualstudio.com), [GitHub Copilot](https://github.com), [OpenAI Codex](https://developers.openai.com/codex), [Gemini CLI](https://geminicli.com), and [32 more](https://agentskills.io).
+Works with [Claude Code](https://claude.ai/code), [Cursor](https://cursor.com), [VS Code](https://code.visualstudio.com), [GitHub Copilot](https://github.com), [OpenAI Codex](https://developers.openai.com/codex), [Gemini CLI](https://geminicli.com), and [26 more](https://agentskills.io).
 
 [Quick Start](#quick-start) | [How It Works](#how-it-works) | [Features](#features) | [Library](#shared-library) | [Reference](#reference)
 
@@ -156,7 +156,7 @@ imports:
 
 ## Shared Library
 
-Skillfold ships with **10 generic skills** you can import into any pipeline:
+Skillfold ships with **11 generic skills** you can import into any pipeline:
 
 | Skill | Purpose |
 |-------|---------|
@@ -170,6 +170,7 @@ Skillfold ships with **10 generic skills** you can import into any pipeline:
 | summarization | Condense information for target audiences |
 | github-workflow | Work with branches, PRs, issues via `gh` CLI |
 | file-management | Read, create, edit, and organize files |
+| skillfold-cli | Use the skillfold compiler to manage pipeline configs |
 
 Three ready-made example configs are included in [`library/examples/`](library/examples/):
 

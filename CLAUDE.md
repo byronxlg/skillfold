@@ -33,7 +33,7 @@ src/
   init.ts         - skillfold init scaffolding
   errors.ts       - ConfigError, ResolveError, CompileError, GraphError
 skills/           - Atomic skill definitions (each has a SKILL.md)
-library/          - Shared skills library (10 generic skills + 3 example configs)
+library/          - Shared skills library (11 generic skills + 3 example configs)
 docs/             - Getting-started tutorial and documentation
 dist/             - tsc compiled JS (npm package, gitignored)
 build/            - Compiled skill output (default --out-dir, gitignored)
@@ -78,7 +78,7 @@ Read BRIEF.md for full context. Key points:
 
 ## Shared Skills Library
 
-The `library/` directory contains 10 generic, reusable atomic skills and 3 example pipeline configs. It exists as an import target - other configs can pull in library skills via the `imports` field.
+The `library/` directory contains 11 generic, reusable atomic skills and 3 example pipeline configs. It exists as an import target - other configs can pull in library skills via the `imports` field.
 
 ### Skills
 
@@ -92,6 +92,7 @@ The `library/` directory contains 10 generic, reusable atomic skills and 3 examp
 - **summarization** - Condense information with audience-appropriate detail levels
 - **github-workflow** - Work with GitHub branches, PRs, issues, reviews via `gh` CLI
 - **file-management** - Read, create, edit, and organize files and directories
+- **skillfold-cli** - Use the skillfold compiler to manage pipeline configs
 
 ### Import Syntax
 
@@ -129,7 +130,7 @@ Located in `library/examples/`:
 - End-to-end test with the brief's full example config
 - CI via GitHub Actions (Node 20 + 22)
 - Graph visualization with full composition lineage and state writes (`skillfold graph`)
-- Shared skills library with 10 generic atomic skills and 3 example pipeline configs
+- Shared skills library with 11 generic atomic skills and 3 example pipeline configs
 - `skillfold init` shows library import hint in generated config and CLI output
 - `skillfold validate` command for config validation without compiling output
 - `skillfold list` command for pipeline introspection (skills, state, team flow)

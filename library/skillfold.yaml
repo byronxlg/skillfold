@@ -12,3 +12,4 @@ skills:
     summarization: ./skills/summarization
     github-workflow: ./skills/github-workflow
     file-management: ./skills/file-management
+    skillfold-cli: ./skills/skillfold-cli
