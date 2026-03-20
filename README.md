@@ -251,7 +251,7 @@ skillfold [command] [options]
 
 Commands:
   (default)         Compile the pipeline config
-  init              Scaffold a new pipeline project
+  init [dir]        Scaffold a new pipeline project
   validate          Validate config without compiling
   list              Display a structured summary of the pipeline
   graph             Output Mermaid flowchart of the team flow
