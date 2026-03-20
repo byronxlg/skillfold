@@ -14,45 +14,70 @@ Running multiple AI agents? Each one needs a [SKILL.md](https://agentskills.io/s
 
 Skillfold fixes this. Define each skill once, compose them into agents, and compile one YAML config into a spec-compliant SKILL.md for every agent.
 
+## The Problem
+
+Three agents that all need planning instructions. Without skillfold, you copy-paste the same block into each SKILL.md:
+
+```
+planner/SKILL.md         engineer/SKILL.md        reviewer/SKILL.md
+------------------       ------------------       ------------------
+# Planning               # Planning               # Planning
+Break problems into      Break problems into      Break problems into
+steps. Identify          steps. Identify          steps. Identify
+dependencies...          dependencies...          dependencies...
+                         # Code Writing           # Code Review
+                         Write clean, correct     Review for correctness,
+                         production code...       clarity, security...
+```
+
+Three files, one shared skill, zero guarantees they stay in sync. Now change the planning instructions - you update one file and forget the other two.
+
+## The Fix
+
+One config. One source of truth. The compiler handles the rest.
+
+```yaml
+# skillfold.yaml
+skills:
+  atomic:
+    planning: ./skills/planning
+    coding: ./skills/coding
+    review: ./skills/review
+  composed:
+    planner:
+      compose: [planning]
+    engineer:
+      compose: [planning, coding]
+    reviewer:
+      compose: [planning, review]
+```
+
+```bash
+npx skillfold
+```
+
+```
+build/
+  planner/SKILL.md     # planning body
+  engineer/SKILL.md    # planning + coding bodies
+  reviewer/SKILL.md    # planning + review bodies
+```
+
+Update `skills/planning/SKILL.md` once, recompile, and every agent gets the change.
+
+---
+
+## Quick Start
+
 ```bash
 npx skillfold init my-team   # scaffold a starter pipeline
 cd my-team
 npx skillfold                # compile it
 ```
 
-```
-build/
-  planner/SKILL.md       # planning body
-  engineer/SKILL.md      # planning + coding bodies, composed
-  reviewer/SKILL.md      # reviewing body
-  orchestrator/SKILL.md  # planning body + generated execution plan
-```
-
-Works with [Claude Code](https://claude.ai/code), [Cursor](https://cursor.com), [VS Code](https://code.visualstudio.com), [GitHub Copilot](https://github.com), [OpenAI Codex](https://developers.openai.com/codex), [Gemini CLI](https://geminicli.com), and [26 more](https://agentskills.io).
-
-<div align="center">
-
-[Already using Claude Code?](#already-using-claude-code) | [Quick Start](#quick-start) | [Claude Code](#claude-code) | [How Is This Different?](#how-is-this-different) | [How It Works](#how-it-works) | [Features](#features) | [Library](#shared-library) | [Integrations](docs/integrations.md) | [Reference](#reference)
-
-</div>
-
-## Already Using Claude Code?
-
-If you have agents in `.claude/agents/`, skillfold can adopt them:
-
-```bash
-npx skillfold adopt
-```
-
-This reads your existing agent files, creates a skill directory for each one, and generates a `skillfold.yaml` config. Your agents keep working exactly as before - now you can start extracting shared instructions into reusable skills that the compiler keeps in sync.
-
----
-
-## Quick Start
-
 For a step-by-step walkthrough, see the [Getting Started](docs/getting-started.md) guide. To compile directly to your platform, see the [Integration Guide](docs/integrations.md).
 
-Define skills, compose them into agents, wire agents into a team flow, and compile:
+Add state and team flow to go beyond skill composition:
 
 ```yaml
 # skillfold.yaml
@@ -103,14 +128,34 @@ build/
   reviewer/SKILL.md    # review body, YAML frontmatter
 ```
 
-The `engineer` agent's SKILL.md contains the concatenated bodies of `planning` and `coding`. Every output file is a valid SKILL.md per the [Agent Skills standard](https://agentskills.io/specification).
-
 > [!TIP]
 > Add `team.orchestrator: orchestrator` and the orchestrator's compiled SKILL.md gets a generated execution plan with numbered steps, state tables, and conditional branches.
 
 ---
 
-## Claude Code
+## How Is This Different?
+
+Agent Skills tools solve different problems at different layers:
+
+| Layer | What it does | Examples |
+|-------|-------------|----------|
+| **Skill authoring** | Define individual skills, ship them with packages | TanStack Intent, manual SKILL.md |
+| **Composition and orchestration** | Compose skills into agents, wire agents into typed team flows, compile output | **Skillfold** |
+| **Execution** | Run the agents | Claude Code, Cursor, Copilot, etc. |
+
+Authoring tools help library maintainers *ship* skills. Skillfold helps teams *consume and orchestrate* them. A library author ships skills with their package, a team imports those skills into a skillfold pipeline, and agent platforms run the compiled output. These tools work together.
+
+---
+
+## Already Using Claude Code?
+
+If you have agents in `.claude/agents/`, skillfold can adopt them:
+
+```bash
+npx skillfold adopt
+```
+
+This reads your existing agent files, creates a skill directory for each one, and generates a `skillfold.yaml` config. Your agents keep working exactly as before - now you can start extracting shared instructions into reusable skills that the compiler keeps in sync.
 
 Compile directly to Claude Code's native agent and skill layout:
 
@@ -136,19 +181,7 @@ npx skillfold plugin
 
 See the [Integration Guide](docs/integrations.md) for setup details.
 
----
-
-## How Is This Different?
-
-Agent Skills tools solve different problems at different layers:
-
-| Layer | What it does | Examples |
-|-------|-------------|----------|
-| **Skill authoring** | Define individual skills, ship them with packages | TanStack Intent, manual SKILL.md |
-| **Composition and orchestration** | Compose skills into agents, wire agents into typed team flows, compile output | **Skillfold** |
-| **Execution** | Run the agents | Claude Code, Cursor, Copilot, etc. |
-
-Authoring tools help library maintainers *ship* skills. Skillfold helps teams *consume and orchestrate* them. A library author ships skills with their package, a team imports those skills into a skillfold pipeline, and agent platforms run the compiled output. These tools work together.
+Works with [Claude Code](https://claude.ai/code), [Cursor](https://cursor.com), [VS Code](https://code.visualstudio.com), [GitHub Copilot](https://github.com), [OpenAI Codex](https://developers.openai.com/codex), [Gemini CLI](https://geminicli.com), and [26 more](https://agentskills.io).
 
 ---
 
@@ -206,19 +239,20 @@ Then:
 
 ## Features
 
-**Composition** --
-Atomic skills are reusable instruction fragments. Composed skills concatenate them in order, recursively. Reference remote skills by GitHub URL.
+### Composition
 
-**Validation** --
-Typed state schema with custom types, primitives, and `list<Type>`. State reads and writes validated at compile time. Write conflict detection. Cycle exit condition enforcement.
+Atomic skills are reusable instruction fragments. Composed skills concatenate them in order, recursively.
 
-**Team Flows** --
-Conditional routing with `when` expressions. Loops with required exit conditions. Parallel `map` over typed lists. Reachability analysis for all flow nodes.
+```yaml
+composed:
+  tech-lead:
+    compose: [planning, code-review]       # bodies joined in order
+  senior-eng:
+    compose: [tech-lead, code-writing]     # recursive - includes planning + code-review + code-writing
+```
 
-**Graph Visualization** --
-`skillfold graph` outputs a Mermaid flowchart showing full composition lineage and state writes.
+### Remote Skills
 
-**Remote Skills** --
 Reference skills by GitHub URL. Skillfold fetches them at compile time.
 
 ```yaml
@@ -230,13 +264,50 @@ skills:
 > [!TIP]
 > Set `GITHUB_TOKEN` in your environment to fetch skills from private repositories.
 
-**Pipeline Imports** --
+### Pipeline Imports
+
 Share skills and state across configs. Team flows stay local.
 
 ```yaml
 imports:
   - node_modules/skillfold/library/skillfold.yaml
 ```
+
+### Validation
+
+Typed state schema with custom types, primitives, and `list<Type>`. The compiler validates state reads and writes at compile time, detects write conflicts, and enforces cycle exit conditions.
+
+```yaml
+state:
+  Task:
+    description: string
+    approved: bool
+  tasks:
+    type: "list<Task>"
+    location:
+      skill: jira
+      path: DEV/dev-board
+```
+
+### Team Flows
+
+Conditional routing with `when` expressions. Loops with required exit conditions. Parallel `map` over typed lists. Reachability analysis for all flow nodes.
+
+```yaml
+team:
+  flow:
+    - planner:
+        writes: [state.tasks]
+      then:
+        map: state.tasks
+        as: task
+        agent: worker
+        then: reviewer
+```
+
+### Graph Visualization
+
+`skillfold graph` outputs a Mermaid flowchart showing full composition lineage and state writes.
 
 ---
 
@@ -341,59 +412,6 @@ Add this line to the top of your `skillfold.yaml` for editor support:
 ```yaml
 # yaml-language-server: $schema=node_modules/skillfold/skillfold.schema.json
 ```
-
-<details>
-<summary><strong>skills</strong> - atomic paths and composition rules</summary>
-
-```yaml
-skills:
-  atomic:
-    code-review: ./skills/code-review                              # local path
-    shared: https://github.com/org/repo/tree/main/skills/shared   # GitHub URL
-  composed:
-    tech-lead:
-      compose: [planning, code-review]
-      description: "Produces plans and reviews code."
-```
-
-</details>
-
-<details>
-<summary><strong>state</strong> - typed schema with custom types and locations</summary>
-
-```yaml
-state:
-  Task:                    # custom type
-    description: string
-    approved: bool
-  tasks:                   # typed field with external location
-    type: "list<Task>"
-    location:
-      skill: jira
-      path: DEV/dev-board
-```
-
-</details>
-
-<details>
-<summary><strong>team</strong> - orchestrator and execution flow</summary>
-
-```yaml
-team:
-  orchestrator: orchestrator   # receives generated execution plan
-  flow:
-    - planner:
-        writes: [state.plan]
-      then: worker
-    - worker:
-        reads: [state.plan]
-        writes: [state.result]
-      then: end
-```
-
-Conditional transitions, parallel map, and imports are documented in [BRIEF.md](BRIEF.md).
-
-</details>
 
 ### Tests
 
