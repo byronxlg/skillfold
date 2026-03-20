@@ -1437,3 +1437,99 @@ describe("type guards", () => {
     assert.equal(isConditionalThen("next"), false);
   });
 });
+
+describe("error message improvements", () => {
+  it("suggests close match for unknown skill in graph node", () => {
+    const graph = parseGraph([{ "reveiw": { writes: ["state.output"] } }]);
+    const skills = makeSkills("review", "lint");
+    assert.throws(
+      () => validateGraph(graph, skills, undefined),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /skill "reveiw" is not declared/);
+        assert.match(err.message, /Did you mean "review"\?/);
+        return true;
+      },
+    );
+  });
+
+  it("omits suggestion when no close skill match exists", () => {
+    const graph = parseGraph([{ "zzzzz": { writes: [] } }]);
+    const skills = makeSkills("review", "lint");
+    assert.throws(
+      () => validateGraph(graph, skills, undefined),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /skill "zzzzz" is not declared/);
+        assert.ok(!err.message.includes("Did you mean"), "should not suggest when no close match");
+        return true;
+      },
+    );
+  });
+
+  it("suggests close match for unknown transition target", () => {
+    const graph = parseGraph([
+      { review: { writes: [] }, then: "lnt" },
+      { lint: null },
+    ]);
+    const skills = makeSkills("review", "lint");
+    assert.throws(
+      () => validateGraph(graph, skills, undefined),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /transition target "lnt"/);
+        assert.match(err.message, /Did you mean "lint"\?/);
+        return true;
+      },
+    );
+  });
+
+  it("includes actionable guidance for missing state section", () => {
+    const graph = parseGraph([{ review: { reads: ["state.output"] } }]);
+    const skills = makeSkills("review");
+    assert.throws(
+      () => validateGraph(graph, skills, undefined),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /Add a top-level "state" section to your config/);
+        return true;
+      },
+    );
+  });
+
+  it("suggests close match for undeclared state field in reads", () => {
+    const state = makeState({
+      output: { kind: "primitive", value: "string" },
+      status: { kind: "primitive", value: "string" },
+    });
+    const graph = parseGraph([{ review: { reads: ["state.outpt"] } }]);
+    const skills = makeSkills("review");
+    assert.throws(
+      () => validateGraph(graph, skills, state),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /reads state field "state.outpt" which is not declared/);
+        assert.match(err.message, /Did you mean "output"\?/);
+        return true;
+      },
+    );
+  });
+
+  it("suggests close match for undeclared state field in writes", () => {
+    const state = makeState({
+      output: { kind: "primitive", value: "string" },
+      status: { kind: "primitive", value: "string" },
+    });
+    const graph = parseGraph([{ review: { writes: ["state.staus"] } }]);
+    const skills = makeSkills("review");
+    assert.throws(
+      () => validateGraph(graph, skills, state),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /writes state field "state.staus" which is not declared/);
+        assert.match(err.message, /Did you mean "status"\?/);
+        return true;
+      },
+    );
+  });
+});
