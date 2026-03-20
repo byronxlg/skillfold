@@ -870,7 +870,7 @@ skills:
 
     const config = await loadConfig(configPath);
     const bodies = await resolveSkills(config, baseDir);
-    const results = compile(config, bodies, outDir);
+    const results = compile(config, bodies, outDir, "0.0.0", "test.yaml");
 
     assert.ok(results.length > 0, "should produce compile results");
     // The composed skill 'combined' should be compiled
