@@ -125,7 +125,7 @@ describe("library: example configs", () => {
 
       const config = await loadConfig(configPath);
       const bodies = await resolveSkills(config, exampleDir);
-      const results = compile(config, bodies, outDir);
+      const results = compile(config, bodies, outDir, "0.0.0", "skillfold.yaml");
 
       assert.ok(results.length > 0, `Expected at least one compiled skill`);
 
@@ -148,7 +148,7 @@ describe("library: example configs", () => {
       config,
       join(libraryDir, "examples", "dev-team")
     );
-    compile(config, bodies, outDir);
+    compile(config, bodies, outDir, "0.0.0", "skillfold.yaml");
 
     for (const agent of ["planner", "engineer", "reviewer"]) {
       assert.ok(
@@ -173,7 +173,7 @@ describe("library: example configs", () => {
       config,
       join(libraryDir, "examples", "content-pipeline")
     );
-    compile(config, bodies, outDir);
+    compile(config, bodies, outDir, "0.0.0", "skillfold.yaml");
 
     for (const agent of ["researcher", "writer", "editor"]) {
       assert.ok(
@@ -198,7 +198,7 @@ describe("library: example configs", () => {
       config,
       join(libraryDir, "examples", "code-review-bot")
     );
-    compile(config, bodies, outDir);
+    compile(config, bodies, outDir, "0.0.0", "skillfold.yaml");
 
     for (const agent of ["analyzer", "reporter"]) {
       assert.ok(
@@ -237,7 +237,7 @@ describe("library: init output references library", () => {
     const configPath = join(tmpDir, "skillfold.yaml");
     const config = readConfig(configPath);
     const bodies = await resolveSkills(config, tmpDir);
-    const results = compile(config, bodies, join(tmpDir, "build"));
+    const results = compile(config, bodies, join(tmpDir, "build"), "0.0.0", "skillfold.yaml");
 
     assert.ok(results.length > 0);
   });

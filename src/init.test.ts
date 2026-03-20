@@ -67,7 +67,7 @@ describe("initProject", () => {
 
     const config = readConfig(configPath);
     const bodies = await resolveSkills(config, tmpDir);
-    const results = compile(config, bodies, outDir);
+    const results = compile(config, bodies, outDir, "0.0.0", "skillfold.yaml");
 
     // 4 agents: planner, engineer, reviewer, orchestrator
     assert.equal(results.length, 4);

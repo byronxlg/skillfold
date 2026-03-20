@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFileSync } from "node:fs";
-import { dirname, join, relative, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { isAtomic, isComposed, loadConfig } from "./config.js";
@@ -227,7 +227,7 @@ async function main(): Promise<void> {
     const bodies = await resolveSkills(config, baseDir);
 
     if (args.check) {
-      const results = check(config, bodies, args.outDir);
+      const results = check(config, bodies, args.outDir, pkg.version, basename(args.configPath));
       const stale = results.filter((r) => r.status !== "ok");
 
       if (stale.length === 0) {
@@ -240,7 +240,7 @@ async function main(): Promise<void> {
         process.exit(1);
       }
     } else {
-      const results = compile(config, bodies, args.outDir);
+      const results = compile(config, bodies, args.outDir, pkg.version, basename(args.configPath));
 
       console.log(`skillfold: compiled ${config.name}`);
       for (const result of results) {
