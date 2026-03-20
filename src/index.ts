@@ -71,6 +71,10 @@ export { listPipeline } from "./list.js";
 export { initFromTemplate, initProject, TEMPLATES } from "./init.js";
 export type { Template } from "./init.js";
 
+// Adopt existing agents
+export { adoptProject } from "./adopt.js";
+export type { AdoptedAgent, AdoptResult } from "./adopt.js";
+
 // Errors
 export {
   CompileError,

@@ -1,6 +1,6 @@
 {
   "name": "skillfold",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Compiler for multi-agent AI pipelines. Compose skills, wire team flows, generate orchestrators.",
   "type": "module",
   "main": "./dist/index.js",
@@ -15,7 +15,7 @@
     "skillfold": "./dist/cli.js"
   },
   "files": ["dist", "library", "plugin", "skillfold.schema.json"],
-  "keywords": ["agent", "skills", "pipeline", "compiler", "multi-agent", "orchestrator", "skill-composition"],
+  "keywords": ["agent", "skills", "pipeline", "compiler", "multi-agent", "orchestrator", "skill-composition", "claude-code", "cursor", "codex", "gemini-cli", "agentskills", "skill-md"],
   "agentskills": {
     "skills": [
       { "name": "planning", "path": "./library/skills/planning" },
