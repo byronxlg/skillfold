@@ -216,6 +216,7 @@ Commands:
   (default)         Compile the pipeline config
   init              Scaffold a new pipeline project
   validate          Validate config without compiling
+  list              Display a structured summary of the pipeline
   graph             Output Mermaid flowchart of the team flow
 
 Options:
@@ -286,7 +287,7 @@ Conditional transitions, parallel map, and imports are documented in [BRIEF.md](
 ### Tests
 
 ```bash
-npm test          # 247 tests, node:test, no extra dependencies
+npm test          # 253 tests, node:test, no extra dependencies
 npx tsc --noEmit  # type check
 ```
 

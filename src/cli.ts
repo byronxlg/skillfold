@@ -7,6 +7,7 @@ import { isAtomic, isComposed, loadConfig } from "./config.js";
 import { compile } from "./compiler.js";
 import { ConfigError, CompileError, GraphError, ResolveError } from "./errors.js";
 import { initProject } from "./init.js";
+import { listPipeline } from "./list.js";
 import { resolveSkills } from "./resolver.js";
 import { generateMermaid } from "./visualize.js";
 
@@ -23,6 +24,7 @@ Usage: skillfold [command] [options]
 Commands:
   init              Scaffold a new pipeline project
   validate          Validate config without compiling
+  list              Display a structured summary of the pipeline
   graph             Output Mermaid flowchart of the team flow
   (default)         Compile the pipeline config
 
@@ -35,7 +37,7 @@ Options:
 }
 
 interface Args {
-  command: "init" | "compile" | "graph" | "validate";
+  command: "init" | "compile" | "graph" | "list" | "validate";
   configPath: string;
   outDir: string;
   dir: string;
@@ -44,7 +46,7 @@ interface Args {
 }
 
 function parseArgs(argv: string[]): Args {
-  let command: "init" | "compile" | "graph" | "validate" = "compile";
+  let command: "init" | "compile" | "graph" | "list" | "validate" = "compile";
   let configPath = "skillfold.yaml";
   let outDir = "build";
   let dir = ".";
@@ -59,6 +61,9 @@ function parseArgs(argv: string[]): Args {
     i = 1;
   } else if (argv.length > 0 && argv[0] === "graph") {
     command = "graph";
+    i = 1;
+  } else if (argv.length > 0 && argv[0] === "list") {
+    command = "list";
     i = 1;
   } else if (argv.length > 0 && argv[0] === "validate") {
     command = "validate";
@@ -131,6 +136,20 @@ async function main(): Promise<void> {
       }
       const output = generateMermaid(config);
       process.stdout.write(output);
+    } catch (err) {
+      if (err instanceof ConfigError || err instanceof GraphError) {
+        console.error(`skillfold error: ${err.message}`);
+        process.exit(1);
+      }
+      throw err;
+    }
+    return;
+  }
+
+  if (args.command === "list") {
+    try {
+      const config = await loadConfig(args.configPath);
+      process.stdout.write(listPipeline(config));
     } catch (err) {
       if (err instanceof ConfigError || err instanceof GraphError) {
         console.error(`skillfold error: ${err.message}`);
