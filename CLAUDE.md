@@ -125,7 +125,7 @@ Located in `library/examples/`:
 - Optional `team.orchestrator` config key to append generated plan to a composed skill
 - Spec-compliant output per Agent Skills standard (directory structure + YAML frontmatter)
 - `skillfold init` command to scaffold starter pipeline projects
-- URL-based skill references (GitHub tree URLs fetched via raw.githubusercontent.com)
+- URL-based skill references (GitHub tree URLs fetched via raw.githubusercontent.com, private repos via GITHUB_TOKEN)
 - Pipeline imports (import skills and state from other configs, team is local-only)
 - End-to-end test with the brief's full example config
 - CI via GitHub Actions (Node 20 + 22)
@@ -144,6 +144,5 @@ Located in `library/examples/`:
 ## What's Next
 
 See BRIEF.md "Open Questions" section. Potential next work:
-1. Private repo authentication
-2. Package registry for shared skills
-3. Sub-flow imports (flow nodes referencing imported flows as single nodes)
+1. Package registry for shared skills
+2. Sub-flow imports (flow nodes referencing imported flows as single nodes)
