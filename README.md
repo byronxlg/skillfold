@@ -1,43 +1,32 @@
+<div align="center">
+
 # Skillfold
 
-[![npm](https://img.shields.io/npm/v/skillfold)](https://www.npmjs.com/package/skillfold)
-[![CI](https://github.com/byronxlg/skillfold/actions/workflows/ci.yml/badge.svg)](https://github.com/byronxlg/skillfold/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+**Compiler for multi-agent AI pipelines**
 
-Compiler for multi-agent AI pipelines. Define skills, compose them into agents, wire agents into execution flows, and compile to standard `SKILL.md` files.
+[![npm v0.5.0](https://img.shields.io/npm/v/skillfold?style=flat-square)](https://www.npmjs.com/package/skillfold)
+[![CI](https://img.shields.io/github/actions/workflow/status/byronxlg/skillfold/ci.yml?style=flat-square&label=CI)](https://github.com/byronxlg/skillfold/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
-**Before and after** - without skillfold, each agent's SKILL.md is hand-maintained and kept in sync manually:
+One YAML config. One command. Every agent gets a compiled [SKILL.md](https://agentskills.io/specification).
 
-```
-# Without skillfold                  # With skillfold
-architect/SKILL.md  (manual)         skillfold.yaml (single source of truth)
-engineer/SKILL.md   (manual)           -> skillfold
-reviewer/SKILL.md   (manual)         build/
-orchestrator/SKILL.md (manual)          architect/SKILL.md
-                                        engineer/SKILL.md
-4 files to maintain, kept             reviewer/SKILL.md
-in sync by hand                         orchestrator/SKILL.md
-                                      4 files generated, always consistent
-```
+[Quick Start](#quick-start) | [How It Works](#how-it-works) | [Features](#features) | [Library](#shared-library) | [Reference](#reference)
 
-## Quick Start
+</div>
+
+---
 
 ```bash
 npx skillfold init   # scaffold a starter pipeline
 npx skillfold        # compile it
 ```
 
-Output: `build/planner/SKILL.md`, `build/worker/SKILL.md`, `build/orchestrator/SKILL.md`
+## Quick Start
 
----
-
-## How Skillfold Works
-
-Write one YAML config. The compiler produces one `SKILL.md` per agent.
-
-### Define, Compose, Compile
+Define skills, compose them into agents, wire agents into a team flow, and compile:
 
 ```yaml
+# skillfold.yaml
 name: dev-team
 
 skills:
@@ -45,7 +34,6 @@ skills:
     planning: ./skills/planning
     coding: ./skills/coding
     review: ./skills/review
-
   composed:
     engineer:
       compose: [planning, coding]
@@ -58,10 +46,8 @@ state:
   Review:
     approved: bool
     feedback: string
-  code:
-    type: string
-  review:
-    type: Review
+  code: { type: string }
+  review: { type: Review }
 
 team:
   flow:
@@ -78,28 +64,35 @@ team:
           to: end
 ```
 
-Run `npx skillfold` and you get:
+```bash
+npx skillfold
+```
 
 ```
 build/
-  engineer/SKILL.md    # planning + coding bodies, frontmatter
-  reviewer/SKILL.md    # review body, frontmatter
+  engineer/SKILL.md    # planning + coding bodies, YAML frontmatter
+  reviewer/SKILL.md    # review body, YAML frontmatter
 ```
 
-The `engineer` agent's `SKILL.md` contains the concatenated bodies of `planning` and `coding`, plus YAML frontmatter with its name and description.
+The `engineer` agent's SKILL.md contains the concatenated bodies of `planning` and `coding`. Every output file is a valid SKILL.md per the [Agent Skills standard](https://agentskills.io/specification).
 
-Every output file is a valid `SKILL.md` per the [Agent Skills standard](https://agentskills.io/specification).
+> [!TIP]
+> Add `team.orchestrator: orchestrator` and the orchestrator's compiled SKILL.md gets a generated execution plan with numbered steps, state tables, and conditional branches.
 
-### Orchestrator Generation
+---
 
-Add `team.orchestrator` to generate an execution plan automatically:
+## How It Works
 
-```yaml
-team:
-  orchestrator: orchestrator
-```
+Skillfold has three layers, each building on the last:
 
-The orchestrator's compiled `SKILL.md` will include a generated plan like this:
+| Layer | What you define | What the compiler does |
+|-------|----------------|----------------------|
+| **Skills** | Atomic skill directories + composition rules | Concatenates skill bodies in order, recursively |
+| **State** | Typed schema with custom types and external locations | Validates reads/writes at compile time |
+| **Team** | Execution flow with conditionals, loops, and parallel map | Generates orchestrator plan, checks reachability |
+
+<details>
+<summary><strong>Generated orchestrator output</strong></summary>
 
 ```markdown
 ## Execution Plan
@@ -118,7 +111,11 @@ Then:
 - If `review.approved == true`: end
 ```
 
-### Features
+</details>
+
+---
+
+## Features
 
 **Composition** --
 Atomic skills are reusable instruction fragments. Composed skills concatenate them in order, recursively. Reference remote skills by GitHub URL.
@@ -129,12 +126,31 @@ Typed state schema with custom types, primitives, and `list<Type>`. State reads 
 **Team Flows** --
 Conditional routing with `when` expressions. Loops with required exit conditions. Parallel `map` over typed lists. Reachability analysis for all flow nodes.
 
-**Tooling** --
-`skillfold init` scaffolds a starter pipeline. `skillfold graph` outputs a Mermaid flowchart. Pipeline imports share skills and state across configs. Spec-compliant output with YAML frontmatter.
+**Graph Visualization** --
+`skillfold graph` outputs a Mermaid flowchart showing full composition lineage and state writes.
 
-### Shared Library
+**Remote Skills** --
+Reference skills by GitHub URL. Skillfold fetches them at compile time.
 
-Skillfold ships with 10 generic skills you can import into any pipeline:
+```yaml
+skills:
+  atomic:
+    shared: https://github.com/org/repo/tree/main/skills/shared
+```
+
+**Pipeline Imports** --
+Share skills and state across configs. Team flows stay local.
+
+```yaml
+imports:
+  - node_modules/skillfold/library/skillfold.yaml
+```
+
+---
+
+## Shared Library
+
+Skillfold ships with **10 generic skills** you can import into any pipeline:
 
 | Skill | Purpose |
 |-------|---------|
@@ -149,34 +165,34 @@ Skillfold ships with 10 generic skills you can import into any pipeline:
 | github-workflow | Work with branches, PRs, issues via `gh` CLI |
 | file-management | Read, create, edit, and organize files |
 
-Import them with one line:
+Three ready-made example configs are included in [`library/examples/`](library/examples/):
 
-```yaml
-imports:
-  - node_modules/skillfold/library/skillfold.yaml
-```
+| Example | Pattern |
+|---------|---------|
+| **dev-team** | Linear pipeline with review loop (planner, engineer, reviewer) |
+| **content-pipeline** | Map/parallel pattern over topics (researcher, writer, editor) |
+| **code-review-bot** | Minimal two-agent flow (analyzer, reporter) |
 
-Then reference them by name in your composed skills. Three ready-made example configs are included in [`library/examples/`](library/examples/):
+---
 
-- **dev-team** - Linear pipeline with review loop (planner, engineer, reviewer)
-- **content-pipeline** - Map/parallel pattern over topics (researcher, writer, editor)
-- **code-review-bot** - Minimal two-agent flow (analyzer, reporter)
+## Self-Hosting
 
-### Self-Hosting
-
-Skillfold builds its own dev team. The [`skillfold.yaml`](skillfold.yaml) in this repo defines five agents:
+Skillfold builds its own dev team. The [`skillfold.yaml`](skillfold.yaml) in this repo defines 7 agents:
 
 | Agent | Role |
 |-------|------|
 | strategist | Assesses project needs and sets direction |
 | architect | Designs systems and decomposes work into GitHub issues |
+| designer | Designs project-facing content like READMEs and docs |
+| marketer | Positions the project for adoption through messaging and outreach |
 | engineer | Writes production TypeScript code and tests, opens PRs |
 | reviewer | Reviews pull requests for correctness and clarity |
 | orchestrator | Coordinates pipeline execution and merges approved PRs |
 
-The reviewer feeds back to the engineer when `review.approved == false`, creating a review loop that runs until code is approved. The compiled orchestrator receives a generated execution plan with numbered steps, state tables, and conditional branches.
+The reviewer feeds back to the engineer when `review.approved == false`, creating a review loop that runs until code is approved.
 
-State is mapped to real infrastructure - plans live in GitHub Discussions, tasks become GitHub Issues, implementations are pull requests, and reviews are PR reviews. See [`skillfold.yaml`](skillfold.yaml) for the full config.
+> [!NOTE]
+> State is mapped to real infrastructure: plans live in GitHub Discussions, tasks become GitHub Issues, implementations are pull requests, and reviews are PR reviews.
 
 ---
 
@@ -185,10 +201,11 @@ State is mapped to real infrastructure - plans live in GitHub Discussions, tasks
 ### Install
 
 ```bash
-npm install -g skillfold
+npm install -g skillfold    # global install
+npx skillfold               # or run directly
 ```
 
-Or run directly with `npx skillfold`. Requires Node.js 20+.
+Requires Node.js 20+. Single dependency: `yaml`.
 
 ### CLI
 
@@ -196,9 +213,9 @@ Or run directly with `npx skillfold`. Requires Node.js 20+.
 skillfold [command] [options]
 
 Commands:
+  (default)         Compile the pipeline config
   init              Scaffold a new pipeline project
   graph             Output Mermaid flowchart of the team flow
-  (default)         Compile the pipeline config
 
 Options:
   --config <path>   Config file (default: skillfold.yaml)
@@ -210,9 +227,10 @@ Options:
 
 ### Config
 
-Full specification in [BRIEF.md](BRIEF.md).
+Three top-level sections. Full specification in [BRIEF.md](BRIEF.md).
 
-#### skills
+<details>
+<summary><strong>skills</strong> - atomic paths and composition rules</summary>
 
 ```yaml
 skills:
@@ -225,7 +243,10 @@ skills:
       description: "Produces plans and reviews code."
 ```
 
-#### state
+</details>
+
+<details>
+<summary><strong>state</strong> - typed schema with custom types and locations</summary>
 
 ```yaml
 state:
@@ -239,7 +260,10 @@ state:
       path: DEV/dev-board
 ```
 
-#### team
+</details>
+
+<details>
+<summary><strong>team</strong> - orchestrator and execution flow</summary>
 
 ```yaml
 team:
@@ -255,6 +279,8 @@ team:
 ```
 
 Conditional transitions, parallel map, and imports are documented in [BRIEF.md](BRIEF.md).
+
+</details>
 
 ### Tests
 
