@@ -39,15 +39,29 @@ state:
 
   direction:
     type: string
+    location:
+      skill: github
+      path: discussions/general
 
   plan:
     type: string
+    location:
+      skill: github
+      path: discussions/general
+      kind: reply
 
   implementation:
     type: string
+    location:
+      skill: github
+      path: pull-requests
 
   review:
     type: Review
+    location:
+      skill: github
+      path: pull-requests
+      kind: review
 
 team:
   orchestrator: orchestrator

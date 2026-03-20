@@ -254,7 +254,7 @@ describe("generateOrchestrator", () => {
     );
   });
 
-  it("includes agent invocation section", () => {
+  it("includes agent invocation section with isolation guidance", () => {
     const config: Config = {
       name: "test",
       skills: {
@@ -273,6 +273,64 @@ describe("generateOrchestrator", () => {
 
     assert.ok(output.includes("## Agent Invocation"));
     assert.ok(output.includes("build/{name}/SKILL.md"));
+    assert.ok(output.includes("isolation"));
+  });
+
+  it("includes state location guidance when fields have locations", () => {
+    const config: Config = {
+      name: "test",
+      skills: {
+        agent: { path: "./skills/agent" },
+      },
+      state: {
+        types: {},
+        fields: {
+          goal: {
+            type: { kind: "primitive", value: "string" },
+            location: { skill: "agent", path: "channel" },
+          },
+        },
+      },
+      team: {
+        flow: {
+          nodes: [
+            { skill: "agent", reads: [], writes: [] },
+          ],
+        },
+      },
+    };
+
+    const output = generateOrchestrator(config);
+
+    assert.ok(output.includes("external locations"));
+  });
+
+  it("omits state location guidance when no fields have locations", () => {
+    const config: Config = {
+      name: "test",
+      skills: {
+        worker: { path: "./skills/worker" },
+      },
+      state: {
+        types: {},
+        fields: {
+          goal: {
+            type: { kind: "primitive", value: "string" },
+          },
+        },
+      },
+      team: {
+        flow: {
+          nodes: [
+            { skill: "worker", reads: [], writes: [] },
+          ],
+        },
+      },
+    };
+
+    const output = generateOrchestrator(config);
+
+    assert.ok(!output.includes("external locations"));
   });
 
   it("no state section when config.state is undefined", () => {
