@@ -42,7 +42,7 @@ A prior violation triggered a cooldown:
 
 **Description:**
 
-Compile-time pipeline compiler for multi-agent AI workflows. A single YAML config defines atomic skills, composed agents, typed state schemas, and execution flows with conditional routing - the compiler validates references, types, and write conflicts, then outputs native agent files for 11 platforms including Claude Code, Cursor, Copilot, and Gemini. 859 tests across 168 suites, single runtime dependency.
+Compile-time pipeline compiler for multi-agent AI workflows. A single YAML config defines atomic skills, composed agents, typed state schemas, and execution flows with conditional routing - the compiler validates references, types, and write conflicts, then outputs native agent files for 12 platforms including Claude Code, Cursor, Copilot, and Gemini. 859 tests across 168 suites, single runtime dependency.
 
 **Validate Claims:**
 
@@ -102,7 +102,7 @@ Prompt 3 - Pipeline visualization:
 
 Skillfold is the only compile-time entry in the Orchestrators category. Every other orchestrator on the list launches agents, manages sessions, or coordinates execution at runtime. Skillfold validates and compiles at build time, then produces plain Markdown files that each platform reads natively. There is no daemon, no server, and no runtime dependency beyond the target platform itself.
 
-Output targets: Claude Code (agents + skills + commands), Agent Teams (bootstrap artifacts), Cursor (.cursor/rules/), Windsurf (.windsurf/rules/), Codex (AGENTS.md), Copilot (.github/instructions/), Gemini (.gemini/agents/), Goose (.goosehints), Roo Code (.roo/), Kiro (.kiro/), Junie (.junie/).
+Output targets: skill (default SKILL.md), Claude Code (agents + skills + commands), Agent Teams (bootstrap artifacts), Cursor (.cursor/rules/), Windsurf (.windsurf/rules/), Codex (AGENTS.md), Copilot (.github/instructions/), Gemini (.gemini/agents/), Goose (.goosehints), Roo Code (.roo/), Kiro (.kiro/), Junie (.junie/).
 
 The project self-hosts: `skillfold.yaml` in the repo root defines a 7-agent dev team pipeline that compiles the project's own agent skills. 859 tests across 168 suites run with `node:test` (zero test framework dependencies). Single runtime dependency (`yaml`). All shell execution uses `execFile` (not `exec`). SECURITY.md documents every execution surface.
 
@@ -126,7 +126,7 @@ files. 859 tests across 168 suites using `node:test` (zero test framework deps).
 Custom error classes with descriptive messages. No `any`, no unnecessary type
 assertions.
 
-**2. Security and Safety: 9/10**
+**2. Security and Safety: 8/10**
 Core compiler is pure - no hooks, no implicit execution, no persistent state,
 no credential storage. Network access only for optional remote skill fetching
 (GitHub raw URLs) and npm registry search. `GITHUB_TOKEN` read from
@@ -136,6 +136,9 @@ Watch mode recompiles on file change but does not execute agents. The opt-in
 `gh` CLI for backends) but is clearly separated from the compiler and
 documented in SECURITY.md. All shell execution uses `execFile` (not `exec`).
 The `agentConfig.hooks` pass-through is inert data, documented in SECURITY.md.
+The SDK spawner uses `bypassPermissions` for unattended execution - documented
+in SECURITY.md with a dedicated "Spawner permission model" section explaining
+the two spawner profiles and mitigation via `--dry-run`.
 
 **3. Documentation and Transparency: 9/10**
 README accurately describes all features. Getting-started tutorial, integration
@@ -150,7 +153,7 @@ cycles, and reachability at compile time. Self-hosts its own dev team pipeline.
 **5. Repository Hygiene and Maintenance: 9/10**
 CI on Node 20 + 22 via GitHub Actions. MIT license in LICENSE and package.json.
 Automated npm publish with provenance. Semver policy documented in
-CONTRIBUTING.md. Active development with 550+ issues/PRs. SECURITY.md
+CONTRIBUTING.md. Active development with 500+ issues/PRs. SECURITY.md
 covers the compiler, `skillfold run`, network access, file system access,
 hook pass-through, and npm lifecycle scripts.
 
@@ -205,7 +208,7 @@ by skillfold itself.
 
 ### Overall Assessment
 
-**Overall Score: 9/10**
+**Overall Score: 8.5/10**
 
 **Recommendation: Recommend**
 
@@ -230,7 +233,7 @@ execution, no claim/behavior mismatch, safe defaults.
   stored or logged.
 - **Single dependency** - The only runtime dependency is `yaml` (YAML parser).
   No transitive dependency tree to audit.
-- **858 tests** across 168 suites, run with `node:test` (zero test framework
+- **859 tests** across 168 suites, run with `node:test` (zero test framework
   dependencies).
 - **MIT license**, clearly stated in LICENSE and package.json.
 - **CI on Node 20 + 22** via GitHub Actions, with `--check` flag for verifying
