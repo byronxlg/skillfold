@@ -10,3 +10,5 @@ build/
 .claude/skills/*
 !.claude/skills/build/
 test-output/
+docs/.vitepress/dist/
+docs/.vitepress/cache/

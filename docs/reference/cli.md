@@ -1,0 +1,159 @@
+# CLI Reference
+
+## Install
+
+```bash
+npm install -g skillfold    # global install
+npx skillfold               # or run directly
+```
+
+Requires Node.js 20+. Single dependency: `yaml`.
+
+## Commands
+
+```
+skillfold [command] [options]
+
+Commands:
+  init [dir]        Scaffold a new pipeline project
+  adopt             Adopt existing Claude Code agents into a pipeline
+  validate          Validate config without compiling
+  list              Display a structured summary of the pipeline
+  graph             Output Mermaid flowchart of the team flow
+  watch             Compile and watch for changes
+  plugin            Package compiled output as a Claude Code plugin
+  search [query]    Discover skill packages on npm
+  (default)         Compile the pipeline config
+```
+
+## Options
+
+```
+  --config <path>      Config file (default: skillfold.yaml)
+  --out-dir <path>     Output directory (default: build, or .claude for claude-code target)
+  --dir <path>         Target directory for init (default: .)
+  --target <mode>      Output mode: skill (default) or claude-code
+  --template <name>    Start from a library template (init only)
+  --html               Output interactive HTML instead of Mermaid (graph only)
+  --check              Verify compiled output is up-to-date (exit 1 if stale)
+  --help               Show this help
+  --version            Show version
+```
+
+## Command Details
+
+### Compile (default)
+
+```bash
+npx skillfold                              # compile skillfold.yaml -> build/
+npx skillfold --config my-pipeline.yaml    # custom config file
+npx skillfold --out-dir output/            # custom output directory
+npx skillfold --target claude-code         # compile to .claude/ structure
+npx skillfold --check                      # verify output is current (CI mode)
+```
+
+### Init
+
+Scaffold a new pipeline project with starter config and example skills.
+
+```bash
+npx skillfold init my-team                          # basic scaffold
+npx skillfold init my-team --template dev-team      # from library template
+npx skillfold init my-team --template content-pipeline
+npx skillfold init my-team --template code-review-bot
+```
+
+Available templates:
+
+| Template | Pattern |
+|----------|---------|
+| `dev-team` | Linear pipeline with review loop (planner, engineer, reviewer) |
+| `content-pipeline` | Map/parallel pattern over topics (researcher, writer, editor) |
+| `code-review-bot` | Minimal two-agent flow (analyzer, reporter) |
+
+### Adopt
+
+Import existing Claude Code agents from `.claude/agents/` into a skillfold config.
+
+```bash
+npx skillfold adopt    # reads .claude/agents/*.md, generates skillfold.yaml
+```
+
+### Validate
+
+Check config for errors without producing output.
+
+```bash
+npx skillfold validate
+npx skillfold validate --config my-pipeline.yaml
+```
+
+### List
+
+Display a structured summary of the pipeline: skills, state, and team flow.
+
+```bash
+npx skillfold list
+```
+
+### Graph
+
+Output a Mermaid flowchart of the team flow with full composition lineage and state writes.
+
+```bash
+npx skillfold graph                # Mermaid text output
+npx skillfold graph --html         # interactive HTML page
+npx skillfold graph --html > pipeline.html
+```
+
+The `--html` output includes clickable nodes, a composition details sidebar, and SVG export.
+
+### Watch
+
+Compile and auto-recompile when config or skill files change.
+
+```bash
+npx skillfold watch
+```
+
+### Plugin
+
+Package compiled output as a Claude Code plugin.
+
+```bash
+npx skillfold plugin
+```
+
+### Search
+
+Discover pipeline configs on npm (searches for `skillfold-pipeline` keyword).
+
+```bash
+npx skillfold search          # list all
+npx skillfold search review   # filter by query
+```
+
+## CI Integration
+
+Add the `--check` flag to CI so stale compiled output fails the build. The repo ships a reusable GitHub Action:
+
+```yaml
+name: Skillfold
+on: [push, pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - uses: byronxlg/skillfold@v1
+```
+
+Or use the `--check` flag directly:
+
+```bash
+npx skillfold --check    # exits 1 if output is stale
+```

@@ -67,7 +67,10 @@
     "prepare": "npm run build",
     "build:plugin": "node scripts/build-plugin.mjs",
     "test": "tsx --test src/*.test.ts",
-    "start": "node dist/cli.js"
+    "start": "node dist/cli.js",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
   },
   "dependencies": {
     "yaml": "^2.8.0"
@@ -75,6 +78,7 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitepress": "^1.6.4"
   }
 }
