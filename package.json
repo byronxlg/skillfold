@@ -49,7 +49,7 @@
     "file-management": "./library/skills/file-management",
     "skillfold-cli": "./library/skills/skillfold-cli"
   },
-  "homepage": "https://github.com/byronxlg/skillfold",
+  "homepage": "https://byronxlg.github.io/skillfold/",
   "bugs": "https://github.com/byronxlg/skillfold/issues",
   "repository": {
     "type": "git",
