@@ -372,12 +372,15 @@ Compile directly to where your platform reads skills. See the [Integration Guide
 npx skillfold --out-dir .claude/skills     # Claude Code (skills only)
 npx skillfold --target claude-code         # Claude Code (skills + agents)
 npx skillfold plugin                       # Claude Code plugin package
+npx skillfold --target cursor              # Cursor (.cursor/rules/*.mdc)
+npx skillfold --target windsurf            # Windsurf (.windsurf/rules/*.md)
+npx skillfold --target codex               # OpenAI Codex (AGENTS.md)
+npx skillfold --target copilot             # VS Code Copilot (.github/ instructions)
 npx skillfold --out-dir .agents/skills     # cross-platform
-npx skillfold --out-dir .github/skills     # VS Code Copilot
 npx skillfold --out-dir .gemini/skills     # Gemini CLI
 ```
 
-For Claude Code, `--target claude-code` generates agent markdown files alongside skills, with role metadata and team flow integration. The `plugin` command packages everything as a distributable Claude Code plugin.
+Each `--target` generates platform-native output with the right file structure and frontmatter. For Claude Code, `--target claude-code` generates agent markdown files alongside skills, with role metadata and team flow integration. The `plugin` command packages everything as a distributable Claude Code plugin.
 
 Skillfold also ships a built-in plugin with 11 generic skills. Install it by referencing `node_modules/skillfold/plugin/` from your Claude Code configuration.
 

@@ -71,7 +71,23 @@ Skills and agents are auto-discovered at session start. No additional configurat
 
 ## Cursor
 
-Cursor reads rules from `.cursor/rules/` as `.mdc` files with YAML frontmatter. It does not natively scan `SKILL.md` files. Use `.agents/skills/` if your Cursor version supports it, or copy compiled output manually.
+The `--target cursor` flag generates `.mdc` rule files with Cursor-specific YAML frontmatter (`description`, `alwaysApply: true`).
+
+```bash
+npx skillfold --target cursor
+```
+
+This outputs to `.cursor/` by default:
+
+```
+.cursor/
+  rules/
+    engineer.mdc
+    reviewer.mdc
+    orchestrator.mdc
+```
+
+Alternatively, use `.agents/skills/` if your Cursor version supports it:
 
 ```bash
 npx skillfold --out-dir .cursor/skills
@@ -79,7 +95,23 @@ npx skillfold --out-dir .cursor/skills
 
 ## VS Code (GitHub Copilot)
 
-VS Code Copilot reads skills from `.github/skills/`, `.claude/skills/`, and `.agents/skills/`.
+The `--target copilot` flag generates a root `copilot-instructions.md` (with orchestrator plan when a team flow exists) and per-agent instruction files with Copilot-specific frontmatter (`applyTo`, `description`).
+
+```bash
+npx skillfold --target copilot
+```
+
+This outputs to `.github/` by default:
+
+```
+.github/
+  copilot-instructions.md
+  instructions/
+    engineer.instructions.md
+    reviewer.instructions.md
+```
+
+Alternatively, compile raw skills to a directory Copilot scans:
 
 ```bash
 npx skillfold --out-dir .github/skills
@@ -87,13 +119,44 @@ npx skillfold --out-dir .github/skills
 
 ## OpenAI Codex
 
-Codex reads skills from `.agents/skills/`, scanning every directory between the project root and cwd.
+The `--target codex` flag generates a single `AGENTS.md` file containing all agent sections and the orchestrator plan.
+
+```bash
+npx skillfold --target codex
+```
+
+This outputs to `build/` by default:
+
+```
+build/
+  AGENTS.md
+```
+
+Alternatively, compile raw skills to `.agents/skills/`:
 
 ```bash
 npx skillfold --out-dir .agents/skills
 ```
 
 This directory structure works well for monorepos where different subdirectories have different agent configurations.
+
+## Windsurf
+
+The `--target windsurf` flag generates `.md` rule files with Windsurf-specific YAML frontmatter (`trigger: always_on`, `description`).
+
+```bash
+npx skillfold --target windsurf
+```
+
+This outputs to `.windsurf/` by default:
+
+```
+.windsurf/
+  rules/
+    engineer.md
+    reviewer.md
+    orchestrator.md
+```
 
 ## Gemini CLI
 
@@ -190,8 +253,15 @@ The compiled output is standard SKILL.md files, so it slots directly into your `
 If your team uses different platforms, compile to each target:
 
 ```bash
-npx skillfold --out-dir .claude/skills
-npx skillfold --out-dir .agents/skills
+npx skillfold --target claude-code
+npx skillfold --target cursor
+npx skillfold --target windsurf
+npx skillfold --target codex
+npx skillfold --target copilot
 ```
 
-Or use the cross-client `.agents/skills/` path, which most platforms scan alongside their native directory.
+Or use the cross-client `.agents/skills/` path, which most platforms scan alongside their native directory:
+
+```bash
+npx skillfold --out-dir .agents/skills
+```
