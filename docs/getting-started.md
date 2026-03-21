@@ -160,7 +160,36 @@ npx skillfold list       # display a structured summary
 npx skillfold graph      # output a Mermaid flowchart
 ```
 
-## 5. Import library skills
+## 5. Use compiled output with a platform
+
+The `build/` directory from the previous step contains generic SKILL.md files. To deploy them where your platform actually reads them, compile with a `--target` flag. For example, targeting Claude Code:
+
+```bash
+npx skillfold --target claude-code
+```
+
+This generates platform-native files in your project:
+
+```
+.claude/
+  agents/
+    planner.md
+    engineer.md
+    reviewer.md
+    orchestrator.md
+  skills/
+    planning/SKILL.md
+    coding/SKILL.md
+    reviewing/SKILL.md
+  commands/
+    run-pipeline.md
+```
+
+Agent files in `.claude/agents/` contain role metadata and the composed skill content. Skill files in `.claude/skills/` hold the atomic skill bodies. Claude Code reads these directories automatically - no extra configuration needed. When you start a conversation, the agents and skills are available immediately.
+
+Other platforms work the same way with their own `--target` flag (e.g., `--target cursor`, `--target codex`). See step 12 and the [Integration Guide](integrations.md) for the full list.
+
+## 6. Import library skills
 
 Skillfold ships with 11 generic skills you can use instead of writing your own. These skills also work standalone with any coding agent - see the [Library Skills](/library) page for individual install commands.
 
@@ -212,7 +241,7 @@ npx skills add byronxlg/skillfold -s code-review
 
 Or install all 11 at once: `npx skills add byronxlg/skillfold`. Each skill installs as a standard SKILL.md file that any coding agent can read.
 
-## 6. Add async nodes for external agents
+## 7. Add async nodes for external agents
 
 Not every participant in a pipeline is a Claude Code agent. Humans, CI systems, and external services can be modeled as **async nodes** - checkpoints where the pipeline waits for external input before continuing.
 
@@ -243,7 +272,7 @@ The `owner` node is async - it does not invoke an agent. Instead, the orchestrat
 
 Async nodes participate in the flow graph like regular nodes - they have reads, writes, and transitions. But they are excluded from skill compilation (no SKILL.md is generated) and from the Agent tool list in the orchestrator.
 
-## 7. Declare resource namespaces
+## 8. Declare resource namespaces
 
 When a state field has a `location`, the compiler can validate that the location path matches a declared namespace. Add a top-level `resources` section to your config:
 
@@ -265,7 +294,7 @@ The orchestrator state table also benefits: instead of abstract `github: discuss
 
 Resource groups without matching state locations still work. The compiler emits a warning suggesting you add resource declarations when a state location references a skill with no resource group.
 
-## 8. Use built-in state integrations
+## 9. Use built-in state integrations
 
 For common external services, skillfold provides built-in integrations that generate validated URLs and orchestrator instructions automatically. Instead of declaring resource namespaces and using the `skill+path` format, you can reference a service directly in the state location.
 
@@ -310,7 +339,7 @@ location:
   path: DEV/dev-board
 ```
 
-## 9. Local overrides
+## 10. Local overrides
 
 On a multi-developer team, you may want personal overrides without modifying the shared config. Create a `skillfold.local.yaml` alongside your main config:
 
@@ -346,7 +375,7 @@ skillfold: using local override from skillfold.local.yaml
 
 The local filename is derived from the main config: if your config is `my-pipeline.yaml`, the local file is `my-pipeline.local.yaml`.
 
-## 10. Start from a template
+## 11. Start from a template
 
 If you prefer starting from a real-world pattern instead of the minimal starter:
 
@@ -364,7 +393,7 @@ Available templates:
 
 Templates use library skills via imports, so they work out of the box with no local skill directories needed.
 
-## 11. Deploy to your platform
+## 12. Deploy to your platform
 
 Compile directly to where your platform reads skills. See the [Integration Guide](integrations.md) for all platforms.
 
@@ -384,7 +413,7 @@ Each `--target` generates platform-native output with the right file structure a
 
 Skillfold also ships a built-in plugin with 11 generic skills. Install it by referencing `node_modules/skillfold/plugin/` from your Claude Code configuration.
 
-## 12. Sharing skills
+## 13. Sharing skills
 
 Once you have skills worth reusing across projects or teams, publish them to npm. Any skill directory or pipeline config can be packaged and shared.
 
@@ -401,7 +430,7 @@ imports:
 
 See the [Publishing Guide](publishing.md) for package structure, required fields, and discovery via `skillfold search`.
 
-## 13. Next steps
+## 14. Next steps
 
 - **Using Agent Teams?** Follow the [Agent Teams Tutorial](/agent-teams-tutorial) to go from YAML to a running team with `/start-team`
 - Run your pipeline with `skillfold run --target claude-code` (linear flows), or preview with `--dry-run`
