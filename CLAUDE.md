@@ -169,7 +169,7 @@ Located in `library/examples/`:
 - npm skill discovery: `agentskills` field in package.json uses flat key-value format for ecosystem compatibility
 - `npm:` prefix support for skill references and imports (resolves to node_modules paths)
 - Publishing guide (`docs/publishing.md`) for sharing skills via npm
-- Test suite with 559 tests across 104 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, adopt, library, validate, list, search, npm, watch, errors, subflow, api, and e2e modules
+- Test suite with 560 tests across 104 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, adopt, library, validate, list, search, npm, watch, errors, subflow, api, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next
