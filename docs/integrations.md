@@ -218,25 +218,23 @@ Verify loaded skills with `gemini skills list`.
 
 ## Goose
 
-The `--target goose` flag generates standard `SKILL.md` files in the `.goose/skills/` directory that [Goose](https://github.com/block/goose) reads natively.
+The `--target goose` flag generates a single `.goosehints` file for [Goose](https://github.com/block/goose) with all agent instructions concatenated.
 
 ```bash
 npx skillfold --target goose
 ```
 
-This outputs to `.goose/` by default:
+This generates `.goosehints` at the project root:
 
 ```
-.goose/
-  skills/
-    engineer/SKILL.md
-    reviewer/SKILL.md
-    orchestrator/SKILL.md
+.goosehints                  # All agent instructions in one file
 ```
+
+The `.goosehints` file is plain markdown loaded into every Goose session as persistent context.
 
 ## Roo Code
 
-The `--target roo-code` flag generates skills, rules, and a `.roomodes` file mapping composed skills to [Roo Code](https://github.com/RooVetGit/Roo-Code) custom modes.
+The `--target roo-code` flag generates mode-specific rule directories and a `.roomodes` file mapping composed skills to [Roo Code](https://github.com/RooVetGit/Roo-Code) custom modes.
 
 ```bash
 npx skillfold --target roo-code
@@ -249,14 +247,16 @@ This outputs to `.roo/` by default:
   skills/
     engineer/SKILL.md
     reviewer/SKILL.md
-  rules/
+  rules-engineer/
     engineer.md
+  rules-reviewer/
     reviewer.md
+  rules-orchestrator/
     orchestrator.md
 .roomodes                    # Custom mode definitions
 ```
 
-Each composed skill becomes a custom mode with `slug`, `name`, `roleDefinition`, and `whenToUse` fields.
+Each composed skill becomes a custom mode with `slug`, `name`, `roleDefinition`, and `whenToUse` fields. Rules are placed in mode-specific directories (`rules-{slug}/`) so each mode only loads its own rules.
 
 ## Kiro
 
@@ -283,7 +283,7 @@ Steering files use `inclusion: always` frontmatter so they are loaded into every
 
 ## Junie
 
-The `--target junie` flag generates skills and plain markdown guidelines for JetBrains [Junie](https://junie.jetbrains.com).
+The `--target junie` flag generates skills and a single `AGENTS.md` for JetBrains [Junie](https://junie.jetbrains.com).
 
 ```bash
 npx skillfold --target junie
@@ -296,12 +296,10 @@ This outputs to `.junie/` by default:
   skills/
     engineer/SKILL.md
     reviewer/SKILL.md
-  engineer_guidelines.md
-  reviewer_guidelines.md
-  orchestrator_guidelines.md
+  AGENTS.md                  # All agent instructions in one file
 ```
 
-Guideline files are plain markdown (no frontmatter) and are applied to every prompt.
+The `AGENTS.md` file is plain markdown (no frontmatter) containing all agent sections. Junie loads it as persistent guidelines for every task.
 
 ## CI Integration
 
