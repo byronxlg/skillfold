@@ -44,7 +44,35 @@ This outputs to `.claude/` by default:
 
 Agent files include reads/writes from the team flow, composed skill instructions, and color-coded role assignments.
 
-### Option 3: Plugin installation
+### Option 3: Agent Teams (agent-teams target)
+
+The `--target agent-teams` flag generates the same skills and agents as `claude-code`, plus a team bootstrap prompt for [Claude Code Agent Teams](https://code.claude.com/docs/en/agent-teams).
+
+```bash
+npx skillfold --target agent-teams
+```
+
+This outputs to `.claude/` by default:
+
+```
+.claude/
+  skills/
+    engineer/SKILL.md
+    reviewer/SKILL.md
+    orchestrator/SKILL.md
+  agents/
+    engineer.md
+    reviewer.md
+    orchestrator.md
+  commands/
+    start-team.md           # Team bootstrap prompt
+```
+
+The `start-team.md` command describes the team structure, shared state, task sequence with dependencies, and coordination instructions. Run it with `/start-team` in Claude Code to launch an Agent Team with the roles, state handoffs, and conditional routing defined in your `skillfold.yaml`.
+
+Agent Teams are experimental in Claude Code (v2.1.32+). Enable them by adding `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS` to your `settings.json`.
+
+### Option 4: Plugin installation
 
 The `skillfold plugin` command packages your pipeline as a distributable Claude Code plugin:
 
@@ -56,7 +84,7 @@ This produces a `plugin/` directory with `.claude-plugin/plugin.json`, agents, s
 
 Skillfold also ships a built-in plugin at `node_modules/skillfold/plugin/` with 11 generic skills and a `/skillfold` slash command.
 
-### Option 4: Marketplace installation
+### Option 5: Marketplace installation
 
 Install the skillfold plugin directly from the Claude Code plugin marketplace:
 

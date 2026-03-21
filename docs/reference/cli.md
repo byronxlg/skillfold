@@ -33,7 +33,7 @@ Commands:
   --config <path>      Config file (default: skillfold.yaml)
   --out-dir <path>     Output directory (default varies by target)
   --dir <path>         Target directory for init (default: .)
-  --target <mode>      Output mode: skill, claude-code, cursor, windsurf, codex, copilot, gemini
+  --target <mode>      Output mode: skill, claude-code, agent-teams, cursor, windsurf, codex, copilot, gemini
   --template <name>    Start from a library template (init only)
   --html               Output interactive HTML instead of Mermaid (graph only)
   --check              Verify compiled output is up-to-date (exit 1 if stale)
@@ -56,6 +56,7 @@ npx skillfold                              # compile skillfold.yaml -> build/
 npx skillfold --config my-pipeline.yaml    # custom config file
 npx skillfold --out-dir output/            # custom output directory
 npx skillfold --target claude-code         # compile to .claude/ structure
+npx skillfold --target agent-teams         # compile to .claude/ with Agent Teams bootstrap
 npx skillfold --target cursor              # compile to .cursor/rules/*.mdc
 npx skillfold --target windsurf            # compile to .windsurf/rules/*.md
 npx skillfold --target codex               # compile to build/AGENTS.md
