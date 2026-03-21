@@ -43,7 +43,8 @@ src/
   list.ts         - Pipeline introspection (skillfold list)
   npm.ts          - npm package resolution (npm: prefix in skill refs and imports)
   search.ts       - npm registry search for skillfold-skill packages (skillfold search)
-  run.ts          - Pipeline runner with conditionals and loops (skillfold run)
+  run.ts          - Pipeline runner with conditionals, loops, and map (skillfold run)
+  backends.ts     - State backend interface and GitHub integration implementations
   watch.ts        - File watching and auto-recompile (skillfold watch)
   init.ts         - skillfold init scaffolding
   integrations.ts - Built-in state integrations (GitHub issues, discussions, pull requests)
@@ -187,8 +188,9 @@ Located in `library/examples/`:
 - `skillfold.local.yaml` support for local config overrides (gitignored), with merge semantics for skills/state/team
 - Built-in state integrations for GitHub services (github-issues, github-discussions, github-pull-requests) with auto-generated URLs, filter options, and orchestrator instructions
 - `skillfold run` command for pipeline execution with `ClaudeSpawner`, state management via `state.json`, dry-run mode, async node skipping, conditional routing (when-clauses), loops with `--max-iterations` guard (default: 10), graph-based node traversal, parallel map execution (concurrent subgraph execution per list item with scoped state), error handling with `--on-error` (retry/skip/abort), `--max-retries`, step timing, execution summary, and `--resume` for checkpoint-based pipeline resumption (state persisted to `.skillfold/run/`, config hash validation)
+- State backend integration: `skillfold run` reads initial state from and writes changes to configured external backends (github-issues, github-discussions, github-pull-requests) via `gh` CLI, with graceful fallback to `state.json` when backends are unreachable
 - VitePress documentation site (`docs/`) with GitHub Pages deployment, config reference, CLI reference, live demo with interactive pipeline visualizer, interactive pipeline builder (YAML editor with live Mermaid graph), examples gallery, skill authoring guide, comparison table, detailed comparisons page (vs Agent Teams, CrewAI, manual SKILL.md), and existing guides
-- Test suite with 813 tests across 153 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, integrations, visualize, remote, init, adopt, library, validate, list, search, npm, skills-prefix, watch, errors, subflow, api, run, cli, and e2e modules
+- Test suite with 824 tests across 158 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, integrations, visualize, remote, init, adopt, library, validate, list, search, npm, skills-prefix, watch, errors, subflow, api, run, backends, cli, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next
