@@ -469,7 +469,7 @@ npx skills add byronxlg/skillfold              # install all 11 library skills
 npx skills add byronxlg/skillfold -s code-review   # install a specific skill
 ```
 
-Requires Node.js 20+. Single dependency: `yaml`.
+Requires Node.js 20+. Single dependency: `yaml`. To uninstall: `npm uninstall -g skillfold` and delete any compiled output (`build/`, `.claude/`, etc.).
 
 **Claude Code plugin marketplace:** Install the skills library and `/skillfold` command directly in Claude Code:
 

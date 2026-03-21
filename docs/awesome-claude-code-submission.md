@@ -7,17 +7,18 @@
 Submit via the GitHub web UI at:
 https://github.com/hesreallyhim/awesome-claude-code/issues/new?template=recommend-resource.yml
 
-Earliest submission date: March 27, 2026 (7-day cooldown expiry from PR #1020, see below).
+Earliest submission date: April 3, 2026 (14-day cooldown expiry from PR #1022, see below).
 
 ### Cooldown Warning
 
-A prior violation triggered a cooldown:
+Two prior violations triggered escalating cooldowns:
 
-- **PR #1020** was submitted directly as a pull request to awesome-claude-code
-  instead of through the required issue template.
-- It was auto-closed by their bot. The 7-day cooldown from March 20
-  sets the earliest retry to **March 27, 2026**.
-- **Do not submit early.** A repeat violation would escalate the cooldown.
+- **PR #1020** (March 20) was submitted directly as a pull request instead of
+  through the required issue template. Auto-closed with a 7-day cooldown.
+- **PR #1022** (March 20) was a second attempt, also auto-closed. The bot
+  escalated to a **14-day cooldown**, expiring **April 3, 2026**.
+- **Do not submit before April 3.** A third violation would likely result in a
+  permanent ban.
 - The submission **MUST** go through the
   [issue template web UI](https://github.com/hesreallyhim/awesome-claude-code/issues/new?template=recommend-resource.yml),
   **NOT** via `gh` CLI, **NOT** as a direct PR.
