@@ -166,7 +166,7 @@ Skillfold ships with 11 generic skills you can use instead of writing your own. 
 
 ```yaml
 imports:
-  - node_modules/skillfold/library/skillfold.yaml
+  - npm:skillfold/library/skillfold.yaml
 ```
 
 Now you can reference library skills in your compositions. For example, replace the local `planning` and `coding` skills with the richer library versions:
@@ -304,7 +304,8 @@ See the [Publishing Guide](publishing.md) for package structure, required fields
 
 - Read the full config specification in [BRIEF.md](../BRIEF.md)
 - Explore the [shared library examples](../library/examples/) for real pipeline patterns
-- Use `skillfold graph` to visualize your team flow as a Mermaid diagram
+- Use `skillfold graph` to visualize your team flow as a Mermaid diagram, or `skillfold graph --html` for interactive HTML output with clickable nodes and SVG export
+- Use the `flow:` field on a flow node to import a sub-flow from an external config, composing pipelines from reusable building blocks
 - Try parallel `map` to process lists of items concurrently
 - Add `skillfold --check` to CI to verify compiled output stays in sync
 - Use `skillfold plugin` to package your pipeline for distribution
