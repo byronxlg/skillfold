@@ -21,10 +21,19 @@ The default `skillfold` command is a pure compiler:
 
 The `skillfold run` command is an opt-in execution mode with a broader surface:
 
-- **Process execution**: Spawns `claude` CLI via `child_process.execFile` (CLI spawner, default) or uses the `@anthropic-ai/claude-agent-sdk` (SDK spawner, `--spawner sdk`). The SDK spawner runs with `bypassPermissions` to enable unattended pipeline execution.
+- **Process execution**: Spawns `claude` CLI via `child_process.execFile` (CLI spawner, default) or uses the `@anthropic-ai/claude-agent-sdk` (SDK spawner, `--spawner sdk`).
 - **State files**: Writes `state.json` (pipeline state) and `.skillfold/run/` (checkpoint files for `--resume`). Both are gitignored.
 - **State backends**: Optionally reads from and writes to GitHub issues, discussions, and pull requests via `gh` CLI (`child_process.execFile`).
-- **Dry run**: Use `--dry-run` to preview execution without spawning agents or writing state.
+- **Dry run**: Use `--dry-run` to preview the execution plan - which agents will run, in what order, with what state - without spawning agents or writing state. Always recommended before a first full run.
+
+#### Spawner permission model
+
+The two spawners have different permission profiles:
+
+- **CLI spawner** (`--spawner cli`, default): Uses `claude --print` for text-only generation. Agents cannot execute tools, modify files, or run commands. This is the safe default and requires no additional dependencies.
+- **SDK spawner** (`--spawner sdk`): Gives agents full tool access (Read, Write, Bash, etc.) and runs with `bypassPermissions` to enable unattended pipeline execution without interactive permission prompts. This is necessary because automated pipelines cannot pause for human approval at each tool call. The SDK spawner is opt-in - it requires explicitly installing the optional peer dependency `@anthropic-ai/claude-agent-sdk`.
+
+Use `--dry-run` to preview what the pipeline will do before committing to a full SDK spawner run.
 
 All shell execution uses `execFile` (not `exec`) to prevent shell injection.
 

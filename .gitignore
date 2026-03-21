@@ -10,6 +10,7 @@ build/
 .claude/skills/*
 !.claude/skills/build/
 .skillfold/
+state.json
 test-output/
 docs/.vitepress/dist/
 docs/.vitepress/cache/
