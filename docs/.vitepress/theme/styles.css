@@ -1093,3 +1093,275 @@ html {
   color: var(--vp-c-brand-1);
   margin: 8px 0 16px;
 }
+
+/* ============================================
+   Library skills - card grid
+   ============================================ */
+.vp-doc .skill-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+@media (min-width: 640px) {
+  .vp-doc .skill-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 960px) {
+  .vp-doc .skill-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+.vp-doc .skill-card {
+  padding: 16px;
+  border-radius: 10px;
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.vp-doc .skill-card:hover {
+  border-color: var(--vp-c-brand-1);
+  transform: translateY(-1px);
+}
+
+.vp-doc .skill-card .skill-name {
+  font-size: 14px;
+  font-weight: 600;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--vp-c-text-1);
+  margin-bottom: 6px;
+}
+
+.vp-doc .skill-card .skill-desc {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--vp-c-text-2);
+  margin-bottom: 10px;
+}
+
+.vp-doc .skill-card .skill-install {
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: var(--vp-c-text-3);
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: var(--vp-c-bg-mute);
+  display: inline-block;
+  word-break: break-all;
+}
+
+/* ============================================
+   Changelog - timeline
+   ============================================ */
+.vp-doc .changelog-timeline h2 {
+  position: relative;
+  padding-left: 28px;
+  border-top: none;
+  margin-top: 40px;
+  padding-top: 0;
+}
+
+.vp-doc .changelog-timeline h2:first-child {
+  margin-top: 0;
+}
+
+.vp-doc .changelog-timeline h2::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981, #06b6d4);
+  flex-shrink: 0;
+}
+
+.dark .vp-doc .changelog-timeline h2::before {
+  background: linear-gradient(135deg, #34d399, #22d3ee);
+}
+
+.vp-doc .changelog-timeline h2 + p,
+.vp-doc .changelog-timeline h2 + ul,
+.vp-doc .changelog-timeline h2 + .version-meta {
+  padding-left: 28px;
+  border-left: 2px solid var(--vp-c-divider);
+  margin-left: 6px;
+}
+
+.vp-doc .changelog-timeline ul {
+  padding-left: 48px;
+  border-left: 2px solid var(--vp-c-divider);
+  margin-left: 6px;
+}
+
+.vp-doc .changelog-timeline p {
+  padding-left: 28px;
+  border-left: 2px solid var(--vp-c-divider);
+  margin-left: 6px;
+}
+
+.vp-doc .changelog-timeline li {
+  margin: 6px 0;
+  color: var(--vp-c-text-2);
+}
+
+.vp-doc .changelog-timeline p strong:first-child {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-1);
+  font-size: 13px;
+}
+
+/* ============================================
+   Comparisons - nav cards at top
+   ============================================ */
+.vp-doc .comparison-nav {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+@media (max-width: 639px) {
+  .vp-doc .comparison-nav {
+    grid-template-columns: 1fr;
+  }
+}
+
+.vp-doc .comparison-nav a {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  border-radius: 10px;
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  text-decoration: none;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.vp-doc .comparison-nav a:hover {
+  border-color: var(--vp-c-brand-1);
+  transform: translateY(-1px);
+}
+
+.vp-doc .comparison-nav .nav-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+}
+
+.vp-doc .comparison-nav .nav-desc {
+  font-size: 13px;
+  color: var(--vp-c-text-2);
+}
+
+/* ============================================
+   Getting Started - step progress
+   ============================================ */
+.vp-doc .guide-steps h2 {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vp-doc .guide-steps h2 .step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981, #06b6d4);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.dark .vp-doc .guide-steps h2 .step-badge {
+  background: linear-gradient(135deg, #34d399, #22d3ee);
+  color: #0f172a;
+}
+
+/* ============================================
+   Inner page hero banners
+   ============================================ */
+.vp-doc .page-hero {
+  text-align: center;
+  padding: 32px 0 24px;
+  margin-bottom: 32px;
+  border-bottom: 1px solid var(--vp-c-divider);
+}
+
+.vp-doc .page-hero h1 {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  background: linear-gradient(120deg, var(--vp-c-text-1) 60%, var(--vp-c-brand-1));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  border-top: none;
+  padding-top: 0;
+  margin-top: 0;
+}
+
+.vp-doc .page-hero p {
+  font-size: 16px;
+  color: var(--vp-c-text-2);
+  max-width: 560px;
+  margin: 8px auto 0;
+  line-height: 1.6;
+}
+
+/* ============================================
+   Quick stat pills (reusable)
+   ============================================ */
+.vp-doc .stat-pills {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.vp-doc .stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  font-size: 13px;
+  color: var(--vp-c-text-2);
+}
+
+.vp-doc .stat-pill strong {
+  color: var(--vp-c-brand-1);
+  font-weight: 600;
+}
+
+/* ============================================
+   Builder page - enhanced
+   ============================================ */
+.vp-doc .builder-intro {
+  text-align: center;
+  max-width: 560px;
+  margin: 0 auto 8px;
+}
+
+.vp-doc .builder-intro p {
+  color: var(--vp-c-text-2);
+  font-size: 15px;
+}

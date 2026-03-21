@@ -1,6 +1,21 @@
 # Comparisons
 
-Skillfold is a compile-time coordination tool for multi-agent pipelines. This page compares it against the alternatives you are most likely evaluating: Claude Code Agent Teams, CrewAI, and hand-written SKILL.md files.
+Skillfold is a compile-time coordination tool for multi-agent pipelines. This page compares it against the alternatives you are most likely evaluating.
+
+<div class="comparison-nav">
+  <a href="#vs-claude-code-agent-teams">
+    <span class="nav-title">vs Agent Teams</span>
+    <span class="nav-desc">Conversational runtime coordination for Claude Code</span>
+  </a>
+  <a href="#vs-crewai">
+    <span class="nav-title">vs CrewAI</span>
+    <span class="nav-desc">Python runtime orchestration framework</span>
+  </a>
+  <a href="#vs-manual-skill-md">
+    <span class="nav-title">vs Manual SKILL.md</span>
+    <span class="nav-desc">Hand-written skill files without a compiler</span>
+  </a>
+</div>
 
 Each tool makes different trade-offs. The right choice depends on your pipeline's complexity, your need for portability, and how much structure you want around agent coordination.
 

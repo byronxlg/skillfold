@@ -8,6 +8,8 @@ This tutorial walks you from zero to a compiled multi-agent pipeline. By the end
 
 **Two paths:** If you already have Claude Code agents in `.claude/agents/`, start with [Adopting an existing setup](#adopting-an-existing-setup). Otherwise, continue below to scaffold from scratch.
 
+<div class="guide-steps">
+
 ## Adopting an Existing Setup
 
 If you have `.claude/agents/*.md` files, skillfold can adopt them into a pipeline:
@@ -32,7 +34,7 @@ Then skip to [step 4](#4-compile-and-examine-output) below.
 
 ---
 
-## 1. Install
+## <span class="step-badge">1</span> Install
 
 Install skillfold from npm:
 
@@ -42,7 +44,7 @@ npm install skillfold
 
 Requires Node.js 20+. Verify with `npx skillfold --version`.
 
-## 2. Scaffold a starter pipeline
+## <span class="step-badge">2</span> Scaffold a starter pipeline
 
 ```bash
 npx skillfold init my-project
@@ -61,7 +63,7 @@ my-project/
 
 Each skill directory contains a `SKILL.md` file with YAML frontmatter and instructions.
 
-## 3. Understand the generated config
+## <span class="step-badge">3</span> Understand the generated config
 
 Open `skillfold.yaml`. It defines a four-agent pipeline with a review loop:
 
@@ -134,7 +136,7 @@ There are three layers:
 - **state** - A `Review` custom type with `approved` and `feedback` fields, plus three state fields: `plan`, `code`, and `review`. The compiler validates that every read and write references a real field.
 - **team** - A flow where `planner` writes the plan, `engineer` reads it and writes code, and `reviewer` reads the code and writes a review. The reviewer transitions conditionally: back to `engineer` if not approved, or to `end` if approved. Skillfold validates that every cycle has an exit condition.
 
-## 4. Compile and examine output
+## <span class="step-badge">4</span> Compile and examine output
 
 Compile the pipeline:
 
@@ -164,7 +166,7 @@ npx skillfold list       # display a structured summary
 npx skillfold graph      # output a Mermaid flowchart
 ```
 
-## 5. Use compiled output with a platform
+## <span class="step-badge">5</span> Use compiled output with a platform
 
 The `build/` directory from the previous step contains generic SKILL.md files. To deploy them where your platform actually reads them, compile with a `--target` flag. For example, targeting Claude Code:
 
@@ -193,7 +195,7 @@ Agent files in `.claude/agents/` contain role metadata and the composed skill co
 
 Other platforms work the same way with their own `--target` flag (e.g., `--target cursor`, `--target codex`). See step 12 and the [Integration Guide](integrations.md) for the full list.
 
-## 6. Import library skills
+## <span class="step-badge">6</span> Import library skills
 
 Skillfold ships with 11 generic skills you can use instead of writing your own. These skills also work standalone with any coding agent - see the [Library Skills](/library) page for individual install commands.
 
@@ -245,7 +247,7 @@ npx skills add byronxlg/skillfold -s code-review
 
 Or install all 11 at once: `npx skills add byronxlg/skillfold`. Each skill installs as a standard SKILL.md file that any coding agent can read.
 
-## 7. Add async nodes for external agents
+## <span class="step-badge">7</span> Add async nodes for external agents
 
 Not every participant in a pipeline is a Claude Code agent. Humans, CI systems, and external services can be modeled as **async nodes** - checkpoints where the pipeline waits for external input before continuing.
 
@@ -276,7 +278,7 @@ The `owner` node is async - it does not invoke an agent. Instead, the orchestrat
 
 Async nodes participate in the flow graph like regular nodes - they have reads, writes, and transitions. But they are excluded from skill compilation (no SKILL.md is generated) and from the Agent tool list in the orchestrator.
 
-## 8. Declare resource namespaces
+## <span class="step-badge">8</span> Declare resource namespaces
 
 When a state field has a `location`, the compiler can validate that the location path matches a declared namespace. Add a top-level `resources` section to your config:
 
@@ -298,7 +300,7 @@ The orchestrator state table also benefits: instead of abstract `github: discuss
 
 Resource groups without matching state locations still work. The compiler emits a warning suggesting you add resource declarations when a state location references a skill with no resource group.
 
-## 9. Use built-in state integrations
+## <span class="step-badge">9</span> Use built-in state integrations
 
 For common external services, skillfold provides built-in integrations that generate validated URLs and orchestrator instructions automatically. Instead of declaring resource namespaces and using the `skill+path` format, you can reference a service directly in the state location.
 
@@ -343,7 +345,7 @@ location:
   path: DEV/dev-board
 ```
 
-## 10. Local overrides
+## <span class="step-badge">10</span> Local overrides
 
 On a multi-developer team, you may want personal overrides without modifying the shared config. Create a `skillfold.local.yaml` alongside your main config:
 
@@ -379,7 +381,7 @@ skillfold: using local override from skillfold.local.yaml
 
 The local filename is derived from the main config: if your config is `my-pipeline.yaml`, the local file is `my-pipeline.local.yaml`.
 
-## 11. Start from a template
+## <span class="step-badge">11</span> Start from a template
 
 If you prefer starting from a real-world pattern instead of the minimal starter:
 
@@ -397,7 +399,7 @@ Available templates:
 
 Templates use library skills via imports, so they work out of the box with no local skill directories needed.
 
-## 12. Deploy to your platform
+## <span class="step-badge">12</span> Deploy to your platform
 
 Compile directly to where your platform reads skills. See the [Integration Guide](integrations.md) for all platforms.
 
@@ -417,7 +419,7 @@ Each `--target` generates platform-native output with the right file structure a
 
 Skillfold also ships a built-in plugin with 11 generic skills. Install it by referencing `node_modules/skillfold/plugin/` from your Claude Code configuration.
 
-## 13. Sharing skills
+## <span class="step-badge">13</span> Sharing skills
 
 Once you have skills worth reusing across projects or teams, publish them to npm. Any skill directory or pipeline config can be packaged and shared.
 
@@ -434,7 +436,7 @@ imports:
 
 See the [Publishing Guide](publishing.md) for package structure, required fields, and discovery via `skillfold search`.
 
-## 14. Next steps
+## <span class="step-badge">14</span> Next steps
 
 - **Using Agent Teams?** Follow the [Agent Teams Tutorial](/agent-teams-tutorial) to go from YAML to a running team with `/start-team`
 - Run your pipeline with `skillfold run --target claude-code` (linear flows), or preview with `--dry-run`
@@ -447,3 +449,5 @@ See the [Publishing Guide](publishing.md) for package structure, required fields
 - Use `skillfold plugin` to package your pipeline for distribution
 - Use `skillfold search` to discover community skill packages on npm
 - Set `GITHUB_TOKEN` to reference skills from private GitHub repositories
+
+</div>

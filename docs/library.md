@@ -2,7 +2,7 @@
 
 Skillfold ships with 11 generic, reusable skills that work with any coding agent. Each skill is a standalone `SKILL.md` file - you can use them with skillfold pipelines, install them individually via the [skills CLI](https://skills.sh), or read them directly.
 
-## Install with the skills CLI
+## Install
 
 Install all 11 skills at once:
 
@@ -22,19 +22,63 @@ No skillfold config or compilation needed. Each skill installs as a standard `SK
 
 ## Available Skills
 
-| Skill | Description | Install |
-|-------|-------------|---------|
-| **planning** | Break problems into steps, identify dependencies, and estimate scope | `npx skills add byronxlg/skillfold -s planning` |
-| **research** | Gather information, evaluate sources, and synthesize findings | `npx skills add byronxlg/skillfold -s research` |
-| **decision-making** | Evaluate trade-offs, document options, and justify recommendations | `npx skills add byronxlg/skillfold -s decision-making` |
-| **code-writing** | Write clean, correct, production-quality code | `npx skills add byronxlg/skillfold -s code-writing` |
-| **code-review** | Review code for correctness, clarity, and security | `npx skills add byronxlg/skillfold -s code-review` |
-| **testing** | Write and reason about tests, covering behavior, edge cases, and errors | `npx skills add byronxlg/skillfold -s testing` |
-| **writing** | Produce clear, structured prose and documentation | `npx skills add byronxlg/skillfold -s writing` |
-| **summarization** | Condense information with audience-appropriate detail levels | `npx skills add byronxlg/skillfold -s summarization` |
-| **github-workflow** | Work with GitHub branches, PRs, issues, and reviews via the gh CLI | `npx skills add byronxlg/skillfold -s github-workflow` |
-| **file-management** | Read, create, edit, and organize files and directories | `npx skills add byronxlg/skillfold -s file-management` |
-| **skillfold-cli** | Use the skillfold compiler to manage multi-agent pipeline configs | `npx skills add byronxlg/skillfold -s skillfold-cli` |
+<div class="skill-grid">
+  <div class="skill-card">
+    <div class="skill-name">planning</div>
+    <div class="skill-desc">Break problems into steps, identify dependencies, and estimate scope.</div>
+    <code class="skill-install">npx skills add byronxlg/skillfold -s planning</code>
+  </div>
+  <div class="skill-card">
+    <div class="skill-name">research</div>
+    <div class="skill-desc">Gather information, evaluate sources, and synthesize findings.</div>
+    <code class="skill-install">npx skills add byronxlg/skillfold -s research</code>
+  </div>
+  <div class="skill-card">
+    <div class="skill-name">decision-making</div>
+    <div class="skill-desc">Evaluate trade-offs, document options, and justify recommendations.</div>
+    <code class="skill-install">npx skills add byronxlg/skillfold -s decision-making</code>
+  </div>
+  <div class="skill-card">
+    <div class="skill-name">code-writing</div>
+    <div class="skill-desc">Write clean, correct, production-quality code.</div>
+    <code class="skill-install">npx skills add byronxlg/skillfold -s code-writing</code>
+  </div>
+  <div class="skill-card">
+    <div class="skill-name">code-review</div>
+    <div class="skill-desc">Review code for correctness, clarity, and security.</div>
+    <code class="skill-install">npx skills add byronxlg/skillfold -s code-review</code>
+  </div>
+  <div class="skill-card">
+    <div class="skill-name">testing</div>
+    <div class="skill-desc">Write and reason about tests, covering behavior, edge cases, and errors.</div>
+    <code class="skill-install">npx skills add byronxlg/skillfold -s testing</code>
+  </div>
+  <div class="skill-card">
+    <div class="skill-name">writing</div>
+    <div class="skill-desc">Produce clear, structured prose and documentation.</div>
+    <code class="skill-install">npx skills add byronxlg/skillfold -s writing</code>
+  </div>
+  <div class="skill-card">
+    <div class="skill-name">summarization</div>
+    <div class="skill-desc">Condense information with audience-appropriate detail levels.</div>
+    <code class="skill-install">npx skills add byronxlg/skillfold -s summarization</code>
+  </div>
+  <div class="skill-card">
+    <div class="skill-name">github-workflow</div>
+    <div class="skill-desc">Work with GitHub branches, PRs, issues, and reviews via the gh CLI.</div>
+    <code class="skill-install">npx skills add byronxlg/skillfold -s github-workflow</code>
+  </div>
+  <div class="skill-card">
+    <div class="skill-name">file-management</div>
+    <div class="skill-desc">Read, create, edit, and organize files and directories.</div>
+    <code class="skill-install">npx skills add byronxlg/skillfold -s file-management</code>
+  </div>
+  <div class="skill-card">
+    <div class="skill-name">skillfold-cli</div>
+    <div class="skill-desc">Use the skillfold compiler to manage multi-agent pipeline configs.</div>
+    <code class="skill-install">npx skills add byronxlg/skillfold -s skillfold-cli</code>
+  </div>
+</div>
 
 ---
 

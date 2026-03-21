@@ -2,6 +2,8 @@
 
 For the full release history with detailed notes, see [GitHub Releases](https://github.com/byronxlg/skillfold/releases).
 
+<div class="changelog-timeline">
+
 ## v1.23.0
 
 **New compilation targets** - Four more platforms:
@@ -135,3 +137,5 @@ For the full release history with detailed notes, see [GitHub Releases](https://
 - Team flow graphs with conditional routing and parallel map
 - Typed state schema with validation
 - Orchestrator generation
+
+</div>
