@@ -26,9 +26,14 @@ Skillfold is declarative. You define agents, typed state, and execution flow in 
 | **Display** | Platform-dependent | In-process cycling or tmux/iTerm2 split panes |
 | **Task management** | Compiler-generated execution plan | Shared task list with self-claiming and file-locked coordination |
 | **Quality gates** | Compile-time validation | Runtime hooks (`TeammateIdle`, `TaskCompleted`) |
+| **Delegation** | Orchestrator agent delegates via subagent tool | Delegate mode (Shift+Tab) restricts lead to coordination only |
+| **Plan review** | Compile-time flow validation | Runtime plan approval - teammates plan before implementing |
+| **Permissions** | Per-agent config via `agentConfig` | Teammates inherit lead's permissions at spawn time |
+| **Model selection** | Per-agent via `agentConfig.model` | Per-teammate via natural language request |
 | **Nesting** | Sub-flow imports for nested pipelines | No nested teams - teammates cannot spawn their own teams |
 | **Skill reuse** | Composition from atomic skills, npm sharing | Copy-paste between agent files |
 | **Platform support** | 8 compilation targets | Claude Code only |
+| **Team size** | Unlimited (constrained by flow definition) | 3-5 recommended, practical max around 10-16 |
 | **Maturity** | Stable | Experimental with known limitations |
 
 ### How they complement each other
@@ -42,6 +47,17 @@ npx skillfold --target agent-teams    # generates .claude/commands/start-team.md
 ```
 
 Then in Claude Code, run `/start-team` to launch the Agent Team with the roles, state handoffs, and task sequence defined in your config. Each teammate automatically loads its compiled skills and agent markdown.
+
+### Known limitations of Agent Teams
+
+Agent Teams is experimental (requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`) and has several constraints:
+
+- **No session resumption** - `/resume` and `/rewind` do not restore teammates
+- **No nested teams** - teammates cannot spawn their own teams
+- **One team per session** - clean up before starting a new one
+- **Lead is fixed** - cannot promote a teammate or transfer leadership
+- **Split panes require tmux or iTerm2** - not supported in VS Code terminal, Windows Terminal, or Ghostty
+- **Higher token costs** - each teammate has its own context window (a 3-teammate team uses roughly 3-4x tokens)
 
 ### When to use Agent Teams alone
 
