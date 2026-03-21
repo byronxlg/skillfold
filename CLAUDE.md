@@ -160,6 +160,10 @@ Located in `library/examples/`:
 - Automated npm publish via GitHub Actions (`.github/workflows/publish.yml`, triggered on release)
 - Claude Code plugin with 11 library skills and `/skillfold` slash command (`plugin/`)
 - `--target claude-code` output mode generating `.claude/agents/*.md`, `.claude/skills/{name}/SKILL.md`, and `.claude/commands/run-pipeline.md`
+- `--target cursor` output mode generating `.cursor/rules/*.mdc` with Cursor-specific frontmatter
+- `--target windsurf` output mode generating `.windsurf/rules/*.md` with Windsurf-specific frontmatter
+- `--target codex` output mode generating a single `AGENTS.md` for OpenAI Codex CLI
+- `--target copilot` output mode generating `.github/copilot-instructions.md` and `.github/instructions/*.instructions.md`
 - `skillfold plugin` command for packaging pipelines as distributable Claude Code plugins
 - `skillfold adopt` command for adopting existing Claude Code agents into a pipeline
 - Async flow nodes for external agents (humans, CI, other teams) with `async: true` and policy options (block, skip, use-latest)
@@ -176,7 +180,7 @@ Located in `library/examples/`:
 - `skillfold.local.yaml` support for local config overrides (gitignored), with merge semantics for skills/state/team
 - Built-in state integrations for GitHub services (github-issues, github-discussions, github-pull-requests) with auto-generated URLs, filter options, and orchestrator instructions
 - VitePress documentation site (`docs/`) with GitHub Pages deployment, config reference, CLI reference, live demo with interactive pipeline visualizer, interactive pipeline builder (YAML editor with live Mermaid graph), examples gallery, skill authoring guide, comparison table, detailed comparisons page (vs Agent Teams, CrewAI, manual SKILL.md), and existing guides
-- Test suite with 650 tests across 121 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, integrations, visualize, remote, init, adopt, library, validate, list, search, npm, watch, errors, subflow, api, and e2e modules
+- Test suite with 667 tests across 125 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, integrations, visualize, remote, init, adopt, library, validate, list, search, npm, watch, errors, subflow, api, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next
