@@ -42,7 +42,7 @@ A prior violation triggered a cooldown:
 
 **Description:**
 
-Configuration language and compiler for multi-agent AI pipelines. Compiles a single YAML config into agent skills for 12 targets including Claude Code, Cursor, Copilot, Gemini, and Goose. Validates skill references, state types, and write conflicts at build time. Ships with 11 reusable library skills, a Claude Code plugin, and example pipeline templates.
+Configuration language and compiler for multi-agent AI pipelines. Compiles a single YAML config into agent skills for 12 targets (Claude Code, Cursor, Copilot, Gemini, Goose, and more), validating skill references, state types, and write conflicts at build time. Ships with 11 reusable library skills and example pipeline templates.
 
 **Validate Claims:**
 
@@ -62,7 +62,7 @@ Install skillfold (`npm install skillfold`), then run: `npx skillfold init demo 
 
 **Additional Comments:**
 
-Every other orchestrator in the awesome-claude-code list is a runtime tool - it launches agents, manages sessions, and coordinates execution while agents run. Skillfold is the only compile-time entry in the Orchestrators category. It validates skill references, state types, write conflicts, and cycle exit conditions at build time, then produces plain Markdown files that Claude Code reads natively. Compiles to 11 platform targets: Claude Code, Agent Teams, Cursor, Windsurf, Codex, Copilot, Gemini, Goose, Roo Code, Kiro, and Junie. The README's "Works with Agent Teams" section explains the complementary relationship: skillfold defines what each agent knows and how agents connect at build time, while Agent Teams coordinates live sessions at execution time. When a pipeline has a team flow, the compiler also generates an executable `/run-pipeline` command that orchestrates the agents with a step-by-step execution plan, state table, and Agent tool invocations. There is no process to run, no server to start, and no SDK to integrate.
+Every other orchestrator in the awesome-claude-code list is a runtime tool - it launches agents, manages sessions, and coordinates execution while agents run. Skillfold is the only compile-time entry in the Orchestrators category. It validates skill references, state types, write conflicts, and cycle exit conditions at build time, then produces plain Markdown files that Claude Code reads natively. Compiles to 12 platform targets: Claude Code, Agent Teams, Cursor, Windsurf, Codex, Copilot, Gemini, Goose, Roo Code, Kiro, Junie, and generic SKILL.md. The README's "Works with Agent Teams" section explains the complementary relationship: skillfold defines what each agent knows and how agents connect at build time, while Agent Teams coordinates live sessions at execution time. When a pipeline has a team flow, the compiler also generates an executable `/run-pipeline` command that orchestrates the agents with a step-by-step execution plan, state table, and Agent tool invocations. There is no process to run, no server to start, and no SDK to integrate.
 
 Self-hosting: skillfold's own dev team pipeline is compiled by skillfold itself (`skillfold.yaml` in the repo root). The 7-agent pipeline (strategist, architect, designer, marketer, engineer, reviewer, orchestrator) produces the project's own discussions, issues, and pull requests.
 
@@ -89,11 +89,15 @@ Custom error classes with descriptive messages. No `any`, no unnecessary type
 assertions.
 
 **2. Security and Safety: 9/10**
-Pure compiler - no hooks, no implicit execution, no persistent state, no
-credential storage. Network access only for optional remote skill fetching
-(GitHub raw URLs). `GITHUB_TOKEN` read from environment, never stored or logged.
-Single runtime dependency (`yaml`). Watch mode recompiles on file change but
-does not execute agents.
+Core compiler is pure - no hooks, no implicit execution, no persistent state,
+no credential storage. Network access only for optional remote skill fetching
+(GitHub raw URLs) and npm registry search. `GITHUB_TOKEN` read from
+environment, never stored or logged. Single runtime dependency (`yaml`).
+Watch mode recompiles on file change but does not execute agents. The opt-in
+`skillfold run` command has a broader surface (spawns `claude` CLI or SDK,
+`gh` CLI for backends) but is clearly separated from the compiler and
+documented in SECURITY.md. All shell execution uses `execFile` (not `exec`).
+The `agentConfig.hooks` pass-through is inert data, documented in SECURITY.md.
 
 **3. Documentation and Transparency: 9/10**
 README accurately describes all features. Getting-started tutorial, integration
@@ -107,52 +111,59 @@ cycles, and reachability at compile time. Self-hosts its own dev team pipeline.
 
 **5. Repository Hygiene and Maintenance: 9/10**
 CI on Node 20 + 22 via GitHub Actions. MIT license in LICENSE and package.json.
-Automated npm publish with provenance. Semver policy documented. Active
-development with 490+ issues/PRs in 3 days.
+Automated npm publish with provenance. Semver policy documented in
+CONTRIBUTING.md. Active development with 550+ issues/PRs. SECURITY.md
+covers the compiler, `skillfold run`, network access, file system access,
+hook pass-through, and npm lifecycle scripts.
 
 ### Claude-Code-Specific Checklist
 
 | Check | Answer | Detail |
 |---|---|---|
-| Defines hooks (stop, lifecycle, or similar)? | No | Pure compiler, no hooks of any kind. |
-| Hooks execute shell scripts? | No | N/A - no hooks defined. |
-| Commands invoke shell or external tools? | No | `/skillfold` and `/run-pipeline` are Markdown files. |
-| Writes persistent local state files? | No | Reads YAML, writes Markdown. No databases, caches, or lockfiles. |
-| Reads state to control execution flow? | No | Each compile run is stateless and deterministic. |
-| Performs implicit execution without confirmation? | No | User invokes CLI explicitly. `watch` recompiles but does not execute agents. |
-| Documents hook or command side effects? | N/A | No hooks or side effects to document. |
-| Includes safe defaults? | Yes | Default output is `build/`. `--target claude-code` writes to `.claude/` only when explicitly requested. |
-| Includes a clear disable or cancel mechanism? | N/A | Nothing to disable - compiler only runs when invoked. Ctrl-C stops `watch`. |
+| Defines hooks (stop, lifecycle, or similar)? | No | The compiler itself installs no hooks. The `agentConfig.hooks` field passes through hook config to compiled agent frontmatter, but skillfold does not execute them - the consuming platform does. Documented in SECURITY.md. |
+| Hooks execute shell scripts? | No | Skillfold does not execute any hooks. Hook pass-through is inert data in YAML frontmatter. |
+| Commands invoke shell or external tools? | Partially | The core compiler (`npx skillfold`) does not. The opt-in `skillfold run` command spawns `claude` CLI or uses the Claude Agent SDK, and `gh` CLI for state backends. Documented in SECURITY.md. |
+| Writes persistent local state files? | Partially | The core compiler writes only Markdown output. The opt-in `skillfold run` writes `state.json` and `.skillfold/run/` checkpoints (both gitignored). Documented in SECURITY.md. |
+| Reads state to control execution flow? | Partially | The core compiler is stateless. The opt-in `skillfold run --resume` reads checkpoints from `.skillfold/run/`. Documented in SECURITY.md. |
+| Performs implicit execution without confirmation? | No | User invokes CLI explicitly. `watch` recompiles on file changes but does not execute agents. The `prepare` npm lifecycle script runs `tsc` (standard TypeScript compilation), only when installing from git source. |
+| Documents hook or command side effects? | Yes | SECURITY.md has dedicated sections for the compiler, `skillfold run`, `skillfold search`, `skillfold init`, `skillfold plugin`, network access, file system access, hook pass-through, and npm lifecycle scripts. |
+| Includes safe defaults? | Yes | Default output is `build/`. `--target claude-code` writes to `.claude/` only when explicitly requested. `skillfold run` requires explicit invocation and supports `--dry-run`. |
+| Includes a clear disable or cancel mechanism? | Yes | Compiler only runs when invoked. Ctrl-C stops `watch`. `skillfold run --dry-run` previews without executing. |
 
 ### Permissions and Side Effects Analysis
 
-**A. Reported / Declared Permissions (from docs):**
-- File system: Reads YAML config + SKILL.md files, writes compiled output to `build/` or `.claude/`
-- Network: Optional fetch from `raw.githubusercontent.com` for remote skills
-- Execution / hooks: None
+**A. Reported / Declared Permissions (from docs / SECURITY.md):**
+- File system: Reads YAML config + SKILL.md files, writes compiled output to `build/` or `.claude/`. `skillfold run` additionally writes `state.json` and `.skillfold/run/`.
+- Network: Optional fetch from `raw.githubusercontent.com` for remote skills. `skillfold search` queries npm registry. `skillfold run` uses `gh` CLI for state backends.
+- Execution / hooks: Compiler: none. `skillfold run`: spawns `claude` CLI or SDK, and `gh` CLI. All via `execFile`.
 - APIs / tools: Optional `GITHUB_TOKEN` env var for private repo skill fetching
 
 **B. Likely Actual Permissions (inferred from code):**
 - File system: `node:fs/promises` read/write for config parsing and output (confirmed)
-- Network: `fetch()` for remote skills only (confirmed)
-- Execution / hooks: `node:child_process` used in `run.ts` (spawns `claude` CLI for `skillfold run`) and `backends.ts` (spawns `gh` CLI for state backends). Not used in compile path. (confirmed)
+- Network: `fetch()` for remote skills and npm registry search (confirmed)
+- Execution / hooks: `node:child_process` used in `run.ts` (spawns `claude` CLI via `execFile` for `skillfold run`) and `backends.ts` (spawns `gh` CLI via `execFile` for state backends). Not used in compile path. All shell execution uses `execFile` (not `exec`) to prevent injection. (confirmed)
 - APIs / tools: `GITHUB_TOKEN` read from `process.env`, never stored (confirmed)
+- npm lifecycle: `prepare` script runs `npm run build` (`tsc`), standard for TypeScript packages (confirmed)
+- Hook pass-through: `agentConfig.hooks` in config is copied verbatim to compiled agent YAML frontmatter. Skillfold does not execute these hooks. (confirmed)
 
 **C. Discrepancies:**
-Minor: `node:child_process` is used by the optional `skillfold run` command
-(not part of the core compile path). The compile workflow (`npx skillfold`)
-does not spawn subprocesses. This should be noted but does not change the
-risk profile for the primary use case (compilation).
+None material. `node:child_process` is used by the optional `skillfold run`
+command (not part of the core compile path). The compile workflow
+(`npx skillfold`) does not spawn subprocesses. The `agentConfig.hooks`
+pass-through is documented in SECURITY.md and does not represent execution
+by skillfold itself.
 
 ### Red Flag Scan
 
 - No malware indicators
-- No undisclosed execution surfaces
+- No undisclosed execution surfaces (all execution paths documented in SECURITY.md)
 - No unsafe defaults
-- No supply-chain risks (single dependency: `yaml`)
+- No supply-chain risks (single runtime dependency: `yaml`)
 - No obfuscated code
 - No telemetry or analytics
 - No data exfiltration vectors
+- `prepare` lifecycle script runs `tsc` only (standard TypeScript compilation)
+- `agentConfig.hooks` pass-through is documented and inert
 
 ### Overall Assessment
 
@@ -186,8 +197,8 @@ execution, no claim/behavior mismatch, safe defaults.
 - **MIT license**, clearly stated in LICENSE and package.json.
 - **CI on Node 20 + 22** via GitHub Actions, with `--check` flag for verifying
   compiled output is current.
-- **Comprehensive docs** - Getting-started tutorial, integration guide for 11
-  platforms, JSON Schema for IDE autocompletion, VitePress docs site.
+- **Comprehensive docs** - Getting-started tutorial, integration guide for 12
+  targets, JSON Schema for IDE autocompletion, VitePress docs site.
 - **Self-hosting** - The project's own dev team pipeline is compiled by
   skillfold, providing a non-trivial real-world usage example.
 - **Semver policy** - Documented in CONTRIBUTING.md with automated npm publish
