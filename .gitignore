@@ -20,6 +20,7 @@ docs/.vitepress/cache/
 .parse_project.mjs
 .test-goose/
 .tmp_payload.json
+.tmux-session.sh
 .update-readme.mjs
 decode_readme.js
 decode_readme.mjs
