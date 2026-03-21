@@ -12,7 +12,7 @@ const route = useRoute();
       <div v-if="route.path === '/' || route.path === '/skillfold/'" class="announcement-bar">
         <a href="/skillfold/changelog">
           <span class="announcement-badge">New</span>
-          <span class="announcement-text">v1.23 - Now compiles to 12 platforms: Goose, Roo Code, Kiro, and Junie added</span>
+          <span class="announcement-text">Now compiles to 12 platforms including Kiro, Junie, Roo Code, and Goose</span>
           <span class="announcement-arrow">&rarr;</span>
         </a>
       </div>

@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Skillfold
   text: One config for every AI coding agent
-  tagline: Define pipelines in YAML. Compile to 12 platforms. Catch errors before agents run.
+  tagline: Define skills in YAML. Compose agents. Compile to 12 platforms. Catch errors before agents run.
   image:
     light: /hero-light.svg
     dark: /hero-dark.svg
@@ -127,7 +127,7 @@ onMounted(() => {
   <div class="step">
     <div class="step-number">2</div>
     <h3>Compile</h3>
-    <p>The compiler validates types, checks flows, detects conflicts - before anything runs.</p>
+    <p>The compiler validates types, checks flows, and detects conflicts before anything runs.</p>
   </div>
   <div class="step-connector"></div>
   <div class="step">
@@ -141,7 +141,7 @@ onMounted(() => {
 
 <div class="before-after fade-in">
 
-## Before and After
+## Why a Compiler?
 
 <div class="ba-grid">
   <div class="ba-card ba-before">
@@ -155,7 +155,7 @@ onMounted(() => {
 .cursor/rules/engineer.mdc    # copy-paste again
 ```
 
-<span class="ba-caption">5 files across 2 platforms. "Planning" is duplicated in 4 of them. Change it once? Update it everywhere. Miss one? Silent drift.</span>
+<span class="ba-caption">5 files across 2 platforms. "Planning" is duplicated 4 times. Add a third platform and the count hits 9. Five agents sharing 3 skills across 3 platforms? That's 45+ files to keep in sync.</span>
   </div>
   <div class="ba-card ba-after">
     <div class="ba-label">With Skillfold</div>
@@ -182,29 +182,6 @@ npx skillfold --target cursor       # generates .cursor/
 
 </div>
 
-<div class="scale-section fade-in">
-<div class="scale-inner">
-
-## The Math Gets Worse Without a Compiler
-
-<div class="scale-visual">
-  <div class="scale-card scale-manual">
-    <div class="scale-number">45+</div>
-    <div class="scale-desc">files to maintain</div>
-    <div class="scale-detail">5 agents, 3 shared skills, 3 platforms</div>
-  </div>
-  <div class="scale-vs">vs</div>
-  <div class="scale-card scale-compiled">
-    <div class="scale-number">1</div>
-    <div class="scale-desc">config file</div>
-    <div class="scale-detail">skillfold.yaml</div>
-  </div>
-</div>
-<p class="scale-caption">Every agent that shares a skill creates another copy. Every platform multiplies the total. Skillfold compiles from one source.</p>
-
-</div>
-</div>
-
 <div class="home-content fade-in">
 
 ## What a Pipeline Looks Like
@@ -226,7 +203,7 @@ state:
   tasks:
     type: list<Task>
     location:
-      github-issues: { repo: my-org/my-repo, label: task }
+      github-issues: { repo: my-org/my-repo }
 
 team:
   flow:
@@ -275,7 +252,7 @@ npx skillfold run --target claude-code
 
 ## Compiler vs. Runtime Orchestration
 
-Skillfold validates your pipeline at compile time and produces standard files with zero runtime overhead. Runtime frameworks like CrewAI and LangGraph validate during execution and require their SDK at runtime.
+Skillfold validates at compile time and produces standard files with zero runtime overhead. Runtime frameworks validate during execution and require their SDK at runtime.
 
 <div class="comparison-table-wrap">
 
@@ -289,7 +266,7 @@ Skillfold validates your pipeline at compile time and produces standard files wi
 
 </div>
 
-<a class="comparison-link" :href="withBase('/comparisons')">Detailed comparisons -></a>
+<a class="comparison-link" :href="withBase('/comparisons')">Detailed comparisons &#8594;</a>
 
 </div>
 </div>
@@ -298,23 +275,23 @@ Skillfold validates your pipeline at compile time and produces standard files wi
 
 ## Start from a Template
 
-Three example pipelines ship with the library. Use them directly or as a starting point for your own.
+Three example pipelines ship with the library. Use them directly or as a starting point.
 
 <div class="templates-grid">
   <a class="template-card" :href="withBase('/examples')">
     <div class="template-name">dev-team</div>
     <div class="template-desc">Planner, engineer, reviewer with a review loop. The default <code>skillfold init</code> template.</div>
-    <div class="template-flow">planner -> engineer -> reviewer -> (loop)</div>
+    <div class="template-flow">planner &#8594; engineer &#8594; reviewer &#8594; (loop)</div>
   </a>
   <a class="template-card" :href="withBase('/examples')">
     <div class="template-name">content-pipeline</div>
     <div class="template-desc">Parallel map over topics. Researcher, writer, and editor run concurrently per item.</div>
-    <div class="template-flow">researcher -> map(writer, editor)</div>
+    <div class="template-flow">researcher &#8594; map(writer, editor)</div>
   </a>
   <a class="template-card" :href="withBase('/examples')">
     <div class="template-name">code-review-bot</div>
     <div class="template-desc">Minimal two-agent flow. Analyzer scans code, reporter writes the review.</div>
-    <div class="template-flow">analyzer -> reporter</div>
+    <div class="template-flow">analyzer &#8594; reporter</div>
   </a>
 </div>
 
@@ -325,7 +302,7 @@ Three example pipelines ship with the library. Use them directly or as a startin
   <div class="dogfood-badge">Self-Hosting</div>
   <h2>Built with Skillfold</h2>
   <p>This project's own dev team - planner, engineer, reviewer, marketer, architect, designer - is defined in <code>skillfold.yaml</code> and compiled with the tool it ships. The pipeline manages its own issues, PRs, and releases.</p>
-  <a class="dogfood-link" href="https://github.com/byronxlg/skillfold/blob/main/skillfold.yaml">See the pipeline config -></a>
+  <a class="dogfood-link" href="https://github.com/byronxlg/skillfold/blob/main/skillfold.yaml">See the pipeline config &#8594;</a>
 </div>
 </div>
 
@@ -342,9 +319,9 @@ npm install skillfold && npx skillfold init my-pipeline
 </div>
 
 <div class="cta-links">
-  <a class="cta-primary" :href="withBase('/getting-started')">Read the guide -></a>
-  <a class="cta-secondary" :href="withBase('/demo')">Try the live demo -></a>
-  <a class="cta-secondary" href="https://github.com/byronxlg/skillfold">View on GitHub -></a>
+  <a class="cta-primary" :href="withBase('/getting-started')">Read the guide &#8594;</a>
+  <a class="cta-secondary" :href="withBase('/demo')">Try the live demo &#8594;</a>
+  <a class="cta-secondary" href="https://github.com/byronxlg/skillfold">View on GitHub &#8594;</a>
 </div>
 
 </div>

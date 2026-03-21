@@ -1,4 +1,6 @@
-/* Brand colors */
+/* ============================================
+   Brand colors
+   ============================================ */
 :root {
   --vp-c-brand-1: #10b981;
   --vp-c-brand-2: #059669;
@@ -20,6 +22,10 @@
     #06b6d4 50%
   );
   --vp-home-hero-image-filter: blur(44px);
+
+  /* Section spacing */
+  --section-gap: 80px;
+  --section-gap-sm: 56px;
 }
 
 .dark {
@@ -29,7 +35,6 @@
   --vp-c-brand-soft: rgba(52, 211, 153, 0.14);
 }
 
-/* Subtle hero image glow sizing */
 @media (min-width: 640px) {
   :root {
     --vp-home-hero-image-filter: blur(56px);
@@ -43,7 +48,53 @@
 }
 
 /* ============================================
-   Hero shimmer animation on gradient text
+   Global refinements
+   ============================================ */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--vp-c-divider);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--vp-c-brand-2);
+}
+
+/* Smooth page transitions */
+.VPContent {
+  transition: opacity 0.2s ease;
+}
+
+/* Code block refinements */
+.vp-doc div[class*="language-"] {
+  border: 1px solid var(--vp-c-divider);
+}
+
+.vp-doc div[class*="language-"]:hover {
+  border-color: var(--vp-c-brand-soft);
+}
+
+/* ============================================
+   Hero - shimmer animation on gradient text
    ============================================ */
 .VPHero .name .clip {
   background-size: 200% 100%;
@@ -86,6 +137,63 @@
 
 .dark .VPFeatures .VPFeature:hover {
   box-shadow: 0 8px 24px rgba(52, 211, 153, 0.06);
+}
+
+/* ============================================
+   Scroll fade-in animation
+   ============================================ */
+.vp-doc .fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.vp-doc .fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vp-doc .fade-in {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ============================================
+   Section heading style (shared)
+   ============================================ */
+.vp-doc .how-it-works h2,
+.vp-doc .before-after h2,
+.vp-doc .home-content h2,
+.vp-doc .comparison-section h2,
+.vp-doc .templates-section h2,
+.vp-doc .cta-section h2 {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(120deg, var(--vp-c-text-1) 60%, var(--vp-c-brand-1));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================
+   Section divider (gradient line between sections)
+   ============================================ */
+.vp-doc .how-it-works::before,
+.vp-doc .before-after::before,
+.vp-doc .home-content::before,
+.vp-doc .templates-section::before,
+.vp-doc .dogfood-section::before {
+  content: '';
+  display: block;
+  height: 1px;
+  max-width: 200px;
+  margin: 0 auto 0;
+  background: linear-gradient(90deg, transparent, var(--vp-c-brand-soft), transparent);
 }
 
 /* ============================================
@@ -163,13 +271,12 @@
   margin-bottom: 4px;
 }
 
-.vp-doc .terminal-line:last-child + .terminal-output:last-child,
 .vp-doc .terminal-body > :last-child {
   margin-bottom: 0;
 }
 
 /* ============================================
-   Proof bar - merged stats + badges
+   Proof bar - stats + badges
    ============================================ */
 .vp-doc .proof-bar {
   display: flex;
@@ -292,42 +399,16 @@
 }
 
 /* ============================================
-   Scroll fade-in animation
-   ============================================ */
-.vp-doc .fade-in {
-  opacity: 0;
-  transform: translateY(20px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
-}
-
-.vp-doc .fade-in.visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .vp-doc .fade-in {
-    opacity: 1;
-    transform: none;
-    transition: none;
-  }
-}
-
-/* ============================================
    How It Works - 3-step workflow
    ============================================ */
 .vp-doc .how-it-works {
   max-width: 960px;
   margin: 0 auto;
-  padding: 48px 24px 0;
+  padding: var(--section-gap) 24px 0;
 }
 
 .vp-doc .how-it-works h2 {
-  text-align: center;
-  font-size: 28px;
-  font-weight: 700;
-  margin-bottom: 32px;
-  letter-spacing: -0.02em;
+  margin-bottom: 40px;
 }
 
 .vp-doc .steps {
@@ -359,20 +440,20 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
   flex-shrink: 0;
 }
 
 .vp-doc .step h3 {
   font-size: 16px;
   font-weight: 600;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   color: var(--vp-c-text-1);
 }
 
 .vp-doc .step p {
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.6;
   color: var(--vp-c-text-2);
   margin: 0;
 }
@@ -387,6 +468,10 @@
 }
 
 @media (max-width: 639px) {
+  .vp-doc .how-it-works {
+    padding-top: var(--section-gap-sm);
+  }
+
   .vp-doc .steps {
     flex-direction: column;
     align-items: center;
@@ -411,15 +496,11 @@
 .vp-doc .before-after {
   max-width: 960px;
   margin: 0 auto;
-  padding: 48px 24px 0;
+  padding: var(--section-gap) 24px 0;
 }
 
 .vp-doc .before-after h2 {
-  text-align: center;
-  font-size: 28px;
-  font-weight: 700;
-  margin-bottom: 24px;
-  letter-spacing: -0.02em;
+  margin-bottom: 32px;
 }
 
 .vp-doc .ba-grid {
@@ -431,6 +512,7 @@
 @media (min-width: 768px) {
   .vp-doc .ba-grid {
     grid-template-columns: 1fr 1fr;
+    gap: 20px;
   }
 }
 
@@ -499,159 +581,22 @@
 .vp-doc .ba-caption {
   display: block;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.6;
   color: var(--vp-c-text-2);
   margin-top: 4px;
 }
 
 /* ============================================
-   Scale section - efficiency metric visual
-   ============================================ */
-.vp-doc .scale-section {
-  padding: 48px 24px 0;
-}
-
-.vp-doc .scale-inner {
-  max-width: 960px;
-  margin: 0 auto;
-}
-
-.vp-doc .scale-section h2 {
-  text-align: center;
-  font-size: 28px;
-  font-weight: 700;
-  margin-bottom: 32px;
-  letter-spacing: -0.02em;
-}
-
-.vp-doc .scale-visual {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 24px;
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.vp-doc .scale-card {
-  flex: 1;
-  text-align: center;
-  padding: 32px 20px;
-  border-radius: 16px;
-  border: 2px solid var(--vp-c-divider);
-}
-
-.vp-doc .scale-manual {
-  border-color: rgba(239, 68, 68, 0.25);
-  background: rgba(239, 68, 68, 0.03);
-}
-
-.dark .vp-doc .scale-manual {
-  border-color: rgba(239, 68, 68, 0.2);
-  background: rgba(239, 68, 68, 0.05);
-}
-
-.vp-doc .scale-compiled {
-  border-color: rgba(16, 185, 129, 0.3);
-  background: rgba(16, 185, 129, 0.03);
-}
-
-.dark .vp-doc .scale-compiled {
-  border-color: rgba(52, 211, 153, 0.25);
-  background: rgba(52, 211, 153, 0.05);
-}
-
-.vp-doc .scale-number {
-  font-size: 48px;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  line-height: 1;
-  margin-bottom: 4px;
-}
-
-.vp-doc .scale-manual .scale-number {
-  color: #ef4444;
-}
-
-.dark .vp-doc .scale-manual .scale-number {
-  color: #f87171;
-}
-
-.vp-doc .scale-compiled .scale-number {
-  background: linear-gradient(120deg, #10b981 30%, #06b6d4);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.dark .vp-doc .scale-compiled .scale-number {
-  background: linear-gradient(120deg, #34d399 30%, #22d3ee);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.vp-doc .scale-desc {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--vp-c-text-1);
-  margin-bottom: 4px;
-}
-
-.vp-doc .scale-detail {
-  font-size: 12px;
-  color: var(--vp-c-text-3);
-}
-
-.vp-doc .scale-vs {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--vp-c-text-3);
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  flex-shrink: 0;
-}
-
-.vp-doc .scale-caption {
-  text-align: center;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--vp-c-text-2);
-  max-width: 560px;
-  margin: 24px auto 0;
-}
-
-@media (max-width: 639px) {
-  .vp-doc .scale-visual {
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .vp-doc .scale-card {
-    width: 100%;
-    max-width: 240px;
-    padding: 24px 16px;
-  }
-
-  .vp-doc .scale-number {
-    font-size: 36px;
-  }
-}
-
-/* ============================================
-   Home content section
+   Home content - pipeline demo section
    ============================================ */
 .vp-doc .home-content {
   max-width: 960px;
   margin: 0 auto;
-  padding: 48px 24px 0;
+  padding: var(--section-gap) 24px 0;
 }
 
 .vp-doc .home-content h2 {
-  font-size: 28px;
-  font-weight: 700;
-  margin-bottom: 12px;
-  letter-spacing: -0.02em;
+  margin-bottom: 24px;
 }
 
 .vp-doc .home-content p {
@@ -660,31 +605,46 @@
   margin-bottom: 20px;
 }
 
-/* ============================================
-   Section divider gradient
-   ============================================ */
-.vp-doc .how-it-works + .before-after::before,
-.vp-doc .before-after + .scale-section::before,
-.vp-doc .scale-section + .home-content::before {
-  content: '';
-  display: block;
-  height: 1px;
-  max-width: 200px;
-  margin: 0 auto 48px;
-  background: linear-gradient(90deg, transparent, var(--vp-c-brand-soft), transparent);
-}
-
-/* ============================================
-   Smooth scrolling
-   ============================================ */
-html {
-  scroll-behavior: smooth;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
+@media (max-width: 639px) {
+  .vp-doc .home-content {
+    padding-top: var(--section-gap-sm);
   }
+}
+
+/* Pipeline demo - side by side layout */
+.vp-doc .pipeline-demo {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 860px) {
+  .vp-doc .pipeline-demo {
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+}
+
+.vp-doc .pipeline-input,
+.vp-doc .pipeline-output {
+  min-width: 0;
+}
+
+.vp-doc .pipeline-label {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-1);
+}
+
+.vp-doc .pipeline-demo div[class*="language-"] {
+  margin-top: 0;
 }
 
 /* ============================================
@@ -692,8 +652,8 @@ html {
    ============================================ */
 .vp-doc .comparison-section {
   background: var(--vp-c-bg-soft);
-  padding: 64px 24px;
-  margin: 48px 0 0;
+  padding: var(--section-gap) 24px;
+  margin-top: var(--section-gap);
 }
 
 .vp-doc .comparison-section .comparison-inner {
@@ -702,25 +662,17 @@ html {
 }
 
 .vp-doc .comparison-section h2 {
-  text-align: center;
-  font-size: 28px;
-  font-weight: 700;
-  margin-bottom: 8px;
-  letter-spacing: -0.02em;
+  margin-bottom: 12px;
 }
 
-.vp-doc .comparison-section > p,
 .vp-doc .comparison-section .comparison-inner > p {
   text-align: center;
   color: var(--vp-c-text-2);
   margin-bottom: 32px;
   line-height: 1.7;
-}
-
-.vp-doc .comparison-section > p:last-child,
-.vp-doc .comparison-section .comparison-inner > p:last-child {
-  text-align: center;
-  margin-top: 24px;
+  max-width: 640px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .vp-doc .comparison-table-wrap {
@@ -742,27 +694,55 @@ html {
   font-weight: 500;
 }
 
+.vp-doc .comparison-link {
+  display: block;
+  text-align: center;
+  margin-top: 24px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--vp-c-brand-1);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.vp-doc .comparison-link:hover {
+  color: var(--vp-c-brand-2);
+}
+
+@media (max-width: 639px) {
+  .vp-doc .comparison-section {
+    padding: var(--section-gap-sm) 16px;
+    margin-top: var(--section-gap-sm);
+  }
+
+  .vp-doc .comparison-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .vp-doc .comparison-table-wrap table {
+    font-size: 13px;
+    min-width: 480px;
+  }
+}
+
 /* ============================================
    Templates section - example pipeline gallery
    ============================================ */
 .vp-doc .templates-section {
   max-width: 960px;
   margin: 0 auto;
-  padding: 64px 24px 0;
+  padding: var(--section-gap) 24px 0;
 }
 
 .vp-doc .templates-section h2 {
-  text-align: center;
-  font-size: 28px;
-  font-weight: 700;
   margin-bottom: 8px;
-  letter-spacing: -0.02em;
 }
 
 .vp-doc .templates-section > p {
   text-align: center;
   color: var(--vp-c-text-2);
-  margin-bottom: 24px;
+  margin-bottom: 32px;
   line-height: 1.6;
 }
 
@@ -827,20 +807,94 @@ html {
   margin-top: auto;
 }
 
+@media (max-width: 639px) {
+  .vp-doc .templates-section {
+    padding-top: var(--section-gap-sm);
+  }
+}
+
 /* ============================================
-   CTA section - focused
+   Dogfood / self-hosting section
+   ============================================ */
+.vp-doc .dogfood-section {
+  padding: var(--section-gap) 24px 0;
+}
+
+.vp-doc .dogfood-inner {
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
+  padding: 32px;
+  border-radius: 16px;
+  border: 1px solid var(--vp-c-divider);
+  background: var(--vp-c-bg-soft);
+  position: relative;
+}
+
+.vp-doc .dogfood-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-1);
+  margin-bottom: 16px;
+}
+
+.vp-doc .dogfood-inner h2 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  letter-spacing: -0.02em;
+}
+
+.vp-doc .dogfood-inner p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--vp-c-text-2);
+  margin-bottom: 16px;
+}
+
+.vp-doc .dogfood-inner code {
+  font-size: 13px;
+}
+
+.vp-doc .dogfood-link {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--vp-c-brand-1);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.vp-doc .dogfood-link:hover {
+  color: var(--vp-c-brand-2);
+}
+
+@media (max-width: 639px) {
+  .vp-doc .dogfood-section {
+    padding-top: var(--section-gap-sm);
+  }
+
+  .vp-doc .dogfood-inner {
+    padding: 24px 20px;
+  }
+}
+
+/* ============================================
+   CTA section - final call to action
    ============================================ */
 .vp-doc .cta-section {
   background: var(--vp-c-bg-soft);
-  padding: 64px 24px;
+  padding: var(--section-gap) 24px;
+  margin-top: var(--section-gap);
 }
 
 .vp-doc .cta-section h2 {
-  text-align: center;
-  font-size: 28px;
-  font-weight: 700;
   margin-bottom: 24px;
-  letter-spacing: -0.02em;
 }
 
 .vp-doc .cta-install {
@@ -891,71 +945,11 @@ html {
   color: var(--vp-c-brand-2);
 }
 
-/* ============================================
-   Comparison link
-   ============================================ */
-.vp-doc .comparison-link {
-  display: block;
-  text-align: center;
-  margin-top: 24px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--vp-c-brand-1);
-}
-
-/* ============================================
-   Dogfood / self-hosting section
-   ============================================ */
-.vp-doc .dogfood-section {
-  padding: 48px 24px;
-}
-
-.vp-doc .dogfood-inner {
-  max-width: 640px;
-  margin: 0 auto;
-  text-align: center;
-  padding: 32px;
-  border-radius: 16px;
-  border: 1px solid var(--vp-c-divider);
-  background: var(--vp-c-bg-soft);
-  position: relative;
-}
-
-.vp-doc .dogfood-badge {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  padding: 4px 12px;
-  border-radius: 20px;
-  background: var(--vp-c-brand-soft);
-  color: var(--vp-c-brand-1);
-  margin-bottom: 16px;
-}
-
-.vp-doc .dogfood-inner h2 {
-  font-size: 22px;
-  font-weight: 700;
-  margin-bottom: 12px;
-  letter-spacing: -0.02em;
-}
-
-.vp-doc .dogfood-inner p {
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--vp-c-text-2);
-  margin-bottom: 16px;
-}
-
-.vp-doc .dogfood-inner code {
-  font-size: 13px;
-}
-
-.vp-doc .dogfood-link {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--vp-c-brand-1);
+@media (max-width: 639px) {
+  .vp-doc .cta-section {
+    padding: var(--section-gap-sm) 24px;
+    margin-top: var(--section-gap-sm);
+  }
 }
 
 /* ============================================
@@ -1013,111 +1007,4 @@ html {
   font-size: 14px;
   font-weight: 500;
   color: var(--vp-c-brand-1);
-}
-
-/* ============================================
-   Custom scrollbar (subtle, brand-tinted)
-   ============================================ */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--vp-c-divider);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--vp-c-brand-2);
-}
-
-/* ============================================
-   Smooth page transitions
-   ============================================ */
-.VPContent {
-  transition: opacity 0.2s ease;
-}
-
-/* ============================================
-   Code block refinements
-   ============================================ */
-.vp-doc div[class*="language-"] {
-  border: 1px solid var(--vp-c-divider);
-}
-
-.vp-doc div[class*="language-"]:hover {
-  border-color: var(--vp-c-brand-soft);
-}
-
-/* ============================================
-   Pipeline demo - side by side layout
-   ============================================ */
-.vp-doc .pipeline-demo {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 24px;
-}
-
-@media (min-width: 860px) {
-  .vp-doc .pipeline-demo {
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
-}
-
-.vp-doc .pipeline-input,
-.vp-doc .pipeline-output {
-  min-width: 0;
-}
-
-.vp-doc .pipeline-label {
-  display: inline-block;
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  padding: 3px 10px;
-  border-radius: 4px;
-  margin-bottom: 8px;
-  background: var(--vp-c-brand-soft);
-  color: var(--vp-c-brand-1);
-}
-
-.vp-doc .pipeline-demo div[class*="language-"] {
-  margin-top: 0;
-}
-
-/* ============================================
-   Section heading refinements
-   ============================================ */
-.vp-doc .how-it-works h2,
-.vp-doc .before-after h2,
-.vp-doc .scale-section h2,
-.vp-doc .home-content h2,
-.vp-doc .comparison-section h2,
-.vp-doc .templates-section h2,
-.vp-doc .cta-section h2 {
-  background: linear-gradient(120deg, var(--vp-c-text-1) 60%, var(--vp-c-brand-1));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* ============================================
-   Improve link arrows on homepage
-   ============================================ */
-.vp-doc .comparison-link,
-.vp-doc .dogfood-link {
-  text-decoration: none;
-  transition: color 0.2s;
-}
-
-.vp-doc .comparison-link:hover,
-.vp-doc .dogfood-link:hover {
-  color: var(--vp-c-brand-2);
 }

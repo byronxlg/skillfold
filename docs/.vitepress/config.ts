@@ -2,7 +2,8 @@ import { defineConfig } from "vitepress";
 
 export default defineConfig({
   title: "Skillfold",
-  description: "One config for every AI coding agent",
+  description:
+    "One config for every AI coding agent. Compile YAML pipelines to 12 platforms.",
 
   // GitHub Pages: https://byronxlg.github.io/skillfold/
   base: "/skillfold/",
@@ -62,25 +63,34 @@ export default defineConfig({
       { text: "Builder", link: "/builder" },
       { text: "Demo", link: "/demo" },
       { text: "Blog", link: "/blog/" },
-      { text: "GitHub", link: "https://github.com/byronxlg/skillfold" },
     ],
 
     sidebar: [
       {
-        text: "Guide",
+        text: "Getting Started",
         items: [
-          { text: "Getting Started", link: "/getting-started" },
-          { text: "Library Skills", link: "/library" },
+          { text: "Quick Start", link: "/getting-started" },
+          { text: "Examples", link: "/examples" },
           { text: "Live Demo", link: "/demo" },
           { text: "Pipeline Builder", link: "/builder" },
-          { text: "Examples", link: "/examples" },
+        ],
+      },
+      {
+        text: "Guide",
+        items: [
+          { text: "Library Skills", link: "/library" },
           { text: "Running Pipelines", link: "/running-pipelines" },
-          { text: "Agent Teams Bridge", link: "/agent-teams-bridge" },
-          { text: "Agent Teams Tutorial", link: "/agent-teams-tutorial" },
-          { text: "Platform Integration", link: "/integrations" },
-          { text: "Publishing Skills", link: "/publishing" },
           { text: "Authoring Skills", link: "/authoring" },
-          { text: "Comparisons", link: "/comparisons" },
+          { text: "Publishing Skills", link: "/publishing" },
+          { text: "Platform Integration", link: "/integrations" },
+        ],
+      },
+      {
+        text: "Agent Teams",
+        collapsed: true,
+        items: [
+          { text: "Bridge Guide", link: "/agent-teams-bridge" },
+          { text: "Tutorial", link: "/agent-teams-tutorial" },
         ],
       },
       {
@@ -88,11 +98,13 @@ export default defineConfig({
         items: [
           { text: "Config Format", link: "/reference/config" },
           { text: "CLI", link: "/reference/cli" },
+          { text: "Comparisons", link: "/comparisons" },
           { text: "Changelog", link: "/changelog" },
         ],
       },
       {
         text: "Blog",
+        collapsed: true,
         items: [
           { text: "All Posts", link: "/blog/" },
           {
@@ -110,7 +122,9 @@ export default defineConfig({
     socialLinks: [
       { icon: "github", link: "https://github.com/byronxlg/skillfold" },
       {
-        icon: { svg: '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M1.763 0C.786 0 0 .786 0 1.763v20.474C0 23.214.786 24 1.763 24h20.474c.977 0 1.763-.786 1.763-1.763V1.763C24 .786 23.214 0 22.237 0zM5.13 5.323l13.837.019-.009 13.836h-3.464l.01-10.382h-3.456L12.04 19.17H5.113z" fill="currentColor"/></svg>' },
+        icon: {
+          svg: '<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M1.763 0C.786 0 0 .786 0 1.763v20.474C0 23.214.786 24 1.763 24h20.474c.977 0 1.763-.786 1.763-1.763V1.763C24 .786 23.214 0 22.237 0zM5.13 5.323l13.837.019-.009 13.836h-3.464l.01-10.382h-3.456L12.04 19.17H5.113z" fill="currentColor"/></svg>',
+        },
         link: "https://www.npmjs.com/package/skillfold",
         ariaLabel: "npm",
       },
@@ -132,5 +146,6 @@ export default defineConfig({
     "submissions/**",
     "community-post.md",
     "awesome-claude-code-submission.md",
+    "dev-to-tutorial-draft.md",
   ],
 });
