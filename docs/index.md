@@ -41,6 +41,19 @@ features:
 
 <script setup>
 import { withBase } from 'vitepress'
+import { onMounted } from 'vue'
+
+onMounted(() => {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible')
+      }
+    })
+  }, { threshold: 0.1 })
+
+  document.querySelectorAll('.fade-in').forEach(el => observer.observe(el))
+})
 </script>
 
 <div class="install-banner">
@@ -94,15 +107,78 @@ bun add skillfold
   <a href="https://github.com/byronxlg/skillfold/blob/main/LICENSE"><img src="https://img.shields.io/github/license/byronxlg/skillfold?color=10b981" alt="MIT License" /></a>
 </div>
 
-<div class="home-content">
+<div class="how-it-works fade-in">
 
-## The Problem
+## How It Works
 
-You have multiple AI coding agents. Each one needs a prompt file. When they share skills, you copy-paste. When state changes, nothing validates it. When you switch platforms, you rewrite everything.
+<div class="steps">
+  <div class="step">
+    <div class="step-number">1</div>
+    <h3>Define</h3>
+    <p>Write one <code>skillfold.yaml</code> with your skills, state schema, and execution flow.</p>
+  </div>
+  <div class="step-connector"></div>
+  <div class="step">
+    <div class="step-number">2</div>
+    <h3>Compile</h3>
+    <p>The compiler validates types, checks flows, detects conflicts - before anything runs.</p>
+  </div>
+  <div class="step-connector"></div>
+  <div class="step">
+    <div class="step-number">3</div>
+    <h3>Deploy</h3>
+    <p>Emit platform-native files for any of 12 targets. Or run the pipeline directly.</p>
+  </div>
+</div>
 
-**Skillfold fixes this.** Define your pipeline once in YAML - skills, state, execution flow - and the compiler handles the rest.
+</div>
 
-## What It Looks Like
+<div class="before-after fade-in">
+
+## Before and After
+
+<div class="ba-grid">
+  <div class="ba-card ba-before">
+    <div class="ba-label">Without Skillfold</div>
+
+```
+.claude/agents/planner.md     # planning instructions
+.claude/agents/engineer.md    # planning + coding (copy-pasted)
+.claude/agents/reviewer.md    # planning + review (copy-pasted)
+.cursor/rules/planner.mdc     # same content, different format
+.cursor/rules/engineer.mdc    # copy-paste again
+```
+
+<span class="ba-caption">5 files across 2 platforms. "Planning" is duplicated in 4 of them. Change it once? Update it everywhere. Miss one? Silent drift.</span>
+  </div>
+  <div class="ba-card ba-after">
+    <div class="ba-label">With Skillfold</div>
+
+```yaml
+skills:
+  atomic:
+    planning: ./skills/planning    # defined once
+  composed:
+    engineer:
+      compose: [planning, code-writing]
+    reviewer:
+      compose: [planning, code-review]
+```
+
+```sh
+npx skillfold --target claude-code  # generates .claude/
+npx skillfold --target cursor       # generates .cursor/
+```
+
+<span class="ba-caption">One source of truth. Change "planning" once, recompile, every agent on every platform updates.</span>
+  </div>
+</div>
+
+</div>
+
+<div class="home-content fade-in">
+
+## What a Pipeline Looks Like
 
 ```yaml
 skills:
@@ -177,12 +253,12 @@ npx skillfold run --target claude-code --spawner sdk
 
 </div>
 
-<div class="comparison-section">
+<div class="comparison-section fade-in">
 <div class="comparison-inner">
 
 ## Compiler vs. Runtime Orchestration
 
-Skillfold catches errors before agents run. Runtime tools like CrewAI and LangGraph catch them during execution. Both are valid approaches.
+Skillfold catches errors before agents run. Runtime tools like CrewAI and LangGraph catch them during execution.
 
 <div class="comparison-grid">
   <div class="comparison-card">
@@ -207,12 +283,12 @@ Skillfold catches errors before agents run. Runtime tools like CrewAI and LangGr
   </div>
 </div>
 
-[Detailed comparisons ->](/comparisons)
+<a class="comparison-link" :href="withBase('/comparisons')">Detailed comparisons -></a>
 
 </div>
 </div>
 
-<div class="targets-section">
+<div class="targets-section fade-in">
 
 ## Compile Once, Run Anywhere
 
@@ -237,7 +313,16 @@ One config, 12 platform targets. Write your pipeline in YAML and compile to whic
 
 </div>
 
-<div class="cta-section">
+<div class="dogfood-section fade-in">
+<div class="dogfood-inner">
+  <div class="dogfood-badge">Self-Hosting</div>
+  <h2>Built with Skillfold</h2>
+  <p>This project's own dev team - planner, engineer, reviewer, marketer, architect, designer - is defined in <code>skillfold.yaml</code> and compiled with the tool it ships. The pipeline manages its own issues, PRs, and releases.</p>
+  <a class="dogfood-link" href="https://github.com/byronxlg/skillfold/blob/main/skillfold.yaml">See the pipeline config -></a>
+</div>
+</div>
+
+<div class="cta-section fade-in">
 
 ## Ready to get started?
 

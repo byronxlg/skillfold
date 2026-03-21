@@ -33,7 +33,7 @@ export default defineConfig({
       "meta",
       {
         property: "og:image",
-        content: "https://byronxlg.github.io/skillfold/og-image.svg",
+        content: "https://byronxlg.github.io/skillfold/og-image.png",
       },
     ],
     ["meta", { name: "twitter:card", content: "summary_large_image" }],
@@ -50,7 +50,7 @@ export default defineConfig({
       "meta",
       {
         name: "twitter:image",
-        content: "https://byronxlg.github.io/skillfold/og-image.svg",
+        content: "https://byronxlg.github.io/skillfold/og-image.png",
       },
     ],
   ],

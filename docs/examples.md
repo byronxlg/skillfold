@@ -6,7 +6,7 @@ Skillfold ships with three starter templates in the shared skills library. Each 
 Don't need a full pipeline? Install any library skill individually with `npx skills add byronxlg/skillfold -s <skill-name>`. See the [Library Skills](/library) page for the full list.
 :::
 
-## dev-team
+## dev-team <Badge type="tip" text="Linear + Loop" />
 
 A linear pipeline with a review loop. Three agents - planner, engineer, reviewer - pass work forward in sequence. The reviewer can approve and end the pipeline or send feedback back to the engineer, creating a revision cycle.
 
@@ -78,7 +78,7 @@ team:
 
 ---
 
-## content-pipeline
+## content-pipeline <Badge type="warning" text="Parallel Map" />
 
 A parallel map pattern over a dynamic list. The researcher produces a list of topics, then writer and editor process each topic in parallel. Each topic has its own revision loop where the editor can send a draft back to the writer.
 
@@ -151,7 +151,7 @@ team:
 
 ---
 
-## code-review-bot
+## code-review-bot <Badge type="info" text="Minimal" />
 
 A minimal two-agent flow with no loops or branching. The analyzer reads code and finds issues, then the reporter produces a structured summary. This is a good starting point for simple pipelines that don't need conditional routing.
 

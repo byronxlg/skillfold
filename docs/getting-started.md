@@ -1,5 +1,9 @@
 # Getting Started with Skillfold
 
+::: info Prerequisites
+Node.js 20+ and npm. No other dependencies.
+:::
+
 This tutorial walks you from zero to a compiled multi-agent pipeline. By the end, you will have a working pipeline with skill composition, typed state, conditional routing, and a review loop.
 
 **Two paths:** If you already have Claude Code agents in `.claude/agents/`, start with [Adopting an existing setup](#adopting-an-existing-setup). Otherwise, continue below to scaffold from scratch.

@@ -194,6 +194,219 @@
 }
 
 /* ============================================
+   Scroll fade-in animation
+   ============================================ */
+.vp-doc .fade-in {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.vp-doc .fade-in.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vp-doc .fade-in {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* ============================================
+   How It Works - 3-step workflow
+   ============================================ */
+.vp-doc .how-it-works {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 48px 24px 0;
+}
+
+.vp-doc .how-it-works h2 {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 32px;
+  letter-spacing: -0.02em;
+}
+
+.vp-doc .steps {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.vp-doc .step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  flex: 1;
+  max-width: 200px;
+}
+
+.vp-doc .step-number {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #10b981, #06b6d4);
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+}
+
+.vp-doc .step h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--vp-c-text-1);
+}
+
+.vp-doc .step p {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--vp-c-text-2);
+  margin: 0;
+}
+
+.vp-doc .step-connector {
+  width: 48px;
+  height: 2px;
+  background: linear-gradient(90deg, #10b981, #06b6d4);
+  margin-top: 23px;
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+@media (max-width: 639px) {
+  .vp-doc .steps {
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  .vp-doc .step {
+    max-width: 280px;
+  }
+
+  .vp-doc .step-connector {
+    width: 2px;
+    height: 24px;
+    margin-top: 0;
+    margin-bottom: 0;
+  }
+}
+
+/* ============================================
+   Before/After comparison
+   ============================================ */
+.vp-doc .before-after {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 48px 24px 0;
+}
+
+.vp-doc .before-after h2 {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 24px;
+  letter-spacing: -0.02em;
+}
+
+.vp-doc .ba-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 768px) {
+  .vp-doc .ba-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.vp-doc .ba-card {
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--vp-c-divider);
+  position: relative;
+}
+
+.vp-doc .ba-card div[class*="language-"] {
+  margin: 0 0 12px 0;
+}
+
+.vp-doc .ba-before {
+  background: rgba(239, 68, 68, 0.04);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.dark .vp-doc .ba-before {
+  background: rgba(239, 68, 68, 0.06);
+  border-color: rgba(239, 68, 68, 0.15);
+}
+
+.vp-doc .ba-after {
+  background: rgba(16, 185, 129, 0.04);
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.dark .vp-doc .ba-after {
+  background: rgba(52, 211, 153, 0.06);
+  border-color: rgba(52, 211, 153, 0.15);
+}
+
+.vp-doc .ba-label {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 3px 10px;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.vp-doc .ba-before .ba-label {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.dark .vp-doc .ba-before .ba-label {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+.vp-doc .ba-after .ba-label {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.dark .vp-doc .ba-after .ba-label {
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+}
+
+.vp-doc .ba-caption {
+  display: block;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--vp-c-text-2);
+  margin-top: 4px;
+}
+
+/* ============================================
    Home content section
    ============================================ */
 .vp-doc .home-content {
@@ -216,14 +429,16 @@
 }
 
 /* ============================================
-   Problem section callout
+   Section divider gradient
    ============================================ */
-.vp-doc .home-content h2 + p {
-  font-size: 16px;
-}
-
-.vp-doc .home-content h2 + p + p strong {
-  color: var(--vp-c-brand-1);
+.vp-doc .how-it-works + .before-after::before,
+.vp-doc .before-after + .home-content::before {
+  content: '';
+  display: block;
+  height: 1px;
+  max-width: 200px;
+  margin: 0 auto 48px;
+  background: linear-gradient(90deg, transparent, var(--vp-c-brand-soft), transparent);
 }
 
 /* ============================================
@@ -471,6 +686,73 @@
 .vp-doc .cta-card span {
   font-size: 13px;
   color: var(--vp-c-text-2);
+}
+
+/* ============================================
+   Comparison link
+   ============================================ */
+.vp-doc .comparison-link {
+  display: block;
+  text-align: center;
+  margin-top: 24px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--vp-c-brand-1);
+}
+
+/* ============================================
+   Dogfood / self-hosting section
+   ============================================ */
+.vp-doc .dogfood-section {
+  padding: 48px 24px;
+}
+
+.vp-doc .dogfood-inner {
+  max-width: 640px;
+  margin: 0 auto;
+  text-align: center;
+  padding: 32px;
+  border-radius: 16px;
+  border: 1px solid var(--vp-c-divider);
+  background: var(--vp-c-bg-soft);
+  position: relative;
+}
+
+.vp-doc .dogfood-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-1);
+  margin-bottom: 16px;
+}
+
+.vp-doc .dogfood-inner h2 {
+  font-size: 22px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  letter-spacing: -0.02em;
+}
+
+.vp-doc .dogfood-inner p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--vp-c-text-2);
+  margin-bottom: 16px;
+}
+
+.vp-doc .dogfood-inner code {
+  font-size: 13px;
+}
+
+.vp-doc .dogfood-link {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--vp-c-brand-1);
 }
 
 /* ============================================
