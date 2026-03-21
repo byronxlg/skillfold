@@ -38,6 +38,16 @@ export default defineConfig({
         items: [
           { text: "Config Format", link: "/reference/config" },
           { text: "CLI", link: "/reference/cli" },
+          { text: "Changelog", link: "/changelog" },
+        ],
+      },
+      {
+        text: "Blog",
+        items: [
+          {
+            text: "My Dev Team Is a YAML File",
+            link: "/blog/self-hosting-pipeline",
+          },
         ],
       },
     ],

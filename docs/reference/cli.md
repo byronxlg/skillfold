@@ -33,11 +33,16 @@ Commands:
   --config <path>      Config file (default: skillfold.yaml)
   --out-dir <path>     Output directory (default varies by target)
   --dir <path>         Target directory for init (default: .)
-  --target <mode>      Output mode: skill, claude-code, cursor, windsurf, codex, copilot
+  --target <mode>      Output mode: skill, claude-code, cursor, windsurf, codex, copilot, gemini
   --template <name>    Start from a library template (init only)
   --html               Output interactive HTML instead of Mermaid (graph only)
   --check              Verify compiled output is up-to-date (exit 1 if stale)
   --dry-run            Show execution plan without running (run only)
+  --spawner <type>     Agent spawner: cli (default) or sdk (run only)
+  --on-error <mode>    Error mode: abort (default), skip, or retry (run only)
+  --max-retries <n>    Max retry attempts, default 3 (run only)
+  --max-iterations <n> Max visits per node, default 10 (run only)
+  --resume             Resume from last checkpoint (run only)
   --help               Show this help
   --version            Show version
 ```
@@ -55,6 +60,7 @@ npx skillfold --target cursor              # compile to .cursor/rules/*.mdc
 npx skillfold --target windsurf            # compile to .windsurf/rules/*.md
 npx skillfold --target codex               # compile to build/AGENTS.md
 npx skillfold --target copilot             # compile to .github/ structure
+npx skillfold --target gemini              # compile to .gemini/ structure
 npx skillfold --check                      # verify output is current (CI mode)
 ```
 
@@ -123,6 +129,7 @@ npx skillfold run --target claude-code                            # execute the 
 npx skillfold run --target claude-code --dry-run                  # preview without running
 npx skillfold run --target claude-code --resume                   # resume from checkpoint
 npx skillfold run --target claude-code --on-error retry           # retry failed steps
+npx skillfold run --target claude-code --spawner sdk              # use Agent SDK spawner
 npx skillfold run --target claude-code --config my-pipeline.yaml  # custom config
 ```
 
@@ -133,6 +140,7 @@ Requires a `--target` flag. See the [Running Pipelines](/running-pipelines) guid
 | `--target` | (required) | Compilation target (`claude-code`) |
 | `--config` | `skillfold.yaml` | Path to pipeline config |
 | `--dry-run` | `false` | Preview without executing |
+| `--spawner` | `cli` | Agent spawner: `cli` or `sdk` |
 | `--on-error` | `abort` | Error mode: `abort`, `skip`, or `retry` |
 | `--max-retries` | `3` | Max retry attempts (with `--on-error retry`) |
 | `--max-iterations` | `10` | Max visits per node (loop guard) |

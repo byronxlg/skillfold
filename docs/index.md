@@ -27,6 +27,56 @@ features:
     details: Compile to Claude Code agents, Cursor rules, VS Code Copilot instructions, OpenAI Codex, or standard SKILL.md files.
 ---
 
+## What It Looks Like
+
+Define your agent pipeline in YAML:
+
+```yaml
+skills:
+  atomic:
+    planning: npm:skillfold/library/skills/planning
+    code-writing: npm:skillfold/library/skills/code-writing
+    testing: npm:skillfold/library/skills/testing
+  composed:
+    engineer:
+      compose: [planning, code-writing, testing]
+
+state:
+  tasks:
+    type: list<Task>
+    location:
+      github-issues: { repo: my-org/my-repo, label: task }
+
+team:
+  flow:
+    - planner:
+        writes: [state.tasks]
+      then: map
+    - map:
+        over: state.tasks
+        as: task
+        flow:
+          - engineer:
+              reads: [task.description]
+              writes: [task.output]
+      then: end
+```
+
+Compile to any platform:
+
+```bash
+npx skillfold --target claude-code   # .claude/agents/*.md
+npx skillfold --target cursor        # .cursor/rules/*.mdc
+npx skillfold --target codex         # AGENTS.md
+npx skillfold --target gemini        # .gemini/agents/*.md
+```
+
+Or run the pipeline directly:
+
+```bash
+npx skillfold run --target claude-code --spawner sdk
+```
+
 ## How Skillfold Compares to Runtime Orchestration
 
 Skillfold is a compiler, not a runtime framework. It validates your pipeline at compile time and emits plain files that agents read directly. Runtime orchestration tools like CrewAI, AutoGen, and LangGraph take a different approach - they coordinate agents at execution time through a framework process. Both are valid; which one fits depends on your pipeline.
