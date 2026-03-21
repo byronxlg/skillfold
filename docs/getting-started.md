@@ -249,7 +249,42 @@ The orchestrator state table also benefits: instead of abstract `github: discuss
 
 Resource groups without matching state locations still work. The compiler emits a warning suggesting you add resource declarations when a state location references a skill with no resource group.
 
-## 8. Local overrides
+## 8. Use built-in state integrations
+
+For common external services, skillfold provides built-in integrations that generate validated URLs and orchestrator instructions automatically. No resource declarations or atomic skill references are needed.
+
+```yaml
+state:
+  direction:
+    type: string
+    location:
+      github-discussions:
+        repo: myorg/myrepo
+        category: strategy
+  tasks:
+    type: list
+    location:
+      github-issues:
+        repo: myorg/myrepo
+        label: task
+  implementation:
+    type: string
+    location:
+      github-pull-requests:
+        repo: myorg/myrepo
+```
+
+Available integrations:
+
+- `github-issues` - required: `repo`, optional: `label`, `assignee`
+- `github-discussions` - required: `repo`, optional: `category`
+- `github-pull-requests` - required: `repo`, optional: `state`
+
+The compiler resolves each integration to a concrete URL (e.g., `https://github.com/myorg/myrepo/issues`) and renders filtering instructions in the orchestrator state table.
+
+For services without a built-in integration, use the traditional `skill`+`path` format described in the previous section.
+
+## 9. Local overrides
 
 On a multi-developer team, you may want personal overrides without modifying the shared config. Create a `skillfold.local.yaml` alongside your main config:
 
@@ -285,7 +320,7 @@ skillfold: using local override from skillfold.local.yaml
 
 The local filename is derived from the main config: if your config is `my-pipeline.yaml`, the local file is `my-pipeline.local.yaml`.
 
-## 9. Start from a template
+## 10. Start from a template
 
 If you prefer starting from a real-world pattern instead of the minimal starter:
 
@@ -303,7 +338,7 @@ Available templates:
 
 Templates use library skills via imports, so they work out of the box with no local skill directories needed.
 
-## 10. Deploy to your platform
+## 11. Deploy to your platform
 
 Compile directly to where your platform reads skills. See the [Integration Guide](integrations.md) for all platforms.
 
@@ -320,7 +355,7 @@ For Claude Code, `--target claude-code` generates agent markdown files alongside
 
 Skillfold also ships a built-in plugin with 11 generic skills. Install it by referencing `node_modules/skillfold/plugin/` from your Claude Code configuration.
 
-## 11. Sharing skills
+## 12. Sharing skills
 
 Once you have skills worth reusing across projects or teams, publish them to npm. Any skill directory or pipeline config can be packaged and shared.
 
@@ -337,7 +372,7 @@ imports:
 
 See the [Publishing Guide](publishing.md) for package structure, required fields, and discovery via `skillfold search`.
 
-## 12. Next steps
+## 13. Next steps
 
 - Read the full config specification in [BRIEF.md](../BRIEF.md)
 - Explore the [shared library examples](../library/examples/) for real pipeline patterns

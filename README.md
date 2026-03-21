@@ -329,7 +329,7 @@ Then:
 
 ### Typed State Schemas
 
-Custom types, primitives, and `list<Type>`. The compiler validates that every read has a matching write, detects write conflicts, and maps state to external locations. A top-level `resources` section declares namespace URLs for compile-time validation of location paths.
+Custom types, primitives, and `list<Type>`. The compiler validates that every read has a matching write, detects write conflicts, and maps state to external locations. Built-in integrations for GitHub Issues, Discussions, and Pull Requests generate validated URLs and orchestrator instructions automatically - no resource declarations needed. For other services, the traditional `skill`+`path` format with a top-level `resources` section is still available.
 
 ```yaml
 state:
@@ -339,8 +339,15 @@ state:
   tasks:
     type: "list<Task>"
     location:
-      skill: jira
-      path: DEV/dev-board
+      github-issues:
+        repo: myorg/myrepo
+        label: task
+  direction:
+    type: string
+    location:
+      github-discussions:
+        repo: myorg/myrepo
+        category: strategy
 ```
 
 ### Execution Flows
