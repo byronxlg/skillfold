@@ -144,7 +144,7 @@ Located in `library/examples/`:
 - Optional `team.orchestrator` config key to append generated plan to a composed skill
 - Spec-compliant output per Agent Skills standard (directory structure + YAML frontmatter)
 - `skillfold init` command to scaffold starter pipeline projects
-- URL-based skill references (GitHub tree URLs fetched via raw.githubusercontent.com, private repos via GITHUB_TOKEN)
+- URL-based skill references (GitHub tree URLs fetched via raw.githubusercontent.com, private repos via GITHUB_TOKEN) with `@ref` version pinning (tags and commit SHAs)
 - Pipeline imports (import skills and state from other configs, team is local-only)
 - End-to-end test with the brief's full example config
 - CI via GitHub Actions (Node 20 + 22)
@@ -187,7 +187,7 @@ Located in `library/examples/`:
 - Built-in state integrations for GitHub services (github-issues, github-discussions, github-pull-requests) with auto-generated URLs, filter options, and orchestrator instructions
 - `skillfold run` command for linear pipeline execution with `ClaudeSpawner`, state management via `state.json`, dry-run mode, and async node skipping (MVP: linear flows only)
 - VitePress documentation site (`docs/`) with GitHub Pages deployment, config reference, CLI reference, live demo with interactive pipeline visualizer, interactive pipeline builder (YAML editor with live Mermaid graph), examples gallery, skill authoring guide, comparison table, detailed comparisons page (vs Agent Teams, CrewAI, manual SKILL.md), and existing guides
-- Test suite with 739 tests across 141 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, integrations, visualize, remote, init, adopt, library, validate, list, search, npm, skills-prefix, watch, errors, subflow, api, run, cli, and e2e modules
+- Test suite with 756 tests across 143 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, integrations, visualize, remote, init, adopt, library, validate, list, search, npm, skills-prefix, watch, errors, subflow, api, run, cli, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next
