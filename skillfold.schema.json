@@ -13,7 +13,7 @@
     },
     "imports": {
       "type": "array",
-      "description": "Paths or URLs to other skillfold configs. Imports pull in skills and state, not team.",
+      "description": "Paths, URLs, or npm: references to other skillfold configs. Imports pull in skills and state, not team. Use npm:package-name for npm packages (resolves to node_modules/package-name/skillfold.yaml) or npm:package-name/custom.yaml for a specific file.",
       "items": {
         "type": "string"
       }
@@ -29,12 +29,12 @@
       "properties": {
         "atomic": {
           "type": "object",
-          "description": "Atomic skills referenced by local path or GitHub URL.",
+          "description": "Atomic skills referenced by local path, GitHub URL, or npm: reference.",
           "additionalProperties": {
             "oneOf": [
               {
                 "type": "string",
-                "description": "Path to the skill directory (local path or GitHub tree URL)."
+                "description": "Path to the skill directory (local path, GitHub tree URL, or npm:package/path)."
               },
               {
                 "type": "object",
