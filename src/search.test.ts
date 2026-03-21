@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
 
-import { searchPipelines } from "./search.js";
+import { searchSkills } from "./search.js";
 
 // Capture console output
 function captureConsole(): { logs: string[]; errors: string[]; restore: () => void } {
@@ -34,9 +34,9 @@ const sampleResults = {
     {
       package: {
         name: "skillfold-planning",
-        description: "Planning pipeline for AI agents",
+        description: "Planning skills for AI agents",
         version: "1.0.0",
-        keywords: ["skillfold-pipeline"],
+        keywords: ["skillfold-skill"],
         links: { npm: "https://www.npmjs.com/package/skillfold-planning" },
       },
       score: { detail: { popularity: 0.5 } },
@@ -44,9 +44,9 @@ const sampleResults = {
     {
       package: {
         name: "skillfold-testing",
-        description: "Testing pipeline for AI agents",
+        description: "Testing skills for AI agents",
         version: "2.1.0",
-        keywords: ["skillfold-pipeline"],
+        keywords: ["skillfold-skill"],
         links: { npm: "https://www.npmjs.com/package/skillfold-testing" },
       },
       score: { detail: { popularity: 0.3 } },
@@ -55,7 +55,7 @@ const sampleResults = {
   total: 2,
 };
 
-describe("searchPipelines", () => {
+describe("searchSkills", () => {
   let originalFetch: typeof globalThis.fetch;
   let originalExit: typeof process.exit;
 
@@ -74,16 +74,16 @@ describe("searchPipelines", () => {
     const out = captureConsole();
 
     try {
-      await searchPipelines();
+      await searchSkills();
     } finally {
       out.restore();
     }
 
     const text = out.logs.join("\n");
-    assert.ok(text.includes("Found 2 pipeline configs"));
+    assert.ok(text.includes("Found 2 skills"));
     assert.ok(text.includes("skillfold-planning"));
     assert.ok(text.includes("v1.0.0"));
-    assert.ok(text.includes("Planning pipeline for AI agents"));
+    assert.ok(text.includes("Planning skills for AI agents"));
     assert.ok(text.includes("skillfold-testing"));
     assert.ok(text.includes("v2.1.0"));
     assert.ok(text.includes("npm install <package>"));
@@ -99,16 +99,16 @@ describe("searchPipelines", () => {
     const out = captureConsole();
 
     try {
-      await searchPipelines("planning");
+      await searchSkills("planning");
     } finally {
       out.restore();
     }
 
-    assert.ok(calledUrl.includes("keywords%3Askillfold-pipeline"));
+    assert.ok(calledUrl.includes("keywords%3Askillfold-skill"));
     assert.ok(calledUrl.includes("planning"));
   });
 
-  it("displays singular form for one result", async () => {
+  it("displays singular 'skill' for one result", async () => {
     const singleResult = {
       objects: [sampleResults.objects[0]],
       total: 1,
@@ -117,14 +117,14 @@ describe("searchPipelines", () => {
     const out = captureConsole();
 
     try {
-      await searchPipelines();
+      await searchSkills();
     } finally {
       out.restore();
     }
 
     const text = out.logs.join("\n");
-    assert.ok(text.includes("Found 1 pipeline config:"));
-    assert.ok(!text.includes("Found 1 pipeline configs"));
+    assert.ok(text.includes("Found 1 skill:"));
+    assert.ok(!text.includes("Found 1 skills"));
   });
 
   it("shows message when no results found", async () => {
@@ -133,13 +133,13 @@ describe("searchPipelines", () => {
     const out = captureConsole();
 
     try {
-      await searchPipelines();
+      await searchSkills();
     } finally {
       out.restore();
     }
 
     const text = out.logs.join("\n");
-    assert.ok(text.includes("No pipeline configs found"));
+    assert.ok(text.includes("No skillfold skills found"));
   });
 
   it("shows query in no-results message", async () => {
@@ -148,13 +148,13 @@ describe("searchPipelines", () => {
     const out = captureConsole();
 
     try {
-      await searchPipelines("nonexistent");
+      await searchSkills("nonexistent");
     } finally {
       out.restore();
     }
 
     const text = out.logs.join("\n");
-    assert.ok(text.includes('No pipeline configs found matching "nonexistent"'));
+    assert.ok(text.includes('No skillfold skills found matching "nonexistent"'));
   });
 
   it("handles network error", async () => {
@@ -170,7 +170,7 @@ describe("searchPipelines", () => {
     const out = captureConsole();
 
     try {
-      await searchPipelines();
+      await searchSkills();
     } catch {
       // Expected: process.exit mock throws
     } finally {
@@ -192,7 +192,7 @@ describe("searchPipelines", () => {
     const out = captureConsole();
 
     try {
-      await searchPipelines();
+      await searchSkills();
     } catch {
       // Expected: process.exit mock throws
     } finally {
@@ -211,7 +211,7 @@ describe("searchPipelines", () => {
             name: "skillfold-bare",
             description: "",
             version: "0.1.0",
-            keywords: ["skillfold-pipeline"],
+            keywords: ["skillfold-skill"],
             links: { npm: "https://www.npmjs.com/package/skillfold-bare" },
           },
           score: { detail: { popularity: 0.1 } },
@@ -223,7 +223,7 @@ describe("searchPipelines", () => {
     const out = captureConsole();
 
     try {
-      await searchPipelines();
+      await searchSkills();
     } finally {
       out.restore();
     }
@@ -241,13 +241,13 @@ describe("searchPipelines", () => {
     const out = captureConsole();
 
     try {
-      await searchPipelines();
+      await searchSkills();
     } finally {
       out.restore();
     }
 
     assert.ok(calledUrl.startsWith("https://registry.npmjs.org/-/v1/search"));
-    assert.ok(calledUrl.includes("keywords%3Askillfold-pipeline"));
+    assert.ok(calledUrl.includes("keywords%3Askillfold-skill"));
     assert.ok(calledUrl.includes("size=25"));
   });
 });

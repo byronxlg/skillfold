@@ -309,5 +309,5 @@ See the [Publishing Guide](publishing.md) for package structure, required fields
 - Try parallel `map` to process lists of items concurrently
 - Add `skillfold --check` to CI to verify compiled output stays in sync
 - Use `skillfold plugin` to package your pipeline for distribution
-- Use `skillfold search` to discover community pipeline configs on npm
+- Use `skillfold search` to discover community skill packages on npm
 - Set `GITHUB_TOKEN` to reference skills from private GitHub repositories

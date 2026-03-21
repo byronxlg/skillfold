@@ -17,7 +17,7 @@ Configuration language and compiler for multi-agent AI pipelines. Compiles YAML 
 - **Check output is current**: `npx tsx src/cli.ts --check`
 - **List pipeline**: `npx tsx src/cli.ts list`
 - **Interactive graph**: `npx tsx src/cli.ts graph --html > pipeline.html`
-- **Search npm pipelines**: `npx tsx src/cli.ts search [query]`
+- **Search npm skills**: `npx tsx src/cli.ts search [query]`
 - **Run with custom config**: `npx tsx src/cli.ts --config path.yaml --out-dir out/`
 - **Build**: `npm run build`
 - **Build plugin**: `npm run build:plugin`
@@ -39,7 +39,7 @@ src/
   plugin.ts       - Claude Code plugin packaging (skillfold plugin)
   list.ts         - Pipeline introspection (skillfold list)
   npm.ts          - npm package resolution (npm: prefix in skill refs and imports)
-  search.ts       - npm registry search for skillfold pipeline configs (skillfold search)
+  search.ts       - npm registry search for skillfold-skill packages (skillfold search)
   watch.ts        - File watching and auto-recompile (skillfold watch)
   init.ts         - skillfold init scaffolding
   errors.ts       - ConfigError, ResolveError, CompileError, GraphError
