@@ -486,7 +486,7 @@ Options:
   --config <path>      Config file (default: skillfold.yaml)
   --out-dir <path>     Output directory (default: build, or .claude for claude-code target)
   --dir <path>         Target directory for init (default: .)
-  --target <mode>      Output mode: skill (default) or claude-code
+  --target <mode>      Output mode: skill, claude-code, cursor, windsurf, codex, copilot, gemini
   --template <name>    Start from a library template (init only)
   --html               Output interactive HTML instead of Mermaid (graph only)
   --check              Verify compiled output is up-to-date (exit 1 if stale)

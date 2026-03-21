@@ -24,7 +24,7 @@ export { assignColor, generateAgents } from "./agent.js";
 export type { AgentColor, AgentDefinition, AgentResult } from "./agent.js";
 
 // Compilation
-export { check, compile, expandComposedBodies, generate, generateClaudeCode } from "./compiler.js";
+export { check, compile, expandComposedBodies, generate, generateClaudeCode, generateGemini } from "./compiler.js";
 export type { CheckResult, CompileResult, CompileTarget, GenerateResult } from "./compiler.js";
 
 // Plugin packaging
