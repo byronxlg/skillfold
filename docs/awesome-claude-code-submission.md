@@ -44,7 +44,7 @@ Two prior violations pushed the earliest submission date back:
 
 **Description:**
 
-Configuration language and compiler for multi-agent AI pipelines. The only compile-time tool in the Orchestrators category - every other entry is a runtime coordinator. Compiles YAML skill definitions into standard SKILL.md files and Claude Code agent layouts at build time, complementing runtime tools like Agent Teams (skillfold owns the config, Agent Teams owns the execution). No runtime, no SDK, no daemon. Ships with a shared skills library, a slash command plugin, and an adopt command that converts existing Claude Code agents into managed pipelines.
+Configuration language and compiler for multi-agent AI pipelines. Compiles YAML config into standard SKILL.md files and Claude Code agent layouts at build time, with validation of skill references, state types, and write conflicts. Ships with 11 reusable library skills, a Claude Code plugin, and example pipeline templates.
 
 **Validate Claims:**
 
