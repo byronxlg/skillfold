@@ -72,6 +72,14 @@
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs"
   },
+  "peerDependencies": {
+    "@anthropic-ai/claude-agent-sdk": ">=0.2.0"
+  },
+  "peerDependenciesMeta": {
+    "@anthropic-ai/claude-agent-sdk": {
+      "optional": true
+    }
+  },
   "dependencies": {
     "yaml": "^2.8.0"
   },
