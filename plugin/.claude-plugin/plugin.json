@@ -1,13 +1,13 @@
 {
   "name": "skillfold",
-  "version": "1.16.0",
-  "description": "Multi-agent pipeline compiler. Compose skills, wire team flows, generate orchestrators.",
+  "version": "1.22.0",
+  "description": "Configuration language and compiler for multi-agent AI pipelines. Compiles YAML into agent skills for Claude Code, Cursor, Windsurf, Codex, Copilot, and Gemini.",
   "author": {
-    "name": "byronxlg",
+    "name": "Byron Smith",
     "url": "https://github.com/byronxlg"
   },
-  "homepage": "https://github.com/byronxlg/skillfold",
+  "homepage": "https://byronxlg.github.io/skillfold/",
   "repository": "https://github.com/byronxlg/skillfold",
   "license": "MIT",
-  "keywords": ["pipeline", "skills", "agents", "compiler", "orchestrator", "multi-agent", "yaml", "claude-code"]
+  "keywords": ["pipeline", "skills", "agents", "compiler", "orchestrator", "multi-agent", "yaml", "claude-code", "agent-teams", "cursor", "windsurf", "copilot", "codex", "gemini"]
 }
