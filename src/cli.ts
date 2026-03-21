@@ -53,6 +53,7 @@ type Command = "init" | "adopt" | "compile" | "graph" | "list" | "run" | "valida
 interface Args {
   command: Command;
   configPath: string;
+  configExplicit: boolean;
   outDir: string;
   outDirExplicit: boolean;
   dir: string;
@@ -69,6 +70,7 @@ interface Args {
 function parseArgs(argv: string[]): Args {
   let command: Command = "compile";
   let configPath = "skillfold.yaml";
+  let configExplicit = false;
   let outDir = "build";
   let outDirExplicit = false;
   let dir = ".";
@@ -130,6 +132,7 @@ function parseArgs(argv: string[]): Args {
   for (; i < argv.length; i++) {
     if (argv[i] === "--config" && argv[i + 1]) {
       configPath = argv[++i];
+      configExplicit = true;
     } else if (argv[i] === "--out-dir" && argv[i + 1]) {
       outDir = argv[++i];
       outDirExplicit = true;
@@ -177,6 +180,7 @@ function parseArgs(argv: string[]): Args {
   return {
     command,
     configPath: resolve(configPath),
+    configExplicit,
     outDir: resolve(outDir),
     outDirExplicit,
     dir: resolve(dir),
@@ -189,6 +193,14 @@ function parseArgs(argv: string[]): Args {
     help,
     version,
   };
+}
+
+function configErrorMessage(err: Error, configExplicit: boolean): string {
+  let msg = `skillfold error: ${err.message}`;
+  if (!configExplicit && err.message.includes("Cannot read config file")) {
+    msg += '\n  Run "skillfold init" to create one, or use --config <path> to specify a different file.';
+  }
+  return msg;
 }
 
 async function main(): Promise<void> {
@@ -278,7 +290,7 @@ async function main(): Promise<void> {
       }
     } catch (err) {
       if (err instanceof ConfigError || err instanceof GraphError) {
-        console.error(`skillfold error: ${err.message}`);
+        console.error(configErrorMessage(err, args.configExplicit));
         process.exit(1);
       }
       throw err;
@@ -292,7 +304,7 @@ async function main(): Promise<void> {
       process.stdout.write(listPipeline(config));
     } catch (err) {
       if (err instanceof ConfigError || err instanceof GraphError) {
-        console.error(`skillfold error: ${err.message}`);
+        console.error(configErrorMessage(err, args.configExplicit));
         process.exit(1);
       }
       throw err;
@@ -324,7 +336,7 @@ async function main(): Promise<void> {
         err instanceof ResolveError ||
         err instanceof GraphError
       ) {
-        console.error(`skillfold error: ${err.message}`);
+        console.error(configErrorMessage(err, args.configExplicit));
         process.exit(1);
       }
       throw err;
@@ -348,7 +360,7 @@ async function main(): Promise<void> {
         err instanceof ResolveError ||
         err instanceof CompileError
       ) {
-        console.error(`skillfold error: ${err.message}`);
+        console.error(configErrorMessage(err, args.configExplicit));
         process.exit(1);
       }
       throw err;
@@ -410,7 +422,7 @@ async function main(): Promise<void> {
         err instanceof ResolveError ||
         err instanceof RunError
       ) {
-        console.error(`skillfold error: ${err.message}`);
+        console.error(configErrorMessage(err, args.configExplicit));
         process.exit(1);
       }
       throw err;
@@ -463,7 +475,7 @@ async function main(): Promise<void> {
       err instanceof ResolveError ||
       err instanceof CompileError
     ) {
-      console.error(`skillfold error: ${err.message}`);
+      console.error(configErrorMessage(err, args.configExplicit));
       process.exit(1);
     }
     throw err;

@@ -133,7 +133,7 @@ describe("initFromTemplate", () => {
     const config = readFileSync(join(tmpDir, "skillfold.yaml"), "utf-8");
     assert.ok(config.includes("name: dev-team"));
     assert.ok(
-      config.includes("node_modules/skillfold/library/skillfold.yaml"),
+      config.includes("npm:skillfold/library/skillfold.yaml"),
       "import path should be rewritten to npm path"
     );
     assert.ok(
@@ -154,7 +154,7 @@ describe("initFromTemplate", () => {
 
       const config = readFileSync(join(tmpDir, "skillfold.yaml"), "utf-8");
       assert.ok(config.includes(`name: ${template}`));
-      assert.ok(config.includes("node_modules/skillfold/library/skillfold.yaml"));
+      assert.ok(config.includes("npm:skillfold/library/skillfold.yaml"));
 
       rmSync(tmpDir, { recursive: true, force: true });
       tmpDir = undefined;
@@ -250,7 +250,7 @@ describe("init CLI", () => {
 
     const config = readFileSync(join(subDir, "skillfold.yaml"), "utf-8");
     assert.ok(config.includes("name: dev-team"));
-    assert.ok(config.includes("node_modules/skillfold/library/skillfold.yaml"));
+    assert.ok(config.includes("npm:skillfold/library/skillfold.yaml"));
   });
 
   it("errors on unknown template via CLI", () => {
@@ -275,5 +275,55 @@ describe("init CLI", () => {
     });
     assert.ok(output.includes("--template"), "help should show --template");
     assert.ok(output.includes("Templates:"), "help should list templates");
+  });
+});
+
+describe("config not found suggestion", () => {
+  let tmpDir: string | undefined;
+
+  afterEach(() => {
+    if (tmpDir) {
+      rmSync(tmpDir, { recursive: true, force: true });
+      tmpDir = undefined;
+    }
+  });
+
+  it("suggests skillfold init when default config is missing", () => {
+    tmpDir = makeTmpDir();
+    try {
+      execSync(`npx tsx ${cliPath}`, { encoding: "utf-8", cwd: tmpDir });
+      assert.fail("should have thrown");
+    } catch (err: unknown) {
+      const e = err as { stderr: string };
+      assert.ok(
+        e.stderr.includes('skillfold init'),
+        "should suggest skillfold init"
+      );
+      assert.ok(
+        e.stderr.includes("--config"),
+        "should mention --config option"
+      );
+    }
+  });
+
+  it("does not suggest init when --config is explicit", () => {
+    tmpDir = makeTmpDir();
+    try {
+      execSync(`npx tsx ${cliPath} --config missing.yaml`, {
+        encoding: "utf-8",
+        cwd: tmpDir,
+      });
+      assert.fail("should have thrown");
+    } catch (err: unknown) {
+      const e = err as { stderr: string };
+      assert.ok(
+        e.stderr.includes("Cannot read config file"),
+        "should show standard error"
+      );
+      assert.ok(
+        !e.stderr.includes('skillfold init'),
+        "should not suggest init for explicit --config"
+      );
+    }
   });
 });
