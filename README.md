@@ -236,6 +236,8 @@ Think of it like TypeScript for agent pipelines. TypeScript doesn't replace Java
 
 That coordination layer is what skillfold provides.
 
+Skill management tools like the [skills CLI](https://skills.sh) handle installing and updating individual SKILL.md files. Skillfold handles what comes after: composing multiple skills into coherent agents, declaring what each agent reads and writes, and validating the entire pipeline at compile time. You can use both together - reference your existing skills by path or GitHub URL, and skillfold composes and validates them.
+
 ---
 
 ## Already Using Claude Code?
