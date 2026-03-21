@@ -18,7 +18,7 @@ For the full release history with detailed notes, see [GitHub Releases](https://
 
 ## v1.21.0
 
-- `--target agent-teams` compilation output for Claude Code Agent Teams - generates team bootstrap prompt with team structure, shared state, task sequence, and coordination instructions
+- `--target agent-teams` compilation output for Claude Code Agent Teams
 - Updated Agent Teams comparison with latest features and complementary workflow documentation
 
 ## v1.20.0
@@ -28,7 +28,6 @@ For the full release history with detailed notes, see [GitHub Releases](https://
 - VitePress landing page enriched with YAML config example
 - Changelog page added to docs
 - Blog section added to docs sidebar
-- Repo homepage URL fixed to docs site
 
 ## v1.19.0
 

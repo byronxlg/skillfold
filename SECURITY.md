@@ -44,6 +44,10 @@ Network access is optional and limited to:
 
 No other network requests are made.
 
+### Compiled Output Pass-through
+
+The `hooks` field in `agentConfig` allows composed skills to specify Claude Code hook configuration. Skillfold does not execute these hooks - it passes them through to compiled agent frontmatter. The hooks are only executed by the consuming platform (e.g., Claude Code) when an agent is loaded. Review any `hooks` configuration in your `skillfold.yaml` with the same scrutiny you would apply to hooks configured directly in your platform settings.
+
 ### File System Access
 
 Skillfold reads config files and skill directories, and writes compiled output to the configured output directory. The `skillfold run` command additionally writes `state.json` and `.skillfold/run/` checkpoint files. It does not read or write files outside these paths.
