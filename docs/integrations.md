@@ -56,6 +56,17 @@ This produces a `plugin/` directory with `.claude-plugin/plugin.json`, agents, s
 
 Skillfold also ships a built-in plugin at `node_modules/skillfold/plugin/` with 11 generic skills and a `/skillfold` slash command.
 
+### Option 4: Marketplace installation
+
+Install the skillfold plugin directly from the Claude Code plugin marketplace:
+
+```
+/plugin marketplace add byronxlg/skillfold
+/plugin install skillfold@skillfold
+```
+
+This installs the same 11 skills and `/skillfold` slash command from the npm package. No local config or compilation needed.
+
 Skills and agents are auto-discovered at session start. No additional configuration needed.
 
 ## Cursor

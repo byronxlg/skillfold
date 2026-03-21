@@ -485,6 +485,13 @@ npx skillfold               # or run directly
 
 Requires Node.js 20+. Single dependency: `yaml`.
 
+**Claude Code plugin marketplace:** Install the skills library and `/skillfold` command directly in Claude Code:
+
+```
+/plugin marketplace add byronxlg/skillfold
+/plugin install skillfold@skillfold
+```
+
 ### CLI
 
 ```

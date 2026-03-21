@@ -1,21 +1,22 @@
 {
+  "name": "skillfold",
+  "owner": {
+    "name": "byronxlg"
+  },
+  "metadata": {
+    "description": "Compiler for multi-agent AI pipelines. Ships 11 reusable skills and a /skillfold slash command."
+  },
   "plugins": [
     {
-      "source": "./library",
-      "name": "skillfold-library",
-      "skills": [
-        "./skills/code-review",
-        "./skills/code-writing",
-        "./skills/decision-making",
-        "./skills/file-management",
-        "./skills/github-workflow",
-        "./skills/planning",
-        "./skills/research",
-        "./skills/skillfold-cli",
-        "./skills/summarization",
-        "./skills/testing",
-        "./skills/writing"
-      ]
+      "name": "skillfold",
+      "source": {
+        "source": "npm",
+        "package": "skillfold"
+      },
+      "description": "11 reusable skills for AI agents (planning, code-writing, testing, etc.) plus a /skillfold compiler command",
+      "version": "1.5.0",
+      "license": "MIT",
+      "keywords": ["pipeline", "skills", "agents", "compiler"]
     }
   ]
 }
