@@ -1,11 +1,5 @@
 name: skillfold-team
 
-resources:
-  github:
-    discussions: "https://github.com/byronxlg/skillfold/discussions"
-    issues: "https://github.com/byronxlg/skillfold/issues"
-    pull-requests: "https://github.com/byronxlg/skillfold/pulls"
-
 skills:
   atomic:
     # Remote public skills
@@ -65,46 +59,39 @@ state:
   human-discussion:
     type: string
     location:
-      skill: github
-      path: discussions/human
+      github-discussions: { repo: byronxlg/skillfold, category: human }
 
   direction:
     type: string
     location:
-      skill: github
-      path: discussions/strategy
+      github-discussions: { repo: byronxlg/skillfold, category: strategy }
 
   plan:
     type: string
     location:
-      skill: github
-      path: discussions/strategy
+      github-discussions: { repo: byronxlg/skillfold, category: strategy }
       kind: reply
 
   tasks:
     type: list<Task>
     location:
-      skill: github
-      path: issues
+      github-issues: { repo: byronxlg/skillfold, label: task }
 
   implementation:
     type: string
     location:
-      skill: github
-      path: pull-requests
+      github-pull-requests: { repo: byronxlg/skillfold }
 
   review:
     type: Review
     location:
-      skill: github
-      path: pull-requests
+      github-pull-requests: { repo: byronxlg/skillfold }
       kind: review
 
   announcement:
     type: string
     location:
-      skill: github
-      path: discussions/announcements
+      github-discussions: { repo: byronxlg/skillfold, category: announcements }
 
 team:
   orchestrator: orchestrator
