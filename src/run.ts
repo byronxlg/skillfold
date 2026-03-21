@@ -7,14 +7,20 @@ import { type Config } from "./config.js";
 import { type CompileTarget, expandComposedBodies } from "./compiler.js";
 import { RunError } from "./errors.js";
 import {
+  type ConditionalBranch,
   type GraphNode,
+  type WhenClause,
   isAsyncNode,
   isConditionalThen,
   isMapNode,
   isSubFlowNode,
+  parseWhenClause,
 } from "./graph.js";
 
 const execFileAsync = promisify(execFile);
+
+/** Default maximum loop iterations before aborting. */
+export const DEFAULT_MAX_ITERATIONS = 10;
 
 export interface RunOptions {
   config: Config;
@@ -22,6 +28,7 @@ export interface RunOptions {
   target: CompileTarget;
   outDir: string;
   dryRun: boolean;
+  maxIterations?: number;
 }
 
 export interface StepResult {
@@ -125,11 +132,129 @@ function nodeLabel(node: GraphNode): string {
   return node.skill;
 }
 
+/**
+ * Build an index mapping node labels to their array indices for O(1) lookup.
+ */
+function buildNodeIndex(nodes: GraphNode[]): Map<string, number> {
+  const index = new Map<string, number>();
+  for (let i = 0; i < nodes.length; i++) {
+    const label = nodeLabel(nodes[i]);
+    if (!index.has(label)) {
+      index.set(label, i);
+    }
+  }
+  return index;
+}
+
+/**
+ * Read a nested value from the state object by dot-separated path.
+ * For example, "review.approved" reads state.review.approved.
+ */
+export function readStatePath(
+  state: Record<string, unknown>,
+  path: string,
+): unknown {
+  const stripped = stripStatePrefix(path);
+  const parts = stripped.split(".");
+  let current: unknown = state;
+
+  for (const part of parts) {
+    if (typeof current !== "object" || current === null) {
+      return undefined;
+    }
+    current = (current as Record<string, unknown>)[part];
+  }
+
+  return current;
+}
+
+/**
+ * Evaluate a single when-clause against the current state.
+ */
+export function evaluateWhenClause(
+  clause: WhenClause,
+  state: Record<string, unknown>,
+): boolean {
+  const actual = readStatePath(state, clause.path);
+
+  // Coerce for comparison: the clause value is already typed (string | boolean | number)
+  // from parseWhenValue. We compare loosely to handle string/boolean mismatches in state JSON.
+  if (clause.operator === "==") {
+    return actual === clause.value;
+  }
+  // clause.operator === "!="
+  return actual !== clause.value;
+}
+
+/**
+ * Evaluate conditional branches and return the target node label of the first matching branch.
+ * Returns undefined if no branch matches.
+ */
+export function evaluateConditionalBranches(
+  branches: ConditionalBranch[],
+  state: Record<string, unknown>,
+): string | undefined {
+  for (const branch of branches) {
+    const clause = parseWhenClause(branch.when, "run");
+    if (evaluateWhenClause(clause, state)) {
+      return branch.to;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Determine the next node index after executing a node, based on its `then` field
+ * and the current state. Returns -1 to signal "end".
+ */
+function resolveNextIndex(
+  node: GraphNode,
+  currentIndex: number,
+  nodes: GraphNode[],
+  nodeIndex: Map<string, number>,
+  state: Record<string, unknown>,
+): number {
+  if (node.then === undefined) {
+    // Implicit fall-through to next sequential node
+    const next = currentIndex + 1;
+    return next < nodes.length ? next : -1;
+  }
+
+  if (!isConditionalThen(node.then)) {
+    // Simple string target
+    if (node.then === "end") return -1;
+    const targetIdx = nodeIndex.get(node.then);
+    if (targetIdx === undefined) {
+      throw new RunError(
+        `Node "${nodeLabel(node)}": transition target "${node.then}" not found`,
+      );
+    }
+    return targetIdx;
+  }
+
+  // Conditional routing: evaluate branches
+  const target = evaluateConditionalBranches(node.then, state);
+  if (target === undefined) {
+    throw new RunError(
+      `Node "${nodeLabel(node)}": no conditional branch matched the current state`,
+    );
+  }
+  if (target === "end") return -1;
+  const targetIdx = nodeIndex.get(target);
+  if (targetIdx === undefined) {
+    throw new RunError(
+      `Node "${nodeLabel(node)}": conditional target "${target}" not found`,
+    );
+  }
+  return targetIdx;
+}
+
 export async function run(
   options: RunOptions,
   spawner?: Spawner,
 ): Promise<RunResult> {
-  const { config, bodies, dryRun } = options;
+  const { config, bodies, dryRun, maxIterations } = options;
+  const iterLimit = maxIterations ?? DEFAULT_MAX_ITERATIONS;
 
   if (!config.team) {
     throw new RunError("Config has no team.flow defined - nothing to run");
@@ -137,6 +262,7 @@ export async function run(
 
   const nodes = config.team.flow.nodes;
   const composedBodies = expandComposedBodies(config, bodies);
+  const nodeIndex = buildNodeIndex(nodes);
 
   // Load initial state from state.json if it exists
   const statePath = join(process.cwd(), "state.json");
@@ -156,40 +282,36 @@ export async function run(
   const activeSpawner = dryRun ? undefined : (spawner ?? new ClaudeSpawner());
   const steps: StepResult[] = [];
 
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    const stepNumber = i + 1;
+  // Track per-node visit counts for loop detection
+  const visitCounts = new Map<number, number>();
+
+  // Walk the graph starting from node 0
+  let currentIdx = nodes.length > 0 ? 0 : -1;
+  let stepNumber = 0;
+
+  while (currentIdx >= 0 && currentIdx < nodes.length) {
+    const node = nodes[currentIdx];
+    stepNumber++;
     const label = nodeLabel(node);
 
-    // Validate that the flow is linear before processing the node
-    if (node.then !== undefined) {
-      if (isConditionalThen(node.then)) {
-        throw new RunError(
-          `Step ${stepNumber} "${label}": conditional routing not supported in skillfold run MVP - use the orchestrator`,
-        );
-      }
-
-      // Non-conditional then pointing to a non-next-sequential node
-      const thenTarget = node.then;
-      if (thenTarget !== "end") {
-        const nextLabel = i + 1 < nodes.length ? nodeLabel(nodes[i + 1]) : undefined;
-        if (thenTarget !== nextLabel) {
-          throw new RunError(
-            `Step ${stepNumber} "${label}": non-linear jump to "${thenTarget}" not supported in skillfold run MVP - use the orchestrator`,
-          );
-        }
-      }
+    // Loop guard: check if we've visited this node too many times
+    const visits = (visitCounts.get(currentIdx) ?? 0) + 1;
+    visitCounts.set(currentIdx, visits);
+    if (visits > iterLimit) {
+      throw new RunError(
+        `Node "${label}": exceeded max iterations (${iterLimit}) - possible infinite loop`,
+      );
     }
 
     if (isMapNode(node)) {
       throw new RunError(
-        `Step ${stepNumber} "map": map nodes not supported in skillfold run MVP - use the orchestrator`,
+        `Step ${stepNumber} "map": map nodes not supported in skillfold run - use the orchestrator`,
       );
     }
 
     if (isSubFlowNode(node)) {
       throw new RunError(
-        `Step ${stepNumber} "${label}": sub-flow nodes not supported in skillfold run MVP - use the orchestrator`,
+        `Step ${stepNumber} "${label}": sub-flow nodes not supported in skillfold run - use the orchestrator`,
       );
     }
 
@@ -200,7 +322,7 @@ export async function run(
         );
       }
       steps.push({ step: stepNumber, agent: label, status: "skipped" });
-      if (node.then === "end") break;
+      currentIdx = resolveNextIndex(node, currentIdx, nodes, nodeIndex, state);
       continue;
     }
 
@@ -222,7 +344,14 @@ export async function run(
           "\n",
       );
       steps.push({ step: stepNumber, agent: node.skill, status: "skipped" });
-      if (node.then === "end") break;
+
+      // In dry-run mode with conditionals, we cannot evaluate the branches
+      // (no real state). Fall through to next sequential node.
+      if (node.then !== undefined && isConditionalThen(node.then)) {
+        currentIdx = currentIdx + 1 < nodes.length ? currentIdx + 1 : -1;
+      } else {
+        currentIdx = resolveNextIndex(node, currentIdx, nodes, nodeIndex, state);
+      }
       continue;
     }
 
@@ -241,8 +370,11 @@ export async function run(
       writeFileSync(statePath, JSON.stringify(state, null, 2) + "\n", "utf-8");
 
       steps.push({ step: stepNumber, agent: node.skill, status: "ok" });
-      if (node.then === "end") break;
+      currentIdx = resolveNextIndex(node, currentIdx, nodes, nodeIndex, state);
     } catch (err) {
+      // Re-throw routing errors (these are infrastructure failures, not agent errors)
+      if (err instanceof RunError) throw err;
+
       const message = err instanceof Error ? err.message : String(err);
       steps.push({
         step: stepNumber,
@@ -250,7 +382,7 @@ export async function run(
         status: "error",
         error: message,
       });
-      // Stop on first error
+      // Stop on first agent error
       break;
     }
   }

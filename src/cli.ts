@@ -27,7 +27,7 @@ Commands:
   validate          Validate config without compiling
   list              Display a structured summary of the pipeline
   graph             Output Mermaid flowchart of the team flow
-  run               Execute a compiled pipeline (linear flows only)
+  run               Execute a compiled pipeline
   watch             Compile and watch for changes
   plugin            Package compiled output as a Claude Code plugin
   search [query]    Search npm for skillfold skill packages
@@ -41,6 +41,7 @@ Options:
   --template <name>    Start from a library template (init only)
   --check              Verify compiled output is up-to-date (exit 1 if stale)
   --dry-run            Show execution plan without running (run only)
+  --max-iterations <n> Max loop iterations before aborting (default: 10, run only)
   --html               Output interactive HTML instead of Mermaid (graph only)
   --help               Show this help
   --version            Show version
@@ -62,6 +63,7 @@ interface Args {
   query: string | undefined;
   check: boolean;
   dryRun: boolean;
+  maxIterations: number | undefined;
   html: boolean;
   help: boolean;
   version: boolean;
@@ -79,6 +81,7 @@ function parseArgs(argv: string[]): Args {
   let query: string | undefined;
   let checkMode = false;
   let dryRun = false;
+  let maxIterations: number | undefined;
   let html = false;
   let help = false;
   let version = false;
@@ -152,6 +155,13 @@ function parseArgs(argv: string[]): Args {
       checkMode = true;
     } else if (argv[i] === "--dry-run") {
       dryRun = true;
+    } else if (argv[i] === "--max-iterations" && argv[i + 1]) {
+      const val = Number(argv[++i]);
+      if (!Number.isInteger(val) || val < 1) {
+        console.error("skillfold error: --max-iterations must be a positive integer");
+        process.exit(1);
+      }
+      maxIterations = val;
     } else if (argv[i] === "--html") {
       html = true;
     } else if (argv[i] === "--help") {
@@ -191,6 +201,7 @@ function parseArgs(argv: string[]): Args {
     query,
     check: checkMode,
     dryRun,
+    maxIterations,
     html,
     help,
     version,
@@ -406,6 +417,7 @@ async function main(): Promise<void> {
         target: args.target,
         outDir: args.outDir,
         dryRun: args.dryRun,
+        maxIterations: args.maxIterations,
       });
 
       if (!args.dryRun) {

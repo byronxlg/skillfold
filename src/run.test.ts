@@ -8,7 +8,13 @@ import type { Config } from "./config.js";
 import { RunError } from "./errors.js";
 import type { Graph } from "./graph.js";
 import type { Spawner, StepResult } from "./run.js";
-import { run } from "./run.js";
+import {
+  DEFAULT_MAX_ITERATIONS,
+  evaluateConditionalBranches,
+  evaluateWhenClause,
+  readStatePath,
+  run,
+} from "./run.js";
 
 function makeTmpDir(): string {
   const dir = join(tmpdir(), `skillfold-run-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -36,6 +42,31 @@ function recordingSpawner(
       async spawn(agentName: string, _skillContent: string, state: Record<string, unknown>) {
         calls.push({ agent: agentName, state: { ...state } });
         return updates[agentName] ?? {};
+      },
+    },
+  };
+}
+
+/**
+ * Mock spawner that returns different updates based on call count per agent.
+ * The updatesPerCall map keys are agent names and values are arrays of updates
+ * for each successive call. If calls exceed the array length, the last element is used.
+ */
+function sequentialSpawner(
+  updatesPerCall: Record<string, Record<string, unknown>[]>,
+): { spawner: Spawner; calls: Array<{ agent: string; state: Record<string, unknown> }> } {
+  const calls: Array<{ agent: string; state: Record<string, unknown> }> = [];
+  const callCounts = new Map<string, number>();
+  return {
+    calls,
+    spawner: {
+      async spawn(agentName: string, _skillContent: string, state: Record<string, unknown>) {
+        calls.push({ agent: agentName, state: { ...state } });
+        const count = callCounts.get(agentName) ?? 0;
+        callCounts.set(agentName, count + 1);
+        const seq = updatesPerCall[agentName];
+        if (!seq || seq.length === 0) return {};
+        return seq[Math.min(count, seq.length - 1)];
       },
     },
   };
@@ -321,6 +352,486 @@ describe("run", () => {
       assert.equal(result.steps.length, 2);
       assert.ok(result.steps.every(s => s.status === "skipped"));
     });
+
+    it("dry-run with conditionals falls through sequentially", async () => {
+      const config = makeConfig({
+        nodes: [
+          {
+            skill: "planner",
+            reads: [],
+            writes: ["state.plan"],
+            then: [
+              { when: "state.plan == true", to: "engineer" },
+              { when: "state.plan == false", to: "reviewer" },
+            ],
+          },
+          { skill: "engineer", reads: ["state.plan"], writes: ["state.code"] },
+          { skill: "reviewer", reads: ["state.code"], writes: ["state.review"] },
+        ],
+      });
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: true },
+        mockSpawner({}),
+      );
+
+      // Should walk through all nodes sequentially in dry-run
+      assert.equal(result.steps.length, 3);
+      assert.ok(result.steps.every(s => s.status === "skipped"));
+    });
+  });
+
+  describe("conditional routing", () => {
+    it("routes to the correct branch based on state (== true)", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          {
+            skill: "reviewer",
+            reads: [],
+            writes: ["state.review"],
+            then: [
+              { when: "state.review == true", to: "end" },
+              { when: "state.review == false", to: "engineer" },
+            ],
+          },
+          { skill: "engineer", reads: [], writes: ["state.code"] },
+        ],
+      });
+
+      // Reviewer approves -> routes to end, engineer never runs
+      const { spawner, calls } = recordingSpawner({
+        reviewer: { review: true },
+      });
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        spawner,
+      );
+
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].agent, "reviewer");
+      assert.equal(result.steps.length, 1);
+      assert.equal(result.steps[0].status, "ok");
+    });
+
+    it("routes to the correct branch based on state (== false)", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          {
+            skill: "reviewer",
+            reads: [],
+            writes: ["state.review"],
+            then: [
+              { when: "state.review == true", to: "end" },
+              { when: "state.review == false", to: "engineer" },
+            ],
+          },
+          { skill: "engineer", reads: [], writes: ["state.code"] },
+        ],
+      });
+
+      // Reviewer rejects -> routes to engineer
+      const { spawner, calls } = recordingSpawner({
+        reviewer: { review: false },
+        engineer: { code: "fixed" },
+      });
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        spawner,
+      );
+
+      assert.equal(calls.length, 2);
+      assert.equal(calls[0].agent, "reviewer");
+      assert.equal(calls[1].agent, "engineer");
+      assert.equal(result.steps.length, 2);
+    });
+
+    it("routes based on string comparison", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          {
+            skill: "planner",
+            reads: [],
+            writes: ["state.plan"],
+            then: [
+              { when: 'state.plan == "approved"', to: "engineer" },
+              { when: 'state.plan != "approved"', to: "end" },
+            ],
+          },
+          { skill: "engineer", reads: ["state.plan"], writes: ["state.code"] },
+        ],
+      });
+
+      const { spawner, calls } = recordingSpawner({
+        planner: { plan: "approved" },
+        engineer: { code: "built" },
+      });
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        spawner,
+      );
+
+      assert.equal(calls.length, 2);
+      assert.equal(result.steps[0].agent, "planner");
+      assert.equal(result.steps[1].agent, "engineer");
+    });
+
+    it("routes based on != operator", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          {
+            skill: "planner",
+            reads: [],
+            writes: ["state.plan"],
+            then: [
+              { when: 'state.plan != "rejected"', to: "engineer" },
+              { when: 'state.plan == "rejected"', to: "end" },
+            ],
+          },
+          { skill: "engineer", reads: ["state.plan"], writes: ["state.code"] },
+        ],
+      });
+
+      const { spawner, calls } = recordingSpawner({
+        planner: { plan: "approved" },
+        engineer: { code: "built" },
+      });
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        spawner,
+      );
+
+      assert.equal(calls.length, 2);
+      assert.equal(result.steps[1].agent, "engineer");
+    });
+
+    it("supports nested state paths in when-clauses", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          {
+            skill: "reviewer",
+            reads: [],
+            writes: ["state.review"],
+            then: [
+              { when: "review.approved == true", to: "end" },
+              { when: "review.approved == false", to: "engineer" },
+            ],
+          },
+          { skill: "engineer", reads: [], writes: ["state.code"] },
+        ],
+      });
+
+      // Reviewer writes nested state: { review: { approved: true } }
+      const { spawner, calls } = recordingSpawner({
+        reviewer: { review: { approved: true } },
+      });
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        spawner,
+      );
+
+      assert.equal(calls.length, 1);
+      assert.equal(result.steps.length, 1);
+      assert.equal(result.steps[0].agent, "reviewer");
+    });
+
+    it("errors when no branch matches", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          {
+            skill: "planner",
+            reads: [],
+            writes: ["state.plan"],
+            then: [
+              { when: 'state.plan == "a"', to: "engineer" },
+              { when: 'state.plan == "b"', to: "end" },
+            ],
+          },
+          { skill: "engineer", reads: [], writes: ["state.code"] },
+        ],
+      });
+
+      await assert.rejects(
+        () => run(
+          { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+          mockSpawner({ planner: { plan: "c" } }),
+        ),
+        (err: Error) => {
+          assert.ok(err instanceof RunError);
+          assert.ok(err.message.includes("no conditional branch matched"));
+          return true;
+        },
+      );
+    });
+
+    it("non-linear jump with simple then works", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      // planner -> reviewer (skipping engineer)
+      const config = makeConfig({
+        nodes: [
+          { skill: "planner", reads: [], writes: ["state.plan"], then: "reviewer" },
+          { skill: "engineer", reads: ["state.plan"], writes: ["state.code"] },
+          { skill: "reviewer", reads: ["state.plan"], writes: ["state.review"] },
+        ],
+      });
+
+      const { spawner, calls } = recordingSpawner({
+        planner: { plan: "done" },
+        reviewer: { review: "reviewed" },
+      });
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        spawner,
+      );
+
+      assert.equal(calls.length, 2);
+      assert.equal(calls[0].agent, "planner");
+      assert.equal(calls[1].agent, "reviewer");
+      assert.equal(result.steps.length, 2);
+    });
+  });
+
+  describe("loops", () => {
+    it("re-executes a node when conditional routes back to it", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      // engineer -> reviewer -> (if rejected) back to engineer -> reviewer -> (if approved) end
+      const config = makeConfig({
+        nodes: [
+          { skill: "engineer", reads: [], writes: ["state.code"], then: "reviewer" },
+          {
+            skill: "reviewer",
+            reads: ["state.code"],
+            writes: ["state.review"],
+            then: [
+              { when: "state.review == true", to: "end" },
+              { when: "state.review == false", to: "engineer" },
+            ],
+          },
+        ],
+      });
+
+      // First call: reviewer rejects. Second call: reviewer approves.
+      const { spawner, calls } = sequentialSpawner({
+        engineer: [
+          { code: "v1" },
+          { code: "v2" },
+        ],
+        reviewer: [
+          { review: false },
+          { review: true },
+        ],
+      });
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        spawner,
+      );
+
+      // engineer(1) -> reviewer(1, reject) -> engineer(2) -> reviewer(2, approve) -> end
+      assert.equal(calls.length, 4);
+      assert.equal(calls[0].agent, "engineer");
+      assert.equal(calls[1].agent, "reviewer");
+      assert.equal(calls[2].agent, "engineer");
+      assert.equal(calls[3].agent, "reviewer");
+      assert.equal(result.steps.length, 4);
+      assert.ok(result.steps.every(s => s.status === "ok"));
+      assert.equal(result.state.review, true);
+      assert.equal(result.state.code, "v2");
+    });
+
+    it("loop carries updated state between iterations", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          { skill: "engineer", reads: [], writes: ["state.code"], then: "reviewer" },
+          {
+            skill: "reviewer",
+            reads: ["state.code"],
+            writes: ["state.review"],
+            then: [
+              { when: "state.review == true", to: "end" },
+              { when: "state.review == false", to: "engineer" },
+            ],
+          },
+        ],
+      });
+
+      const { spawner, calls } = sequentialSpawner({
+        engineer: [
+          { code: "draft1" },
+          { code: "draft2" },
+        ],
+        reviewer: [
+          { review: false },
+          { review: true },
+        ],
+      });
+
+      await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        spawner,
+      );
+
+      // On second iteration, engineer sees the state from the first iteration
+      assert.equal(calls[2].state.code, "draft1");
+      assert.equal(calls[2].state.review, false);
+      // On second review, reviewer sees draft2
+      assert.equal(calls[3].state.code, "draft2");
+    });
+  });
+
+  describe("max-iterations", () => {
+    it("throws RunError when max iterations exceeded", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      // A loop that never exits (reviewer always returns false)
+      const config = makeConfig({
+        nodes: [
+          { skill: "engineer", reads: [], writes: ["state.code"], then: "reviewer" },
+          {
+            skill: "reviewer",
+            reads: ["state.code"],
+            writes: ["state.review"],
+            then: [
+              { when: "state.review == true", to: "end" },
+              { when: "state.review == false", to: "engineer" },
+            ],
+          },
+        ],
+      });
+
+      await assert.rejects(
+        () => run(
+          { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false, maxIterations: 3 },
+          mockSpawner({
+            engineer: { code: "forever" },
+            reviewer: { review: false },
+          }),
+        ),
+        (err: Error) => {
+          assert.ok(err instanceof RunError);
+          assert.ok(err.message.includes("exceeded max iterations (3)"));
+          return true;
+        },
+      );
+    });
+
+    it("respects custom max-iterations value", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          { skill: "engineer", reads: [], writes: ["state.code"], then: "reviewer" },
+          {
+            skill: "reviewer",
+            reads: ["state.code"],
+            writes: ["state.review"],
+            then: [
+              { when: "state.review == true", to: "end" },
+              { when: "state.review == false", to: "engineer" },
+            ],
+          },
+        ],
+      });
+
+      // With max-iterations=1, the first node can only be visited once
+      // engineer(1) -> reviewer(1, reject) -> engineer(2, exceeds limit)
+      await assert.rejects(
+        () => run(
+          { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false, maxIterations: 1 },
+          mockSpawner({
+            engineer: { code: "nope" },
+            reviewer: { review: false },
+          }),
+        ),
+        (err: Error) => {
+          assert.ok(err instanceof RunError);
+          assert.ok(err.message.includes("exceeded max iterations (1)"));
+          return true;
+        },
+      );
+    });
+
+    it("default max iterations is 10", () => {
+      assert.equal(DEFAULT_MAX_ITERATIONS, 10);
+    });
+
+    it("loop completes within max-iterations limit", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      // Loop that exits after 2 iterations (within limit of 3)
+      const config = makeConfig({
+        nodes: [
+          { skill: "engineer", reads: [], writes: ["state.code"], then: "reviewer" },
+          {
+            skill: "reviewer",
+            reads: ["state.code"],
+            writes: ["state.review"],
+            then: [
+              { when: "state.review == true", to: "end" },
+              { when: "state.review == false", to: "engineer" },
+            ],
+          },
+        ],
+      });
+
+      const { spawner } = sequentialSpawner({
+        engineer: [{ code: "v1" }, { code: "v2" }],
+        reviewer: [{ review: false }, { review: true }],
+      });
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false, maxIterations: 3 },
+        spawner,
+      );
+
+      assert.equal(result.steps.length, 4);
+      assert.ok(result.steps.every(s => s.status === "ok"));
+    });
   });
 
   describe("unsupported features", () => {
@@ -339,57 +850,6 @@ describe("run", () => {
         (err: Error) => {
           assert.ok(err instanceof RunError);
           assert.ok(err.message.includes("map nodes not supported"));
-          return true;
-        },
-      );
-    });
-
-    it("conditional then produces clear error", async () => {
-      const config = makeConfig({
-        nodes: [
-          {
-            skill: "planner",
-            reads: [],
-            writes: ["state.plan"],
-            then: [
-              { when: 'state.plan == "good"', to: "engineer" },
-              { when: 'state.plan != "good"', to: "planner" },
-            ],
-          },
-          { skill: "engineer", reads: ["state.plan"], writes: ["state.code"] },
-        ],
-      });
-
-      await assert.rejects(
-        () => run(
-          { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
-          mockSpawner({}),
-        ),
-        (err: Error) => {
-          assert.ok(err instanceof RunError);
-          assert.ok(err.message.includes("conditional routing not supported"));
-          return true;
-        },
-      );
-    });
-
-    it("non-linear jump produces clear error", async () => {
-      const config = makeConfig({
-        nodes: [
-          { skill: "planner", reads: [], writes: ["state.plan"], then: "reviewer" },
-          { skill: "engineer", reads: ["state.plan"], writes: ["state.code"] },
-          { skill: "reviewer", reads: ["state.code"], writes: ["state.review"] },
-        ],
-      });
-
-      await assert.rejects(
-        () => run(
-          { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
-          mockSpawner({}),
-        ),
-        (err: Error) => {
-          assert.ok(err instanceof RunError);
-          assert.ok(err.message.includes("non-linear jump"));
           return true;
         },
       );
@@ -587,7 +1047,7 @@ describe("run", () => {
       assert.equal(result.state.plan, "only step");
     });
 
-    it("then: end is accepted as valid linear flow", async () => {
+    it("then: end is accepted as valid flow", async () => {
       tmpDir = makeTmpDir();
       origCwd = process.cwd();
       process.chdir(tmpDir);
@@ -635,6 +1095,83 @@ describe("run", () => {
       assert.equal(calls.length, 1);
       assert.equal(result.state.plan, "done");
       assert.equal(result.state.code, undefined);
+    });
+  });
+
+  describe("readStatePath", () => {
+    it("reads top-level field", () => {
+      assert.equal(readStatePath({ plan: "hello" }, "state.plan"), "hello");
+    });
+
+    it("reads nested field", () => {
+      assert.equal(readStatePath({ review: { approved: true } }, "review.approved"), true);
+    });
+
+    it("returns undefined for missing field", () => {
+      assert.equal(readStatePath({}, "state.missing"), undefined);
+    });
+
+    it("returns undefined for nested missing field", () => {
+      assert.equal(readStatePath({ review: {} }, "review.approved"), undefined);
+    });
+
+    it("strips state. prefix", () => {
+      assert.equal(readStatePath({ plan: "x" }, "state.plan"), "x");
+    });
+  });
+
+  describe("evaluateWhenClause", () => {
+    it("== true matches true", () => {
+      assert.equal(evaluateWhenClause({ path: "state.x", operator: "==", value: true }, { x: true }), true);
+    });
+
+    it("== true does not match false", () => {
+      assert.equal(evaluateWhenClause({ path: "state.x", operator: "==", value: true }, { x: false }), false);
+    });
+
+    it("!= false matches true", () => {
+      assert.equal(evaluateWhenClause({ path: "state.x", operator: "!=", value: false }, { x: true }), true);
+    });
+
+    it("== string matches", () => {
+      assert.equal(evaluateWhenClause({ path: "state.x", operator: "==", value: "yes" }, { x: "yes" }), true);
+    });
+
+    it("== string does not match different string", () => {
+      assert.equal(evaluateWhenClause({ path: "state.x", operator: "==", value: "yes" }, { x: "no" }), false);
+    });
+
+    it("handles nested path", () => {
+      assert.equal(
+        evaluateWhenClause({ path: "review.approved", operator: "==", value: true }, { review: { approved: true } }),
+        true,
+      );
+    });
+  });
+
+  describe("evaluateConditionalBranches", () => {
+    it("returns target of first matching branch", () => {
+      const branches = [
+        { when: "state.x == true", to: "a" },
+        { when: "state.x == false", to: "b" },
+      ];
+      assert.equal(evaluateConditionalBranches(branches, { x: true }), "a");
+    });
+
+    it("returns target of second branch when first does not match", () => {
+      const branches = [
+        { when: "state.x == true", to: "a" },
+        { when: "state.x == false", to: "b" },
+      ];
+      assert.equal(evaluateConditionalBranches(branches, { x: false }), "b");
+    });
+
+    it("returns undefined when no branch matches", () => {
+      const branches = [
+        { when: 'state.x == "a"', to: "a" },
+        { when: 'state.x == "b"', to: "b" },
+      ];
+      assert.equal(evaluateConditionalBranches(branches, { x: "c" }), undefined);
     });
   });
 });
