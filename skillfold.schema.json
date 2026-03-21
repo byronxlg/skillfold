@@ -150,6 +150,20 @@
               "background": {
                 "type": "boolean",
                 "description": "Whether this agent runs in the background."
+              },
+              "mcpServers": {
+                "type": "object",
+                "description": "MCP server configurations for this agent. Keys are server names, values are server config objects.",
+                "additionalProperties": {
+                  "type": "object",
+                  "description": "MCP server configuration with command, args, env, and other settings.",
+                  "additionalProperties": true
+                }
+              },
+              "skills": {
+                "type": "array",
+                "description": "Skill paths to preload for this agent.",
+                "items": { "type": "string" }
               }
             }
           }

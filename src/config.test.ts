@@ -1575,6 +1575,127 @@ skills:
       tmpDir = undefined;
     }
   });
+
+  it("parses mcpServers field", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      mcpServers:
+        filesystem:
+          command: npx
+          args:
+            - "-y"
+            - "@modelcontextprotocol/server-filesystem"
+          env:
+            HOME: /home/user
+`);
+    const config = readConfig(configPath);
+    const skill = config.skills["quality"];
+    assert.ok(isComposed(skill));
+    assert.ok(skill.agentConfig?.mcpServers);
+    assert.deepEqual(skill.agentConfig.mcpServers.filesystem, {
+      command: "npx",
+      args: ["-y", "@modelcontextprotocol/server-filesystem"],
+      env: { HOME: "/home/user" },
+    });
+  });
+
+  it("parses skills field", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      skills:
+        - ".claude/skills/review/SKILL.md"
+        - ".claude/skills/testing/SKILL.md"
+`);
+    const config = readConfig(configPath);
+    const skill = config.skills["quality"];
+    assert.ok(isComposed(skill));
+    assert.deepEqual(skill.agentConfig?.skills, [
+      ".claude/skills/review/SKILL.md",
+      ".claude/skills/testing/SKILL.md",
+    ]);
+  });
+
+  it("rejects non-object mcpServers", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      mcpServers: "not a map"
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /mcpServers must be a YAML map/);
+      return true;
+    });
+  });
+
+  it("rejects non-object mcpServers server entry", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      mcpServers:
+        my-server: "not a map"
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /mcpServers\.my-server must be a YAML map/);
+      return true;
+    });
+  });
+
+  it("rejects non-array skills", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      skills: "not an array"
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /skills must be an array of strings/);
+      return true;
+    });
+  });
 });
 
 describe("type guards", () => {

@@ -741,3 +741,132 @@ describe("generateAgents: async nodes", () => {
     assert.ok(!orchestratorAgent.content.includes("Agent(engineer, owner"));
   });
 });
+
+describe("generateAgents: mcpServers and skills fields", () => {
+  it("emits mcpServers in claude-code target frontmatter", () => {
+    const config = makeConfig({
+      skills: {
+        planning: { path: "./skills/planning" },
+        coding: { path: "./skills/coding" },
+        engineer: {
+          compose: ["planning", "coding"],
+          description: "Writes code.",
+          agentConfig: {
+            mcpServers: {
+              filesystem: {
+                command: "npx",
+                args: ["-y", "@modelcontextprotocol/server-filesystem"],
+                env: { HOME: "/home/user" },
+              },
+            },
+          },
+        },
+      },
+      team: undefined,
+    });
+    const bodies = new Map<string, string>();
+    bodies.set("engineer", "Write code.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml", "claude-code");
+    const engineer = results.find((r) => r.name === "engineer");
+    assert.ok(engineer);
+
+    assert.ok(engineer.content.includes("mcpServers:"));
+    assert.ok(engineer.content.includes("filesystem:"));
+    assert.ok(engineer.content.includes("command: npx"));
+    assert.ok(engineer.content.includes("- -y"));
+    assert.ok(engineer.content.includes("@modelcontextprotocol/server-filesystem"));
+  });
+
+  it("emits skills array in claude-code target frontmatter", () => {
+    const config = makeConfig({
+      skills: {
+        planning: { path: "./skills/planning" },
+        coding: { path: "./skills/coding" },
+        engineer: {
+          compose: ["planning", "coding"],
+          description: "Writes code.",
+          agentConfig: {
+            skills: [".claude/skills/review/SKILL.md", ".claude/skills/testing/SKILL.md"],
+          },
+        },
+      },
+      team: undefined,
+    });
+    const bodies = new Map<string, string>();
+    bodies.set("engineer", "Write code.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml", "claude-code");
+    const engineer = results.find((r) => r.name === "engineer");
+    assert.ok(engineer);
+
+    assert.ok(engineer.content.includes("skills:"));
+    assert.ok(engineer.content.includes("- .claude/skills/review/SKILL.md"));
+    assert.ok(engineer.content.includes("- .claude/skills/testing/SKILL.md"));
+  });
+
+  it("mcpServers and skills are not emitted in skill target", () => {
+    const config = makeConfig({
+      skills: {
+        planning: { path: "./skills/planning" },
+        coding: { path: "./skills/coding" },
+        engineer: {
+          compose: ["planning", "coding"],
+          description: "Writes code.",
+          agentConfig: {
+            mcpServers: {
+              filesystem: { command: "npx", args: ["-y", "server"] },
+            },
+            skills: [".claude/skills/review/SKILL.md"],
+          },
+        },
+      },
+      team: undefined,
+    });
+    const bodies = new Map<string, string>();
+    bodies.set("engineer", "Write code.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml", "skill");
+    const engineer = results.find((r) => r.name === "engineer");
+    assert.ok(engineer);
+
+    assert.ok(!engineer.content.includes("mcpServers:"));
+    assert.ok(!engineer.content.includes("skills:"));
+  });
+
+  it("emits both mcpServers and skills alongside other agentConfig fields", () => {
+    const config = makeConfig({
+      skills: {
+        planning: { path: "./skills/planning" },
+        coding: { path: "./skills/coding" },
+        engineer: {
+          compose: ["planning", "coding"],
+          description: "Writes code.",
+          agentConfig: {
+            tools: ["Read", "Edit"],
+            permissionMode: "acceptEdits",
+            mcpServers: {
+              "my-server": { command: "node", args: ["server.js"] },
+            },
+            skills: [".claude/skills/lint/SKILL.md"],
+          },
+        },
+      },
+      team: undefined,
+    });
+    const bodies = new Map<string, string>();
+    bodies.set("engineer", "Write code.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml", "claude-code");
+    const engineer = results.find((r) => r.name === "engineer");
+    assert.ok(engineer);
+
+    // All fields present
+    assert.ok(engineer.content.includes("tools:"));
+    assert.ok(engineer.content.includes("permissionMode: acceptEdits"));
+    assert.ok(engineer.content.includes("mcpServers:"));
+    assert.ok(engineer.content.includes("my-server:"));
+    assert.ok(engineer.content.includes("skills:"));
+    assert.ok(engineer.content.includes("- .claude/skills/lint/SKILL.md"));
+  });
+});
