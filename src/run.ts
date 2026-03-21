@@ -1,4 +1,4 @@
-import { execFile, execSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { promisify } from "node:util";
@@ -47,7 +47,7 @@ export interface Spawner {
 export class ClaudeSpawner implements Spawner {
   constructor() {
     try {
-      execSync("claude --version", { stdio: "pipe" });
+      execFileSync("claude", ["--version"], { stdio: "pipe" });
     } catch {
       throw new RunError(
         "claude CLI not found. Install it from https://docs.anthropic.com/en/docs/claude-cli",
@@ -200,6 +200,7 @@ export async function run(
         );
       }
       steps.push({ step: stepNumber, agent: label, status: "skipped" });
+      if (node.then === "end") break;
       continue;
     }
 
@@ -221,6 +222,7 @@ export async function run(
           "\n",
       );
       steps.push({ step: stepNumber, agent: node.skill, status: "skipped" });
+      if (node.then === "end") break;
       continue;
     }
 
@@ -239,6 +241,7 @@ export async function run(
       writeFileSync(statePath, JSON.stringify(state, null, 2) + "\n", "utf-8");
 
       steps.push({ step: stepNumber, agent: node.skill, status: "ok" });
+      if (node.then === "end") break;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       steps.push({

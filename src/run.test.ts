@@ -606,5 +606,35 @@ describe("run", () => {
       assert.equal(result.steps.length, 1);
       assert.equal(result.steps[0].status, "ok");
     });
+
+    it("then: end on a middle node stops execution", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          { skill: "planner", reads: [], writes: ["state.plan"], then: "end" },
+          { skill: "engineer", reads: ["state.plan"], writes: ["state.code"] },
+        ],
+      });
+
+      const { spawner, calls } = recordingSpawner({
+        planner: { plan: "done" },
+        engineer: { code: "should not run" },
+      });
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        spawner,
+      );
+
+      assert.equal(result.steps.length, 1);
+      assert.equal(result.steps[0].status, "ok");
+      assert.equal(result.steps[0].agent, "planner");
+      assert.equal(calls.length, 1);
+      assert.equal(result.state.plan, "done");
+      assert.equal(result.state.code, undefined);
+    });
   });
 });

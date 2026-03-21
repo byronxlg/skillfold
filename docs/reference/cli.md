@@ -20,6 +20,7 @@ Commands:
   validate          Validate config without compiling
   list              Display a structured summary of the pipeline
   graph             Output Mermaid flowchart of the team flow
+  run               Execute a compiled pipeline (linear flows only)
   watch             Compile and watch for changes
   plugin            Package compiled output as a Claude Code plugin
   search [query]    Discover skill packages on npm
@@ -36,6 +37,7 @@ Commands:
   --template <name>    Start from a library template (init only)
   --html               Output interactive HTML instead of Mermaid (graph only)
   --check              Verify compiled output is up-to-date (exit 1 if stale)
+  --dry-run            Show execution plan without running (run only)
   --help               Show this help
   --version            Show version
 ```
