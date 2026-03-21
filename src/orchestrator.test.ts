@@ -2,7 +2,8 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 import type { Config } from "./config.js";
-import { generateOrchestrator } from "./orchestrator.js";
+import { formatLocation, generateOrchestrator } from "./orchestrator.js";
+import type { StateField } from "./state.js";
 
 describe("generateOrchestrator", () => {
   it("linear graph - 3 steps with correct numbering, reads/writes, transitions", () => {
@@ -735,5 +736,122 @@ describe("generateOrchestrator: async nodes", () => {
     assert.ok(!asyncSection.includes("Agent tool"));
     // But the step node should
     assert.ok(output.includes("Invoke **worker** using the Agent tool."));
+  });
+});
+
+describe("formatLocation with resolved URLs", () => {
+  const resources = {
+    discussions: "https://github.com/org/repo/discussions",
+    issues: "https://github.com/org/repo/issues",
+    "pull-requests": "https://github.com/org/repo/pulls",
+  };
+
+  it("resolves URL with sub-path", () => {
+    const field: StateField = {
+      type: { kind: "primitive", value: "string" },
+      location: { skill: "github", path: "discussions/general" },
+    };
+    assert.equal(
+      formatLocation(field, resources),
+      "https://github.com/org/repo/discussions/general"
+    );
+  });
+
+  it("resolves URL without sub-path", () => {
+    const field: StateField = {
+      type: { kind: "primitive", value: "string" },
+      location: { skill: "github", path: "issues" },
+    };
+    assert.equal(
+      formatLocation(field, resources),
+      "https://github.com/org/repo/issues"
+    );
+  });
+
+  it("resolves URL with kind qualifier", () => {
+    const field: StateField = {
+      type: { kind: "primitive", value: "string" },
+      location: { skill: "github", path: "pull-requests", kind: "review" },
+    };
+    assert.equal(
+      formatLocation(field, resources),
+      "https://github.com/org/repo/pulls (review)"
+    );
+  });
+
+  it("falls back to abstract format without resources", () => {
+    const field: StateField = {
+      type: { kind: "primitive", value: "string" },
+      location: { skill: "github", path: "discussions/general" },
+    };
+    assert.equal(
+      formatLocation(field),
+      "github: discussions/general"
+    );
+  });
+
+  it("falls back to abstract format with kind without resources", () => {
+    const field: StateField = {
+      type: { kind: "primitive", value: "string" },
+      location: { skill: "github", path: "pull-requests", kind: "review" },
+    };
+    assert.equal(
+      formatLocation(field),
+      "github: pull-requests (review)"
+    );
+  });
+
+  it("returns empty string for field without location", () => {
+    const field: StateField = {
+      type: { kind: "primitive", value: "string" },
+    };
+    assert.equal(formatLocation(field), "");
+  });
+});
+
+describe("generateOrchestrator with resolved URLs", () => {
+  it("renders resolved URLs in state table when skills have resources", () => {
+    const config: Config = {
+      name: "resolved-urls",
+      skills: {
+        github: {
+          path: "./skills/github",
+          resources: {
+            discussions: "https://github.com/org/repo/discussions",
+            issues: "https://github.com/org/repo/issues",
+          },
+        },
+        worker: { compose: ["github"], description: "Does work." },
+      },
+      state: {
+        types: {},
+        fields: {
+          direction: {
+            type: { kind: "primitive", value: "string" },
+            location: { skill: "github", path: "discussions/general" },
+          },
+          tasks: {
+            type: { kind: "primitive", value: "string" },
+            location: { skill: "github", path: "issues" },
+          },
+        },
+      },
+      team: {
+        flow: {
+          nodes: [
+            {
+              skill: "worker",
+              reads: [],
+              writes: [],
+              then: "end",
+            },
+          ],
+        },
+      },
+    };
+
+    const output = generateOrchestrator(config);
+    assert.ok(output.includes("https://github.com/org/repo/discussions/general"));
+    assert.ok(output.includes("https://github.com/org/repo/issues"));
   });
 });

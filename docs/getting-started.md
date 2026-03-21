@@ -227,7 +227,28 @@ The `owner` node is async - it does not invoke an agent. Instead, the orchestrat
 
 Async nodes participate in the flow graph like regular nodes - they have reads, writes, and transitions. But they are excluded from skill compilation (no SKILL.md is generated) and from the Agent tool list in the orchestrator.
 
-## 7. Start from a template
+## 7. Declare resource namespaces
+
+When a state field has a `location` pointing to an atomic skill, the compiler can validate that the location path matches a declared namespace. Add `resources` to your atomic skill definitions:
+
+```yaml
+skills:
+  atomic:
+    github:
+      path: ./skills/github
+      resources:
+        discussions: "https://github.com/org/repo/discussions"
+        issues: "https://github.com/org/repo/issues"
+        pull-requests: "https://github.com/org/repo/pulls"
+```
+
+Now when a state field references `github` with a `location.path`, the compiler checks that the first path segment matches a declared resource namespace. A path like `discussions/general` matches `discussions`; a path like `wikis/page` would fail with a clear error.
+
+The orchestrator state table also benefits: instead of abstract `github: discussions/general`, it renders the resolved URL `https://github.com/org/repo/discussions/general`, giving the orchestrator agent concrete locations to work with.
+
+Skills without `resources` still work - the compiler emits a warning suggesting you add declarations for compile-time validation.
+
+## 8. Start from a template
 
 If you prefer starting from a real-world pattern instead of the minimal starter:
 
@@ -245,7 +266,7 @@ Available templates:
 
 Templates use library skills via imports, so they work out of the box with no local skill directories needed.
 
-## 8. Deploy to your platform
+## 9. Deploy to your platform
 
 Compile directly to where your platform reads skills. See the [Integration Guide](integrations.md) for all platforms.
 
@@ -262,7 +283,7 @@ For Claude Code, `--target claude-code` generates agent markdown files alongside
 
 Skillfold also ships a built-in plugin with 11 generic skills. Install it by referencing `node_modules/skillfold/plugin/` from your Claude Code configuration.
 
-## 9. Next steps
+## 10. Next steps
 
 - Read the full config specification in [BRIEF.md](../BRIEF.md)
 - Explore the [shared library examples](../library/examples/) for real pipeline patterns

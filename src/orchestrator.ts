@@ -1,4 +1,5 @@
 import type { Config } from "./config.js";
+import { isAtomic } from "./config.js";
 import { isAsyncNode, isConditionalThen, isMapNode } from "./graph.js";
 import type { AsyncNode, GraphNode, Then } from "./graph.js";
 import type { StateField, StateType } from "./state.js";
@@ -19,9 +20,24 @@ export function formatType(type: StateType): string {
   }
 }
 
-export function formatLocation(field: StateField): string {
+export function formatLocation(
+  field: StateField,
+  skillResources?: Record<string, string>,
+): string {
   if (!field.location) return "";
   const { skill, path, kind } = field.location;
+
+  if (skillResources) {
+    const slashIdx = path.indexOf("/");
+    const namespace = slashIdx === -1 ? path : path.slice(0, slashIdx);
+    const subPath = slashIdx === -1 ? "" : path.slice(slashIdx + 1);
+    const baseUrl = skillResources[namespace];
+    if (baseUrl) {
+      const resolved = subPath ? `${baseUrl}/${subPath}` : baseUrl;
+      return kind ? `${resolved} (${kind})` : resolved;
+    }
+  }
+
   if (kind) {
     return `${skill}: ${path} (${kind})`;
   }
@@ -267,7 +283,14 @@ export function generateOrchestrator(
 
     for (const [name, field] of Object.entries(config.state.fields)) {
       const typeStr = formatType(field.type);
-      const locStr = formatLocation(field);
+      let resources: Record<string, string> | undefined;
+      if (field.location) {
+        const skill = config.skills[field.location.skill];
+        if (skill && isAtomic(skill)) {
+          resources = skill.resources;
+        }
+      }
+      const locStr = formatLocation(field, resources);
       lines.push(`| ${name} | ${typeStr} | ${locStr} |`);
     }
   }
