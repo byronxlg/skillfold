@@ -247,6 +247,7 @@ describe("init CLI", () => {
     );
     assert.ok(output.includes("project initialized"));
     assert.ok(existsSync(join(subDir, "skillfold.yaml")));
+    assert.ok(output.includes("npm install skillfold"), "should suggest npm install for template");
 
     const config = readFileSync(join(subDir, "skillfold.yaml"), "utf-8");
     assert.ok(config.includes("name: dev-team"));

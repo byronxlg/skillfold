@@ -303,6 +303,7 @@ skills:
         assert.ok(err instanceof ConfigError);
         assert.match(err.message, /Cannot read npm imported config/);
         assert.match(err.message, /npm:@nonexistent\/package/);
+        assert.match(err.message, /npm install @nonexistent\/package/);
         return true;
       }
     );

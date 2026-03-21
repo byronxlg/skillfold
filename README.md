@@ -93,9 +93,9 @@ $ npx skillfold init demo --template dev-team
 skillfold: project initialized
   -> skillfold.yaml
 
-Next: cd demo && npx skillfold
+Next: cd demo && npm install skillfold && npx skillfold
 
-$ cd demo && npx skillfold --target claude-code
+$ cd demo && npm install skillfold && npx skillfold --target claude-code
 skillfold: compiled dev-team
   -> .claude/skills/planner/SKILL.md
   -> .claude/skills/engineer/SKILL.md
