@@ -7,7 +7,7 @@ name: my-pipeline
 
 # To import shared skills from the skillfold library, uncomment:
 # imports:
-#   - node_modules/skillfold/library/skillfold.yaml
+#   - npm:skillfold/library/skillfold.yaml
 
 skills:
   atomic:
@@ -134,7 +134,7 @@ const SCHEMA_COMMENT =
   "# yaml-language-server: $schema=node_modules/skillfold/skillfold.schema.json\n";
 
 const IMPORT_REWRITE_FROM = /- \.\.\/\.\.\/skillfold\.yaml/;
-const IMPORT_REWRITE_TO = "- node_modules/skillfold/library/skillfold.yaml";
+const IMPORT_REWRITE_TO = "- npm:skillfold/library/skillfold.yaml";
 
 export function initFromTemplate(dir: string, template: string): string[] {
   if (!TEMPLATES.includes(template as Template)) {
