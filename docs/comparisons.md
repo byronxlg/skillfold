@@ -32,7 +32,7 @@ Skillfold is declarative. You define agents, typed state, and execution flow in 
 | **Model selection** | Per-agent via `agentConfig.model` | Per-teammate via natural language request |
 | **Nesting** | Sub-flow imports for nested pipelines | No nested teams - teammates cannot spawn their own teams |
 | **Skill reuse** | Composition from atomic skills, npm sharing | Copy-paste between agent files |
-| **Platform support** | 8 compilation targets | Claude Code only |
+| **Platform support** | 12 compilation targets | Claude Code only |
 | **Team size** | Unlimited (constrained by flow definition) | 3-5 recommended, practical max around 10-16 |
 | **Maturity** | Stable | Experimental with known limitations |
 
@@ -125,7 +125,7 @@ Skillfold is a compiler. It reads your `skillfold.yaml`, validates everything at
 | **Flow patterns** | Conditional routing, parallel map, loops, sub-flows | Sequential and hierarchical processes |
 | **State** | Typed schema with compile-time validation | Python objects at runtime |
 | **Output format** | Agent Skills standard (SKILL.md) | Proprietary CrewAI objects |
-| **Platform support** | 8 compilation targets | CrewAI runtime only |
+| **Platform support** | 12 compilation targets | CrewAI runtime only |
 | **Validation** | Compile-time (types, references, conflicts, cycles) | Runtime errors |
 | **LLM support** | Any platform that reads Agent Skills | Multiple LLM providers via CrewAI SDK |
 | **Dynamic workflows** | Static topology, validated ahead of time | Can adapt structure at runtime |
