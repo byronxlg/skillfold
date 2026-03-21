@@ -92,9 +92,10 @@ team:
   orchestrator: orchestrator
 
   flow:
-    - strategist:
-        reads: [state.tasks]
+    - owner:
+        async: true
         writes: [state.direction]
+        policy: block
       then: architect
 
     - architect:

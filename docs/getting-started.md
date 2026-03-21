@@ -196,7 +196,38 @@ skills:
 
 The import makes all 11 library skills available: `planning`, `research`, `decision-making`, `code-writing`, `code-review`, `testing`, `writing`, `summarization`, `github-workflow`, `file-management`, and `skillfold-cli`.
 
-## 6. Start from a template
+## 6. Add async nodes for external agents
+
+Not every participant in a pipeline is a Claude Code agent. Humans, CI systems, and external services can be modeled as **async nodes** - checkpoints where the pipeline waits for external input before continuing.
+
+```yaml
+team:
+  flow:
+    - owner:
+        async: true
+        writes: [state.direction]
+        policy: block
+      then: architect
+
+    - architect:
+        reads: [state.direction]
+        writes: [state.plan]
+      then: engineer
+```
+
+The `owner` node is async - it does not invoke an agent. Instead, the orchestrator checks `state.direction` at its external location and waits for a value to appear. Once the human (or external system) provides direction, the pipeline proceeds.
+
+**Policy options** control what happens when the value is not yet available:
+
+| Policy | Behavior |
+|--------|----------|
+| `block` (default) | Wait until the value is provided |
+| `skip` | Skip this step and proceed without the value |
+| `use-latest` | Use the most recent available value and proceed |
+
+Async nodes participate in the flow graph like regular nodes - they have reads, writes, and transitions. But they are excluded from skill compilation (no SKILL.md is generated) and from the Agent tool list in the orchestrator.
+
+## 7. Start from a template
 
 If you prefer starting from a real-world pattern instead of the minimal starter:
 
@@ -214,7 +245,7 @@ Available templates:
 
 Templates use library skills via imports, so they work out of the box with no local skill directories needed.
 
-## 7. Deploy to your platform
+## 8. Deploy to your platform
 
 Compile directly to where your platform reads skills. See the [Integration Guide](integrations.md) for all platforms.
 
@@ -231,7 +262,7 @@ For Claude Code, `--target claude-code` generates agent markdown files alongside
 
 Skillfold also ships a built-in plugin with 11 generic skills. Install it by referencing `node_modules/skillfold/plugin/` from your Claude Code configuration.
 
-## 8. Next steps
+## 9. Next steps
 
 - Read the full config specification in [BRIEF.md](../BRIEF.md)
 - Explore the [shared library examples](../library/examples/) for real pipeline patterns
