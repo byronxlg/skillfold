@@ -1,12 +1,12 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-import { generateAgents, generateRunCommand } from "./agent.js";
+import { generateAgents, generateGeminiAgents, generateRunCommand } from "./agent.js";
 import { type Config, isComposed } from "./config.js";
 import { CompileError } from "./errors.js";
 import { generateOrchestrator } from "./orchestrator.js";
 
-export type CompileTarget = "skill" | "claude-code" | "cursor" | "windsurf" | "codex" | "copilot";
+export type CompileTarget = "skill" | "claude-code" | "cursor" | "windsurf" | "codex" | "copilot" | "gemini";
 
 function expand(
   name: string,
@@ -478,6 +478,42 @@ export function generateCopilot(
   return results;
 }
 
+/**
+ * Generate output for gemini target: agents in agents/ subdirectory
+ * and skill files in skills/ subdirectory.
+ */
+export function generateGemini(
+  config: Config,
+  bodies: Map<string, string>,
+  outDir: string,
+  version: string,
+  configFile: string,
+): GenerateResult[] {
+  const results: GenerateResult[] = [];
+
+  // Generate skills under skills/ subdirectory (name + description only)
+  const skillResults = generate(config, bodies, outDir, version, configFile);
+  for (const result of skillResults) {
+    result.path = join(outDir, "skills", result.name, "SKILL.md");
+    results.push(result);
+  }
+
+  // Generate Gemini agent markdown files
+  const composedBodies = expandComposedBodies(config, bodies);
+  const agentResults = generateGeminiAgents(
+    config,
+    composedBodies,
+    outDir,
+    version,
+    configFile,
+  );
+  for (const agent of agentResults) {
+    results.push(agent);
+  }
+
+  return results;
+}
+
 function writeResults(results: GenerateResult[]): void {
   for (const result of results) {
     mkdirSync(dirname(result.path), { recursive: true });
@@ -512,6 +548,9 @@ export function compile(
     case "copilot":
       generated = generateCopilot(config, bodies, outDir, version, configFile);
       break;
+    case "gemini":
+      generated = generateGemini(config, bodies, outDir, version, configFile);
+      break;
     default:
       generated = generate(config, bodies, outDir, version, configFile);
   }
@@ -545,6 +584,9 @@ export function check(
       break;
     case "copilot":
       generated = generateCopilot(config, bodies, outDir, version, configFile);
+      break;
+    case "gemini":
+      generated = generateGemini(config, bodies, outDir, version, configFile);
       break;
     default:
       generated = generate(config, bodies, outDir, version, configFile);

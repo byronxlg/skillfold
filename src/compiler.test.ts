@@ -1394,3 +1394,319 @@ describe("computeStats", () => {
     assert.equal(stats.linesDeduplicated, 0);
   });
 });
+
+describe("compile with gemini target", () => {
+  let tmpDir: string | undefined;
+
+  afterEach(() => {
+    if (tmpDir) {
+      rmSync(tmpDir, { recursive: true, force: true });
+      tmpDir = undefined;
+    }
+  });
+
+  it("outputs skills under skills/ subdirectory", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        leaf: { path: "./skills/leaf" },
+        bundle: { compose: ["leaf"], description: "A bundle skill." },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("leaf", "Leaf body");
+
+    const results = compile(config, bodies, outDir, "0.0.0", "test.yaml", "gemini");
+
+    const skillResult = results.find((r) => r.name === "bundle" && r.path.includes("skills"));
+    assert.ok(skillResult);
+    assert.equal(skillResult.path, join(outDir, "skills", "bundle", "SKILL.md"));
+    assert.ok(existsSync(skillResult.path));
+  });
+
+  it("skill files have only name and description frontmatter", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        leaf: { path: "./skills/leaf" },
+        bundle: { compose: ["leaf"], description: "A bundle skill." },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("leaf", "Leaf body");
+
+    compile(config, bodies, outDir, "0.0.0", "test.yaml", "gemini");
+
+    const content = readFileSync(join(outDir, "skills", "bundle", "SKILL.md"), "utf-8");
+    assert.ok(content.includes("name: bundle"));
+    assert.ok(content.includes("description: A bundle skill."));
+    // Should not have model or color fields in skill files
+    assert.ok(!content.includes("model:"));
+    assert.ok(!content.includes("color:"));
+  });
+
+  it("outputs agent markdown files under agents/ subdirectory", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        leaf: { path: "./skills/leaf" },
+        bundle: { compose: ["leaf"], description: "A bundle skill." },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("leaf", "Leaf body");
+
+    const results = compile(config, bodies, outDir, "0.0.0", "test.yaml", "gemini");
+
+    const agentResult = results.find((r) => r.path.includes("agents"));
+    assert.ok(agentResult);
+    assert.equal(agentResult.path, join(outDir, "agents", "bundle.md"));
+    assert.ok(existsSync(agentResult.path));
+  });
+
+  it("agent files contain Gemini-specific frontmatter with name and description", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        leaf: { path: "./skills/leaf" },
+        bundle: { compose: ["leaf"], description: "A bundle skill." },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("leaf", "Leaf body");
+
+    compile(config, bodies, outDir, "0.0.0", "test.yaml", "gemini");
+
+    const content = readFileSync(join(outDir, "agents", "bundle.md"), "utf-8");
+    assert.ok(content.includes("name: bundle"));
+    assert.ok(content.includes("description: A bundle skill."));
+    assert.ok(content.includes("Leaf body"));
+    // Should not have claude-code-specific fields
+    assert.ok(!content.includes("color:"));
+  });
+
+  it("agent frontmatter uses snake_case max_turns from agentConfig maxTurns", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        leaf: { path: "./skills/leaf" },
+        bundle: {
+          compose: ["leaf"],
+          description: "A bundle skill.",
+          agentConfig: { model: "gemini-2.0-flash", maxTurns: 25 },
+        },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("leaf", "Leaf body");
+
+    compile(config, bodies, outDir, "0.0.0", "test.yaml", "gemini");
+
+    const content = readFileSync(join(outDir, "agents", "bundle.md"), "utf-8");
+    assert.ok(content.includes("model: gemini-2.0-flash"));
+    assert.ok(content.includes("max_turns: 25"));
+    // Should NOT have camelCase maxTurns
+    assert.ok(!content.includes("maxTurns:"));
+  });
+
+  it("agent files include provenance header", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        leaf: { path: "./skills/leaf" },
+        bundle: { compose: ["leaf"], description: "A bundle skill." },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("leaf", "Leaf body");
+
+    compile(config, bodies, outDir, "0.0.0", "test.yaml", "gemini");
+
+    const content = readFileSync(join(outDir, "agents", "bundle.md"), "utf-8");
+    assert.ok(content.startsWith("<!-- Generated by skillfold v0.0.0 from test (test.yaml). Do not edit directly. -->"));
+  });
+
+  it("orchestrator agent includes execution plan when team flow exists", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const graph: Graph = {
+      nodes: [
+        { skill: "planner", reads: [], writes: ["state.plan"] },
+        { skill: "worker", reads: ["state.plan"], writes: [] },
+      ],
+    };
+
+    const state: StateSchema = {
+      types: {},
+      fields: {
+        plan: { type: { kind: "primitive", value: "string" } },
+      },
+    };
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        planning: { path: "./skills/planning" },
+        working: { path: "./skills/working" },
+        planner: { compose: ["planning"], description: "Plans." },
+        worker: { compose: ["working"], description: "Works." },
+      },
+      state,
+      team: { orchestrator: "planner", flow: graph },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("planning", "Planning body.");
+    bodies.set("working", "Working body.");
+
+    compile(config, bodies, outDir, "0.0.0", "test.yaml", "gemini");
+
+    const content = readFileSync(join(outDir, "agents", "planner.md"), "utf-8");
+    assert.ok(content.includes("# planner (orchestrator)"));
+    assert.ok(content.includes("## Execution Plan"));
+  });
+
+  it("produces both skills and agents for config with team flow", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const graph: Graph = {
+      nodes: [
+        { skill: "planner", reads: [], writes: ["state.plan"] },
+        { skill: "worker", reads: ["state.plan"], writes: [] },
+      ],
+    };
+
+    const state: StateSchema = {
+      types: {},
+      fields: {
+        plan: { type: { kind: "primitive", value: "string" } },
+      },
+    };
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        planning: { path: "./skills/planning" },
+        working: { path: "./skills/working" },
+        planner: { compose: ["planning"], description: "Plans." },
+        worker: { compose: ["working"], description: "Works." },
+      },
+      state,
+      team: { flow: graph },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("planning", "Planning body.");
+    bodies.set("working", "Working body.");
+
+    const results = compile(config, bodies, outDir, "0.0.0", "test.yaml", "gemini");
+
+    const skillPaths = results.filter((r) => r.path.includes("/skills/"));
+    const agentPaths = results.filter((r) => r.path.includes("/agents/"));
+
+    assert.ok(skillPaths.length >= 2);
+    assert.ok(agentPaths.length >= 2);
+  });
+
+  it("check returns ok when compiled gemini output matches on disk", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        leaf: { path: "./skills/leaf" },
+        bundle: { compose: ["leaf"], description: "A bundle skill." },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("leaf", "Leaf body");
+
+    compile(config, bodies, outDir, "0.0.0", "test.yaml", "gemini");
+    const results = check(config, bodies, outDir, "0.0.0", "test.yaml", "gemini");
+
+    for (const result of results) {
+      assert.equal(result.status, "ok");
+    }
+  });
+
+  it("check returns stale when gemini agent file differs", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        leaf: { path: "./skills/leaf" },
+        bundle: { compose: ["leaf"], description: "A bundle skill." },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("leaf", "Leaf body");
+
+    compile(config, bodies, outDir, "0.0.0", "test.yaml", "gemini");
+    writeFileSync(join(outDir, "agents", "bundle.md"), "old content", "utf-8");
+    const results = check(config, bodies, outDir, "0.0.0", "test.yaml", "gemini");
+
+    const agentResult = results.find((r) => r.path.includes("agents"));
+    assert.ok(agentResult);
+    assert.equal(agentResult.status, "stale");
+  });
+
+  it("agent files map tools from agentConfig", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        leaf: { path: "./skills/leaf" },
+        bundle: {
+          compose: ["leaf"],
+          description: "A bundle skill.",
+          agentConfig: {
+            tools: ["search", "code_execution"],
+          },
+        },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("leaf", "Leaf body");
+
+    compile(config, bodies, outDir, "0.0.0", "test.yaml", "gemini");
+
+    const content = readFileSync(join(outDir, "agents", "bundle.md"), "utf-8");
+    assert.ok(content.includes("tools:"));
+    assert.ok(content.includes("- search"));
+    assert.ok(content.includes("- code_execution"));
+  });
+});

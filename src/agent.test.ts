@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import type { Config } from "./config.js";
 import type { Graph } from "./graph.js";
 import type { StateSchema } from "./state.js";
-import { assignColor, generateAgents, generateRunCommand } from "./agent.js";
+import { assignColor, generateAgents, generateGeminiAgents, generateRunCommand } from "./agent.js";
 
 function makeConfig(overrides?: Partial<Config>): Config {
   const state: StateSchema = {
@@ -739,5 +739,161 @@ describe("generateAgents: async nodes", () => {
     // "owner" should not appear in the Agent(...) tool list
     assert.ok(!orchestratorAgent.content.includes("Agent(owner"));
     assert.ok(!orchestratorAgent.content.includes("Agent(engineer, owner"));
+  });
+});
+
+describe("generateGeminiAgents", () => {
+  it("generates agent files for each composed skill", () => {
+    const config = makeConfig();
+    const bodies = new Map<string, string>();
+    bodies.set("planner", "Plan body.");
+    bodies.set("engineer", "Engineer body.");
+    bodies.set("reviewer", "Reviewer body.");
+    bodies.set("orchestrator", "Orchestrator body.");
+
+    const results = generateGeminiAgents(config, bodies, "/out", "1.0.0", "test.yaml");
+
+    assert.equal(results.length, 4);
+    const names = results.map((r) => r.name);
+    assert.ok(names.includes("planner"));
+    assert.ok(names.includes("engineer"));
+    assert.ok(names.includes("reviewer"));
+    assert.ok(names.includes("orchestrator"));
+  });
+
+  it("agent frontmatter has name and description but no color or model: inherit", () => {
+    const config = makeConfig({ team: undefined });
+    const bodies = new Map<string, string>();
+    bodies.set("engineer", "Write code.");
+
+    const results = generateGeminiAgents(config, bodies, "/out", "1.0.0", "test.yaml");
+    const engineer = results.find((r) => r.name === "engineer");
+    assert.ok(engineer);
+
+    assert.ok(engineer.content.includes("name: engineer"));
+    assert.ok(engineer.content.includes("description: Writes code."));
+    // Should not have claude-code-specific fields
+    assert.ok(!engineer.content.includes("color:"));
+    assert.ok(!engineer.content.includes("model: inherit"));
+  });
+
+  it("maps agentConfig maxTurns to snake_case max_turns", () => {
+    const config = makeConfig({
+      skills: {
+        planning: { path: "./skills/planning" },
+        planner: {
+          compose: ["planning"],
+          description: "Plans.",
+          agentConfig: { maxTurns: 30 },
+        },
+      },
+      team: undefined,
+    });
+    const bodies = new Map<string, string>();
+    bodies.set("planner", "Plan.");
+
+    const results = generateGeminiAgents(config, bodies, "/out", "1.0.0", "test.yaml");
+    const planner = results.find((r) => r.name === "planner");
+    assert.ok(planner);
+
+    assert.ok(planner.content.includes("max_turns: 30"));
+    assert.ok(!planner.content.includes("maxTurns:"));
+  });
+
+  it("maps agentConfig model and tools", () => {
+    const config = makeConfig({
+      skills: {
+        planning: { path: "./skills/planning" },
+        planner: {
+          compose: ["planning"],
+          description: "Plans.",
+          agentConfig: {
+            model: "gemini-2.0-flash",
+            tools: ["search", "code_execution"],
+          },
+        },
+      },
+      team: undefined,
+    });
+    const bodies = new Map<string, string>();
+    bodies.set("planner", "Plan.");
+
+    const results = generateGeminiAgents(config, bodies, "/out", "1.0.0", "test.yaml");
+    const planner = results.find((r) => r.name === "planner");
+    assert.ok(planner);
+
+    assert.ok(planner.content.includes("model: gemini-2.0-flash"));
+    assert.ok(planner.content.includes("tools:"));
+    assert.ok(planner.content.includes("- search"));
+    assert.ok(planner.content.includes("- code_execution"));
+  });
+
+  it("orchestrator agent has special heading and execution plan", () => {
+    const config = makeConfig();
+    const bodies = new Map<string, string>();
+    bodies.set("orchestrator", "Orchestrate.");
+
+    const results = generateGeminiAgents(config, bodies, "/out", "1.0.0", "test.yaml");
+    const orch = results.find((r) => r.name === "orchestrator");
+    assert.ok(orch);
+
+    assert.ok(orch.content.includes("# orchestrator (orchestrator)"));
+    assert.ok(orch.content.includes("lead orchestrator agent"));
+    assert.ok(orch.content.includes("## Execution Plan"));
+  });
+
+  it("agent output path is agents/{name}.md", () => {
+    const config = makeConfig({ team: undefined });
+    const bodies = new Map<string, string>();
+    bodies.set("planner", "Plan.");
+
+    const results = generateGeminiAgents(config, bodies, "/out", "1.0.0", "test.yaml");
+    const planner = results.find((r) => r.name === "planner");
+    assert.ok(planner);
+    assert.ok(planner.path.endsWith("/agents/planner.md"));
+  });
+
+  it("includes provenance header", () => {
+    const config = makeConfig({ team: undefined });
+    const bodies = new Map<string, string>();
+    bodies.set("planner", "Body.");
+
+    const results = generateGeminiAgents(config, bodies, "/out", "1.0.0", "test.yaml");
+    const planner = results.find((r) => r.name === "planner");
+    assert.ok(planner);
+    assert.ok(
+      planner.content.startsWith(
+        "<!-- Generated by skillfold v1.0.0 from test-pipeline (test.yaml). Do not edit directly. -->"
+      ),
+    );
+  });
+
+  it("does not emit agentConfig fields not relevant to Gemini", () => {
+    const config = makeConfig({
+      skills: {
+        planning: { path: "./skills/planning" },
+        planner: {
+          compose: ["planning"],
+          description: "Plans.",
+          agentConfig: {
+            permissionMode: "acceptEdits",
+            isolation: "worktree",
+            effort: "high",
+          },
+        },
+      },
+      team: undefined,
+    });
+    const bodies = new Map<string, string>();
+    bodies.set("planner", "Plan.");
+
+    const results = generateGeminiAgents(config, bodies, "/out", "1.0.0", "test.yaml");
+    const planner = results.find((r) => r.name === "planner");
+    assert.ok(planner);
+
+    // These Claude Code-specific fields should not appear in Gemini output
+    assert.ok(!planner.content.includes("permissionMode:"));
+    assert.ok(!planner.content.includes("isolation:"));
+    assert.ok(!planner.content.includes("effort:"));
   });
 });
