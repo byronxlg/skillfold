@@ -1,5 +1,5 @@
 import { type Config, type SkillEntry, isComposed } from "./config.js";
-import { type GraphNode, isConditionalThen, isMapNode } from "./graph.js";
+import { type GraphNode, isAsyncNode, isConditionalThen, isMapNode } from "./graph.js";
 
 // Sanitize a name into a valid Mermaid node ID by replacing non-alphanumeric
 // characters with underscores.
@@ -49,6 +49,8 @@ function buildIdMap(nodes: GraphNode[]): Map<string, string> {
   for (const node of nodes) {
     if (isMapNode(node)) {
       ids.set("map", `map_${sanitizeId(node.over)}`);
+    } else if (isAsyncNode(node)) {
+      ids.set(node.name, sanitizeId(node.name));
     } else {
       ids.set(node.skill, sanitizeId(node.skill));
     }
@@ -103,6 +105,13 @@ function renderThen(
   }
 }
 
+// Get the Mermaid ID for a node when it's the target of a fall-through edge.
+function getNextTarget(node: GraphNode): string {
+  if (isMapNode(node)) return `map_${sanitizeId(node.over)}`;
+  if (isAsyncNode(node)) return sanitizeId(node.name);
+  return sanitizeId(node.skill);
+}
+
 // Render nodes at one level of the graph, collecting lines into the output array.
 function renderNodes(
   nodes: GraphNode[],
@@ -130,10 +139,38 @@ function renderNodes(
       } else {
         const nextNode = nodes[i + 1];
         if (nextNode) {
-          const nextId = isMapNode(nextNode)
-            ? `map_${sanitizeId(nextNode.over)}`
-            : sanitizeId(nextNode.skill);
+          const nextId = getNextTarget(nextNode);
           lines.push(`${indent}${subgraphId} --> ${nextId}`);
+        }
+      }
+    } else if (isAsyncNode(node)) {
+      // Async nodes render with stadium shape ([name])
+      const currentId = sanitizeId(node.name);
+      lines.push(`${indent}${currentId}([${node.name}])`);
+
+      if (node.then !== undefined) {
+        renderThen(
+          lines,
+          indent,
+          currentId,
+          node.then,
+          endNodeId,
+          idMap,
+          node.writes,
+        );
+      } else {
+        const nextNode = nodes[i + 1];
+        if (nextNode) {
+          const nextTarget = getNextTarget(nextNode);
+          renderEdge(lines, indent, currentId, nextTarget, node.writes);
+        } else {
+          renderEdge(
+            lines,
+            indent,
+            currentId,
+            `${endNodeId}([end])`,
+            node.writes,
+          );
         }
       }
     } else {
@@ -177,9 +214,7 @@ function renderNodes(
       } else {
         const nextNode = nodes[i + 1];
         if (nextNode) {
-          const nextTarget = isMapNode(nextNode)
-            ? `map_${sanitizeId(nextNode.over)}`
-            : sanitizeId(nextNode.skill);
+          const nextTarget = getNextTarget(nextNode);
           renderEdge(lines, indent, currentId, nextTarget, node.writes);
         } else {
           renderEdge(
