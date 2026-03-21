@@ -116,31 +116,36 @@ The `--html` output includes clickable nodes, a composition details sidebar, and
 
 ### Run
 
-Execute a compiled pipeline by spawning agents sequentially. Currently supports linear flows only (no conditionals, map, or sub-flows).
+Execute a compiled pipeline by spawning agents through the flow graph. Supports linear flows, conditional routing, loops, and parallel map execution.
 
 ```bash
-npx skillfold run --target claude-code             # execute the pipeline
-npx skillfold run --target claude-code --dry-run   # preview without running
-npx skillfold run --target claude-code --config my-pipeline.yaml
+npx skillfold run --target claude-code                            # execute the pipeline
+npx skillfold run --target claude-code --dry-run                  # preview without running
+npx skillfold run --target claude-code --resume                   # resume from checkpoint
+npx skillfold run --target claude-code --on-error retry           # retry failed steps
+npx skillfold run --target claude-code --config my-pipeline.yaml  # custom config
 ```
 
-Requires a `--target` flag (cannot use the default `skill` target). The `--dry-run` flag prints each step with its reads and writes without spawning any agents.
+Requires a `--target` flag. See the [Running Pipelines](/running-pipelines) guide for full documentation.
 
-**State management**: The runner reads and writes `state.json` in the working directory. Before each step, the current state is passed to the agent. After each step, the agent's state updates are merged back. Only fields declared in the node's `writes` are persisted.
-
-**Async nodes**: Async nodes (external agents, humans) are skipped automatically. Execution continues to the next step.
-
-**Current limitations**:
-- Linear flows only (no conditional routing, no map/parallel, no sub-flows)
-- Requires the `claude` CLI to be installed for agent spawning
-- Agents output state updates via a JSON code block with a `stateUpdates` key
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--target` | (required) | Compilation target (`claude-code`) |
+| `--config` | `skillfold.yaml` | Path to pipeline config |
+| `--dry-run` | `false` | Preview without executing |
+| `--on-error` | `abort` | Error mode: `abort`, `skip`, or `retry` |
+| `--max-retries` | `3` | Max retry attempts (with `--on-error retry`) |
+| `--max-iterations` | `10` | Max visits per node (loop guard) |
+| `--resume` | `false` | Resume from last checkpoint |
 
 Example dry-run output:
 
 ```
 skillfold: dry run for my-pipeline (3 steps)
 Step 1: planner reads=[direction] writes=[plan]
-Step 2: engineer reads=[plan] writes=[code]
+Step 2: map over state.tasks (3 items)
+  Step 2.1: engineer
+  Step 2.2: reviewer
 Step 3: reviewer reads=[code] writes=[review]
 ```
 
