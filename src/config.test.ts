@@ -118,7 +118,7 @@ skills:
 `);
     assert.throws(() => readConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
-      assert.match(err.message, /composed skills must have a description/);
+      assert.match(err.message, /composed skills must have a "description" field/);
       return true;
     });
   });
@@ -425,7 +425,7 @@ skills:
 `);
     assert.throws(() => readConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
-      assert.match(err.message, /composed skills must have a description/);
+      assert.match(err.message, /composed skills must have a "description" field/);
       return true;
     });
   });
@@ -989,6 +989,151 @@ skills:
     await assert.rejects(() => loadConfig(configPath), (err: unknown) => {
       assert.ok(err instanceof ConfigError);
       assert.match(err.message, /Imports must be an array of strings/);
+      return true;
+    });
+  });
+});
+
+describe("error message improvements", () => {
+  let tmpDir: string | undefined;
+
+  afterEach(() => {
+    if (tmpDir) {
+      rmSync(tmpDir, { recursive: true, force: true });
+      tmpDir = undefined;
+    }
+  });
+
+  it("includes file path in config parsing errors", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, "just a string");
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.ok(err.message.includes(configPath), "error should contain file path");
+      return true;
+    });
+  });
+
+  it("includes file path when skill validation fails", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  composed:
+    quality:
+      compose:
+        - nonexistent
+      description: "A quality skill."
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.ok(err.message.includes(configPath), "error should contain file path");
+      return true;
+    });
+  });
+
+  it("suggests close match for composed skill referencing unknown skill", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    review: ./skills/review
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - reveiw
+      description: "A quality skill."
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /composes unknown skill "reveiw"/);
+      assert.match(err.message, /Did you mean "review"\?/);
+      return true;
+    });
+  });
+
+  it("omits suggestion when no close match exists for composed skill", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    review: ./skills/review
+  composed:
+    quality:
+      compose:
+        - zzzzzzz
+      description: "A quality skill."
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /composes unknown skill "zzzzzzz"/);
+      assert.ok(!err.message.includes("Did you mean"), "should not suggest when no close match");
+      return true;
+    });
+  });
+
+  it("suggests close match for orchestrator referencing unknown skill", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    strategy: ./skills/strategy
+    lead: ./skills/lead
+state:
+  goal:
+    type: string
+team:
+  orchestrator: startegy
+  flow:
+    - strategy:
+        writes: [state.goal]
+      then: lead
+    - lead:
+        reads: [state.goal]
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /Orchestrator references unknown skill "startegy"/);
+      assert.match(err.message, /Did you mean "strategy"\?/);
+      return true;
+    });
+  });
+
+  it("actionable guidance for missing compose field", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  composed:
+    quality:
+      description: "A quality skill."
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /Add a "compose" list of skill names/);
+      return true;
+    });
+  });
+
+  it("actionable guidance for missing description field", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /Add a description explaining what this composed skill does/);
       return true;
     });
   });

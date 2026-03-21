@@ -1,4 +1,4 @@
-import { ConfigError } from "./errors.js";
+import { ConfigError, didYouMean } from "./errors.js";
 
 export type PrimitiveType = "string" | "bool" | "number";
 
@@ -51,8 +51,9 @@ function parseTypeString(
       );
     }
     if (!definedTypes.has(element)) {
+      const hint = didYouMean(element, definedTypes);
       throw new ConfigError(
-        `State field "${fieldName}": unknown type "${element}"`
+        `State field "${fieldName}": unknown type "${element}"${hint}`
       );
     }
     return { kind: "list", element };
@@ -62,8 +63,10 @@ function parseTypeString(
     return { kind: "custom", name: raw };
   }
 
+  const allCandidates = [...definedTypes, ...PRIMITIVES];
+  const hint = didYouMean(raw, allCandidates);
   throw new ConfigError(
-    `State field "${fieldName}": unknown type "${raw}"`
+    `State field "${fieldName}": unknown type "${raw}"${hint}`
   );
 }
 

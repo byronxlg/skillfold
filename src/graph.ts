@@ -1,5 +1,5 @@
 import { SkillEntry } from "./config.js";
-import { GraphError } from "./errors.js";
+import { didYouMean, GraphError } from "./errors.js";
 import { CustomType, StateSchema } from "./state.js";
 
 export interface WhenClause {
@@ -259,11 +259,13 @@ function validateNodes(
   const nodeLabels = new Set(collectNodeLabels(nodes));
 
   // Rule 1: Skill references
+  const skillNames = Object.keys(skills);
   for (const node of nodes) {
     if (!isMapNode(node)) {
       if (!(node.skill in skills)) {
+        const hint = didYouMean(node.skill, skillNames);
         throw new GraphError(
-          `Graph node "${node.skill}": skill "${node.skill}" is not declared`
+          `Graph node "${node.skill}": skill "${node.skill}" is not declared${hint}`
         );
       }
     }
@@ -276,14 +278,16 @@ function validateNodes(
     for (const target of targets) {
       if (target === "end") continue;
       if (!nodeLabels.has(target)) {
+        const hint = didYouMean(target, [...nodeLabels, "end"]);
         throw new GraphError(
-          `Graph node "${label}": transition target "${target}" is not a declared skill or "end"`
+          `Graph node "${label}": transition target "${target}" is not a declared skill or "end"${hint}`
         );
       }
     }
   }
 
   // Rule 3: State path validation
+  const stateFieldNames = state ? Object.keys(state.fields) : [];
   for (const node of nodes) {
     if (isMapNode(node)) continue;
     const label = node.skill;
@@ -292,13 +296,14 @@ function validateNodes(
       if (path.startsWith("state.")) {
         if (!state) {
           throw new GraphError(
-            `Graph node "${label}": reads state field "${path}" but no state is declared`
+            `Graph node "${label}": reads state field "${path}" but no state is declared. Add a top-level "state" section to your config`
           );
         }
         const fieldName = path.slice("state.".length);
         if (!(fieldName in state.fields)) {
+          const hint = didYouMean(fieldName, stateFieldNames);
           throw new GraphError(
-            `Graph node "${label}": reads state field "${path}" which is not declared`
+            `Graph node "${label}": reads state field "${path}" which is not declared${hint}`
           );
         }
       } else if (mapCtx && path.startsWith(mapCtx.as + ".")) {
@@ -315,13 +320,14 @@ function validateNodes(
       if (path.startsWith("state.")) {
         if (!state) {
           throw new GraphError(
-            `Graph node "${label}": writes state field "${path}" but no state is declared`
+            `Graph node "${label}": writes state field "${path}" but no state is declared. Add a top-level "state" section to your config`
           );
         }
         const fieldName = path.slice("state.".length);
         if (!(fieldName in state.fields)) {
+          const hint = didYouMean(fieldName, stateFieldNames);
           throw new GraphError(
-            `Graph node "${label}": writes state field "${path}" which is not declared`
+            `Graph node "${label}": writes state field "${path}" which is not declared${hint}`
           );
         }
       } else if (mapCtx && path.startsWith(mapCtx.as + ".")) {
