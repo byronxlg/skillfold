@@ -175,7 +175,7 @@ Located in `library/examples/`:
 - Publishing guide (`docs/publishing.md`) for sharing skills via npm
 - `skillfold.local.yaml` support for local config overrides (gitignored), with merge semantics for skills/state/team
 - Built-in state integrations for GitHub services (github-issues, github-discussions, github-pull-requests) with auto-generated URLs, filter options, and orchestrator instructions
-- VitePress documentation site (`docs/`) with GitHub Pages deployment, config reference, CLI reference, and existing guides
+- VitePress documentation site (`docs/`) with GitHub Pages deployment, config reference, CLI reference, live demo with interactive pipeline visualizer, and existing guides
 - Test suite with 650 tests across 121 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, integrations, visualize, remote, init, adopt, library, validate, list, search, npm, watch, errors, subflow, api, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
