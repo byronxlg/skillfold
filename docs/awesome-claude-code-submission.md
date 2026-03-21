@@ -34,7 +34,7 @@ A prior violation triggered a cooldown:
 
 **Primary Link:** https://github.com/byronxlg/skillfold
 
-**Author Name:** byronxlg
+**Author Name:** Byron Smith
 
 **Author Link:** https://github.com/byronxlg
 
@@ -42,35 +42,73 @@ A prior violation triggered a cooldown:
 
 **Description:**
 
-Configuration language and compiler for multi-agent AI pipelines. Compiles a single YAML config into agent skills for 12 targets (Claude Code, Cursor, Copilot, Gemini, Goose, and more), validating skill references, state types, and write conflicts at build time. Ships with 11 reusable library skills and example pipeline templates.
+Compile-time pipeline compiler for multi-agent AI workflows. A single YAML config defines atomic skills, composed agents, typed state schemas, and execution flows with conditional routing - the compiler validates references, types, and write conflicts, then outputs native agent files for 11 platforms including Claude Code, Cursor, Copilot, and Gemini. 859 tests across 168 suites, single runtime dependency.
 
 **Validate Claims:**
 
 ```bash
-npx skillfold init demo --template dev-team && cd demo && npx skillfold --target claude-code && ls .claude/agents/ && head -20 .claude/agents/engineer.md && grep -c "^#" .claude/agents/engineer.md
+# Install skillfold (single dependency: yaml)
+npm install skillfold
+
+# Scaffold a 3-agent pipeline from a library template
+npx skillfold init demo --template dev-team
+cd demo
+
+# Compile to Claude Code agent layout
+npx skillfold --target claude-code
+
+# Inspect the output: each agent file has YAML frontmatter + composed skill sections
+ls .claude/agents/
+cat .claude/agents/engineer.md
+
+# Compile the same config for Cursor to see cross-platform output
+npx skillfold --target cursor
+ls .cursor/rules/
+
+# Validate config correctness (checks references, types, cycles)
+npx skillfold validate
+
+# Generate an interactive pipeline graph
+npx skillfold graph --html > pipeline.html
+# Open pipeline.html in a browser to see the execution flow
 ```
 
-This scaffolds a three-agent pipeline from a library template, compiles it to Claude Code agent layout, and shows that each agent file contains composed skill instructions with YAML frontmatter. The final `grep -c` confirms multiple skill sections were composed into a single agent file.
+Each step is independent - stop at any point. The key claims to verify: (1) a single YAML config produces agent files for multiple platforms, (2) composed agents contain merged instructions from multiple atomic skills, (3) the validator catches real errors (try misspelling a skill reference in `skillfold.yaml` and re-run `npx skillfold validate`).
 
 **Specific Task(s):**
 
-Run the command above and inspect the compiled agent files in `.claude/agents/`. Each file contains composed skill instructions from multiple atomic skills, with YAML frontmatter. Inspect the compiled agent files to confirm that multiple atomic skills were composed into a single agent file. Check that the YAML frontmatter and section headers are present.
+1. Run the validate claims commands above. Inspect `.claude/agents/engineer.md` to confirm it contains composed sections from multiple atomic skills (code-writing, testing, github-workflow) with YAML frontmatter.
+
+2. Open the generated `pipeline.html` in a browser. Click nodes to see skill composition details and state reads/writes in the sidebar.
+
+3. Try compiling for a different platform: `npx skillfold --target copilot` produces `.github/copilot-instructions.md` and `.github/instructions/*.instructions.md`. Same source config, different output format.
+
+4. Break something on purpose: edit `skillfold.yaml`, change a skill reference to a nonexistent name, and run `npx skillfold validate`. The compiler catches it at build time with a descriptive error.
 
 **Specific Prompt(s):**
 
-Install skillfold (`npm install skillfold`), then run: `npx skillfold init demo --template dev-team && cd demo && npx skillfold --target claude-code`. Now inspect `.claude/agents/engineer.md` - it should contain composed instructions from multiple atomic skills. Then try the generated slash command: use `/run-pipeline` to see the orchestrator execution plan.
+After installing (`npm install skillfold`), try these prompts in Claude Code:
+
+Prompt 1 - Scaffold and compile:
+"Run `npx skillfold init demo --template dev-team && cd demo && npx skillfold --target claude-code` and then show me the contents of `.claude/agents/engineer.md`. Explain how the atomic skills were composed into this agent file."
+
+Prompt 2 - Cross-platform compilation:
+"In the demo directory, run `npx skillfold --target cursor` and then `npx skillfold --target copilot`. Compare the output formats in `.cursor/rules/` and `.github/instructions/` - same source config, different platform output."
+
+Prompt 3 - Pipeline visualization:
+"Run `npx skillfold graph --html > pipeline.html` and describe the execution flow shown in the graph. What agents are involved and how do they connect?"
 
 **Additional Comments:**
 
-Every other orchestrator in the awesome-claude-code list is a runtime tool - it launches agents, manages sessions, and coordinates execution while agents run. Skillfold is the only compile-time entry in the Orchestrators category. It validates skill references, state types, write conflicts, and cycle exit conditions at build time, then produces plain Markdown files that Claude Code reads natively. Compiles to 12 platform targets: Claude Code, Agent Teams, Cursor, Windsurf, Codex, Copilot, Gemini, Goose, Roo Code, Kiro, Junie, and generic SKILL.md. The README's "Works with Agent Teams" section explains the complementary relationship: skillfold defines what each agent knows and how agents connect at build time, while Agent Teams coordinates live sessions at execution time. When a pipeline has a team flow, the compiler also generates an executable `/run-pipeline` command that orchestrates the agents with a step-by-step execution plan, state table, and Agent tool invocations. There is no process to run, no server to start, and no SDK to integrate.
+Skillfold is the only compile-time entry in the Orchestrators category. Every other orchestrator on the list launches agents, manages sessions, or coordinates execution at runtime. Skillfold validates and compiles at build time, then produces plain Markdown files that each platform reads natively. There is no daemon, no server, and no runtime dependency beyond the target platform itself.
 
-Self-hosting: skillfold's own dev team pipeline is compiled by skillfold itself (`skillfold.yaml` in the repo root). The 7-agent pipeline (strategist, architect, designer, marketer, engineer, reviewer, orchestrator) produces the project's own discussions, issues, and pull requests.
+Output targets: Claude Code (agents + skills + commands), Agent Teams (bootstrap artifacts), Cursor (.cursor/rules/), Windsurf (.windsurf/rules/), Codex (AGENTS.md), Copilot (.github/instructions/), Gemini (.gemini/agents/), Goose (.goosehints), Roo Code (.roo/), Kiro (.kiro/), Junie (.junie/).
 
-CI integration: ships a reusable GitHub Action (`action.yml`) that verifies compiled output is up-to-date via `--check`, so stale agent files fail the build.
+The project self-hosts: `skillfold.yaml` in the repo root defines a 7-agent dev team pipeline that compiles the project's own agent skills. 859 tests across 168 suites run with `node:test` (zero test framework dependencies). Single runtime dependency (`yaml`). All shell execution uses `execFile` (not `exec`). SECURITY.md documents every execution surface.
 
-11 library skills (planning, research, code-writing, testing, etc.) are discoverable via `npx skills add byronxlg/skillfold`.
+The `--target agent-teams` output is complementary to Claude Code's built-in Agent Teams: skillfold defines what each agent knows and how they connect at build time, Agent Teams coordinates the live sessions.
 
-Single dependency (`yaml`), 858 tests across 168 suites, Node 20+.
+No network requests except optional remote skill fetching (GitHub raw URLs) and `npx skillfold search` (npm registry). No hooks installed. No telemetry.
 
 ---
 
@@ -84,7 +122,7 @@ pre-runs that evaluation against skillfold and documents the results.
 
 **1. Code Quality: 9/10**
 TypeScript strict mode, ESM modules, consistent conventions across all source
-files. 858 tests across 168 suites using `node:test` (zero test framework deps).
+files. 859 tests across 168 suites using `node:test` (zero test framework deps).
 Custom error classes with descriptive messages. No `any`, no unnecessary type
 assertions.
 
