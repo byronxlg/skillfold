@@ -53,6 +53,7 @@ type Command = "init" | "adopt" | "compile" | "graph" | "list" | "run" | "valida
 interface Args {
   command: Command;
   configPath: string;
+  configPathExplicit: boolean;
   outDir: string;
   outDirExplicit: boolean;
   dir: string;
@@ -69,6 +70,7 @@ interface Args {
 function parseArgs(argv: string[]): Args {
   let command: Command = "compile";
   let configPath = "skillfold.yaml";
+  let configPathExplicit = false;
   let outDir = "build";
   let outDirExplicit = false;
   let dir = ".";
@@ -130,6 +132,7 @@ function parseArgs(argv: string[]): Args {
   for (; i < argv.length; i++) {
     if (argv[i] === "--config" && argv[i + 1]) {
       configPath = argv[++i];
+      configPathExplicit = true;
     } else if (argv[i] === "--out-dir" && argv[i + 1]) {
       outDir = argv[++i];
       outDirExplicit = true;
@@ -177,6 +180,7 @@ function parseArgs(argv: string[]): Args {
   return {
     command,
     configPath: resolve(configPath),
+    configPathExplicit,
     outDir: resolve(outDir),
     outDirExplicit,
     dir: resolve(dir),
@@ -189,6 +193,16 @@ function parseArgs(argv: string[]): Args {
     help,
     version,
   };
+}
+
+export const INIT_HINT = 'Run "skillfold init" to create one, or use --config <path> to specify a different file.';
+
+/** Enhance "Cannot read config file" errors with an init suggestion when using the default path. */
+export function enhanceConfigError(err: ConfigError, configPathExplicit: boolean): ConfigError {
+  if (!configPathExplicit && err.message.startsWith("Cannot read config file:")) {
+    return new ConfigError(`${err.message}\n${INIT_HINT}`);
+  }
+  return err;
 }
 
 async function main(): Promise<void> {
@@ -278,7 +292,8 @@ async function main(): Promise<void> {
       }
     } catch (err) {
       if (err instanceof ConfigError || err instanceof GraphError) {
-        console.error(`skillfold error: ${err.message}`);
+        const enhanced = err instanceof ConfigError ? enhanceConfigError(err, args.configPathExplicit) : err;
+        console.error(`skillfold error: ${enhanced.message}`);
         process.exit(1);
       }
       throw err;
@@ -292,7 +307,8 @@ async function main(): Promise<void> {
       process.stdout.write(listPipeline(config));
     } catch (err) {
       if (err instanceof ConfigError || err instanceof GraphError) {
-        console.error(`skillfold error: ${err.message}`);
+        const enhanced = err instanceof ConfigError ? enhanceConfigError(err, args.configPathExplicit) : err;
+        console.error(`skillfold error: ${enhanced.message}`);
         process.exit(1);
       }
       throw err;
@@ -324,7 +340,8 @@ async function main(): Promise<void> {
         err instanceof ResolveError ||
         err instanceof GraphError
       ) {
-        console.error(`skillfold error: ${err.message}`);
+        const enhanced = err instanceof ConfigError ? enhanceConfigError(err, args.configPathExplicit) : err;
+        console.error(`skillfold error: ${enhanced.message}`);
         process.exit(1);
       }
       throw err;
@@ -348,7 +365,8 @@ async function main(): Promise<void> {
         err instanceof ResolveError ||
         err instanceof CompileError
       ) {
-        console.error(`skillfold error: ${err.message}`);
+        const enhanced = err instanceof ConfigError ? enhanceConfigError(err, args.configPathExplicit) : err;
+        console.error(`skillfold error: ${enhanced.message}`);
         process.exit(1);
       }
       throw err;
@@ -410,7 +428,8 @@ async function main(): Promise<void> {
         err instanceof ResolveError ||
         err instanceof RunError
       ) {
-        console.error(`skillfold error: ${err.message}`);
+        const enhanced = err instanceof ConfigError ? enhanceConfigError(err, args.configPathExplicit) : err;
+        console.error(`skillfold error: ${enhanced.message}`);
         process.exit(1);
       }
       throw err;
@@ -463,7 +482,8 @@ async function main(): Promise<void> {
       err instanceof ResolveError ||
       err instanceof CompileError
     ) {
-      console.error(`skillfold error: ${err.message}`);
+      const enhanced = err instanceof ConfigError ? enhanceConfigError(err, args.configPathExplicit) : err;
+      console.error(`skillfold error: ${enhanced.message}`);
       process.exit(1);
     }
     throw err;
