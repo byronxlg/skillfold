@@ -51,14 +51,14 @@ Create `plugin/.claude-plugin/marketplace.json`:
   },
   "metadata": {
     "description": "Multi-agent pipeline compiler with reusable skills library",
-    "version": "1.6.0"
+    "version": "1.7.0"
   },
   "plugins": [
     {
       "name": "skillfold",
       "source": ".",
       "description": "Multi-agent pipeline compiler. Compose skills, wire team flows, generate orchestrators.",
-      "version": "1.6.0",
+      "version": "1.7.0",
       "author": {
         "name": "byronxlg"
       },

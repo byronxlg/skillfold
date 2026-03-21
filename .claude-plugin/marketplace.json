@@ -31,7 +31,7 @@
         "package": "skillfold"
       },
       "description": "11 reusable skills for AI agents (planning, code-writing, testing, etc.) plus a /skillfold compiler command",
-      "version": "1.6.0",
+      "version": "1.7.0",
       "license": "MIT",
       "keywords": ["pipeline", "skills", "agents", "compiler"]
     }
