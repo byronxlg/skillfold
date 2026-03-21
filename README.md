@@ -8,6 +8,8 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/byronxlg/skillfold/ci.yml?style=flat-square&label=CI)](https://github.com/byronxlg/skillfold/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
+[Documentation](https://byronxlg.github.io/skillfold/) | [Getting Started](https://byronxlg.github.io/skillfold/getting-started) | [Live Demo](https://byronxlg.github.io/skillfold/demo) | [Pipeline Builder](https://byronxlg.github.io/skillfold/builder)
+
 </div>
 
 You have a dozen agents in scattered Markdown files. How do you know they're wired correctly? How do you validate that Agent A's output types match Agent B's input? How do you catch cycles or unreachable nodes before runtime?
@@ -80,7 +82,7 @@ cd my-team
 npx skillfold                # compile it
 ```
 
-For a step-by-step walkthrough, see the [Getting Started](docs/getting-started.md) guide. To compile directly to your platform, see the [Integration Guide](docs/integrations.md).
+For a step-by-step walkthrough, see the [Getting Started](https://byronxlg.github.io/skillfold/getting-started) guide. To compile directly to your platform, see the [Integration Guide](https://byronxlg.github.io/skillfold/integrations).
 
 > [!TIP]
 > Add `team.orchestrator: orchestrator` and the orchestrator's compiled SKILL.md gets a generated execution plan with numbered steps, state tables, and conditional branches.
@@ -221,7 +223,7 @@ npx skillfold --target claude-code   # compile back to native subagents, skills,
 
 Your agents keep working exactly as before. Now you can layer on state schemas, execution flows, and compile-time validation. The `/run-pipeline` command is generated from the flow definition - no hand-written orchestration.
 
-See the [Integration Guide](docs/integrations.md) for setup details. Works with [Claude Code](https://claude.ai/code), [Cursor](https://cursor.com), [VS Code](https://code.visualstudio.com), [GitHub Copilot](https://github.com), [OpenAI Codex](https://developers.openai.com/codex), [Gemini CLI](https://geminicli.com), and [27+ more](https://agentskills.io).
+See the [Integration Guide](https://byronxlg.github.io/skillfold/integrations) for setup details. Works with [Claude Code](https://claude.ai/code), [Cursor](https://cursor.com), [VS Code](https://code.visualstudio.com), [GitHub Copilot](https://github.com), [OpenAI Codex](https://developers.openai.com/codex), [Gemini CLI](https://geminicli.com), and [27+ more](https://agentskills.io).
 
 ---
 
@@ -532,7 +534,7 @@ jobs:
 
 ### Config
 
-Four top-level sections: `resources`, `skills`, `state`, `team`. Full specification in [BRIEF.md](BRIEF.md). A [JSON Schema](skillfold.schema.json) is available for IDE autocompletion.
+Four top-level sections: `resources`, `skills`, `state`, `team`. Full specification in the [Config Reference](https://byronxlg.github.io/skillfold/reference/config). A [JSON Schema](skillfold.schema.json) is available for IDE autocompletion.
 
 Add this line to the top of your `skillfold.yaml` for editor support:
 
