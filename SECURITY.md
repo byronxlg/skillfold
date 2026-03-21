@@ -39,7 +39,7 @@ All shell execution uses `execFile` (not `exec`) to prevent shell injection.
 
 ### Other Commands
 
-- **`skillfold search`**: Queries the npm registry (HTTPS) for packages with the `skillfold-pipeline` keyword.
+- **`skillfold search`**: Queries the npm registry (HTTPS) for packages with the `skillfold-skill` keyword.
 - **`skillfold init`**: Creates project directories and starter files in the current working directory.
 - **`skillfold plugin`**: Copies compiled output to a plugin directory structure. No network access.
 

@@ -180,7 +180,7 @@ npx skillfold plugin
 
 ### Search
 
-Discover pipeline configs on npm (searches for `skillfold-pipeline` keyword).
+Discover pipeline configs on npm (searches for `skillfold-skill` keyword).
 
 ```bash
 npx skillfold search          # list all
