@@ -6,44 +6,87 @@ Each tool makes different trade-offs. The right choice depends on your pipeline'
 
 ## vs Claude Code Agent Teams
 
-[Agent Teams](https://docs.anthropic.com/en/docs/claude-code/agent-teams) is Anthropic's built-in multi-agent feature for Claude Code. It lets you define agents in `.claude/agents/*.md` files and coordinate them through natural language in a shared task list.
+[Agent Teams](https://code.claude.com/docs/en/agent-teams) is Claude Code's built-in multi-agent feature (experimental, v2.1.32+). It coordinates multiple Claude Code instances through a team lead, shared task list, and direct inter-agent messaging.
 
 ### How they differ
 
-Agent Teams is prompt-driven. You describe agents in markdown, then orchestrate them conversationally - telling one agent to delegate to another or check a shared task list. There is no config file that defines the pipeline topology ahead of time.
+Agent Teams is conversational. You describe the team structure in natural language, and Claude creates teammates, assigns tasks, and coordinates work at runtime. The team lead decides how to split work, route results, and handle failures. There is no config file that defines the pipeline topology ahead of time.
 
-Skillfold is config-driven. You declare agents, state, and execution flow in `skillfold.yaml`. The compiler validates the entire pipeline before anything runs - checking state types, transition targets, write conflicts, and cycle exit conditions.
+Skillfold is declarative. You define agents, typed state, and execution flow in `skillfold.yaml`. The compiler validates the entire pipeline before anything runs - checking state types, transition targets, write conflicts, and cycle exit conditions - then emits output for the target platform.
 
 | | Skillfold | Agent Teams |
 | --- | --- | --- |
-| **Coordination model** | Declarative YAML config, compiled ahead of time | Natural language orchestration at runtime |
-| **Pipeline definition** | `skillfold.yaml` with typed state schema and flow graph | `.claude/agents/*.md` files with prose instructions |
+| **Definition** | Declarative YAML config, compiled ahead of time | Conversational, defined at runtime |
+| **Pipeline config** | `skillfold.yaml` with typed state schema and flow graph | No config file - team structure lives in prompts |
 | **Validation** | Compile-time type checking, cycle detection, conflict analysis | No static validation - errors surface at runtime |
 | **Routing** | Conditional transitions, parallel map, loops, sub-flows | Agent-to-agent delegation via conversation |
-| **State management** | Typed schema with read/write tracking per agent | Shared task list, untyped |
-| **Reproducibility** | Deterministic - same config always produces same pipeline | Depends on prompt interpretation |
-| **Version control** | Single YAML file diffs cleanly | Agent markdown files version well, but orchestration logic lives in prompts |
+| **State** | Typed schema with read/write tracking per agent | Shared task list with dependency tracking, untyped |
+| **Communication** | Orchestrator manages handoffs | Teammates message each other directly via mailbox |
+| **Reproducibility** | Deterministic - same config always produces same pipeline | Each run creates a unique team based on prompt interpretation |
+| **Display** | Platform-dependent | In-process cycling or tmux/iTerm2 split panes |
+| **Task management** | Compiler-generated execution plan | Shared task list with self-claiming and file-locked coordination |
+| **Quality gates** | Compile-time validation | Runtime hooks (`TeammateIdle`, `TaskCompleted`) |
+| **Nesting** | Sub-flow imports for nested pipelines | No nested teams - teammates cannot spawn their own teams |
 | **Skill reuse** | Composition from atomic skills, npm sharing | Copy-paste between agent files |
-| **Platform support** | 38+ platforms via Agent Skills standard | Claude Code only |
+| **Platform support** | 8 compilation targets | Claude Code only |
+| **Maturity** | Stable | Experimental with known limitations |
 
-### When to use Agent Teams
+### How they complement each other
 
-Agent Teams is a good fit when you want to get a multi-agent pipeline running quickly inside Claude Code without learning a config language. It works well for ad-hoc coordination where the execution order is flexible and agents can decide among themselves who does what.
+Skillfold and Agent Teams are not competing tools - they solve different parts of the same problem. Skillfold handles the **definition and validation** layer (what agents exist, what state they share, how they connect). Agent Teams handles the **execution** layer (spawning teammates, routing messages, managing the task list).
 
-### When to use Skillfold
+The `--target agent-teams` compilation mode bridges both: define your pipeline in `skillfold.yaml`, compile to a team bootstrap prompt, and launch an Agent Team with the correct structure.
 
-Skillfold is a better fit when you need reproducible pipelines that are version-controlled and validated before they run. It is also the right choice when your pipeline has structured execution flow - conditional routing, parallel processing over collections, review loops with typed feedback, or sub-flow imports. If you need to target platforms beyond Claude Code, skillfold's compiled output works across any tool that reads the Agent Skills standard.
+```bash
+npx skillfold --target agent-teams    # generates .claude/commands/start-team.md
+```
 
-### Migration path
+Then in Claude Code, run `/start-team` to launch the Agent Team with the roles, state handoffs, and task sequence defined in your config. Each teammate automatically loads its compiled skills and agent markdown.
+
+### When to use Agent Teams alone
+
+Agent Teams without skillfold works well for:
+- **Ad-hoc exploration** where the team structure emerges from the task
+- **Small teams (2-3 agents)** with simple coordination needs
+- **Interactive work** where you want to message teammates directly and steer in real time
+- **One-off tasks** that don't need to be repeated with the same structure
+
+### When to add Skillfold
+
+Skillfold adds value when:
+- **Reproducibility matters** - the same config should produce the same team structure every time
+- **The pipeline has structured flow** - conditional routing, review loops, parallel map, or sub-flows
+- **State needs validation** - typed schemas catch mismatches before agents run
+- **Multiple platforms** - the same config compiles to Claude Code, Cursor, Codex, Copilot, Gemini, and Windsurf
+- **Skill reuse** - shared instructions are composed from atomic fragments, not copy-pasted
+- **Version control** - a single YAML file diffs cleanly and documents the pipeline topology
+
+### Migration paths
+
+**From Agent Teams to Skillfold:**
 
 If you already have Agent Teams set up, `skillfold adopt` can import your existing `.claude/agents/*.md` files into a `skillfold.yaml` config:
 
 ```bash
 npx skillfold adopt
-npx skillfold --target claude-code
+npx skillfold --target agent-teams
 ```
 
-This creates a 1:1 mapping from agents to skills. From there you can extract shared instructions into reusable atomic skills, add typed state, and wire agents into a team flow.
+This creates a 1:1 mapping from agents to composed skills. From there you can extract shared instructions into reusable atomic skills, add typed state, and wire agents into a team flow.
+
+**From Skillfold subagents to Agent Teams:**
+
+If you have a `skillfold.yaml` with a team flow and want to switch from subagent-based execution to Agent Teams:
+
+```bash
+# Before: subagent execution
+npx skillfold --target claude-code
+
+# After: Agent Teams execution
+npx skillfold --target agent-teams
+```
+
+Both targets generate the same skills and agent markdown. The difference is the orchestration command: `run-pipeline.md` spawns subagents sequentially, while `start-team.md` bootstraps an Agent Team where teammates coordinate through the shared task list.
 
 ---
 
