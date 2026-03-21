@@ -627,7 +627,7 @@ function collectSubFlowNodes(nodes: GraphNode[]): SubFlowNode[] {
     if (isSubFlowNode(node)) {
       result.push(node);
     } else if (isMapNode(node)) {
-      result.push(...collectSubFlowNodes(node.graph));
+      result.push(...collectSubFlowNodes(node.flow));
     }
   }
   return result;

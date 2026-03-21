@@ -150,10 +150,10 @@ export function renderNodes(
       );
 
       // Build sub-step map for inner nodes
-      const subMap = buildStepMap(node.graph, stepNum);
+      const subMap = buildStepMap(node.flow, stepNum);
       const subHeading = headingLevel + "#";
       const subSections = renderNodes(
-        node.graph,
+        node.flow,
         subMap,
         stepNum,
         subHeading,

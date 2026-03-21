@@ -34,7 +34,7 @@ export interface AsyncNode {
 export interface MapNode {
   over: string;
   as: string;
-  graph: GraphNode[];
+  flow: GraphNode[];
   then?: Then;
 }
 
@@ -63,7 +63,7 @@ export function isMapNode(node: GraphNode): node is MapNode {
 }
 
 export function isSubFlowNode(node: GraphNode): node is SubFlowNode {
-  return "flow" in node;
+  return "flow" in node && !("over" in node);
 }
 
 export function isConditionalThen(then: Then): then is ConditionalBranch[] {
@@ -188,16 +188,25 @@ function parseGraphNodes(raw: unknown[], insideMap = false): GraphNode[] {
         throw new GraphError(`Graph element "map": must have "as" (string)`);
       }
 
-      if (!Array.isArray(mapObj.graph)) {
-        throw new GraphError(`Graph element "map": must have "graph" (array)`);
+      // Accept both "flow" (preferred) and "graph" (backward compat) for the subgraph
+      const hasFlow = "flow" in mapObj;
+      const hasGraph = "graph" in mapObj;
+      if (hasFlow && hasGraph) {
+        throw new GraphError(
+          `Graph element "map": cannot have both "flow" and "graph" (use "flow")`
+        );
+      }
+      const subgraphRaw = hasFlow ? mapObj.flow : mapObj.graph;
+      if (!Array.isArray(subgraphRaw)) {
+        throw new GraphError(`Graph element "map": must have "flow" (array)`);
       }
 
-      const subNodes = parseGraphNodes(mapObj.graph, true);
+      const subNodes = parseGraphNodes(subgraphRaw, true);
 
       nodes.push({
         over: mapObj.over,
         as: mapObj.as,
-        graph: subNodes,
+        flow: subNodes,
         ...(then !== undefined ? { then } : {}),
       });
     } else {
@@ -244,11 +253,6 @@ function parseGraphNodes(raw: unknown[], insideMap = false): GraphNode[] {
 
         if (stepObj.async === true) {
           isAsync = true;
-          if (insideMap) {
-            throw new GraphError(
-              `Graph element "${primaryKey}": async nodes are not allowed inside map subgraphs`
-            );
-          }
         }
 
         if (stepObj.policy !== undefined) {
@@ -563,7 +567,7 @@ function validateNodes(
     }
 
     // Recursively validate the subgraph
-    validateNodes(node.graph, skills, state, subMapCtx);
+    validateNodes(node.flow, skills, state, subMapCtx);
   }
 
   // Rule 9: Sub-flow inner graph validation (after resolution populates graph)
