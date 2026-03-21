@@ -227,7 +227,17 @@ See the [Integration Guide](docs/integrations.md) for setup details. Works with 
 
 ## Works with Agent Teams
 
-Skillfold owns the config; Agent Teams owns the runtime. Skillfold compiles agent definitions, state schemas, and flow graphs into plain Markdown at build time. Agent Teams picks up those files at execution time to coordinate live sessions and distribute parallel work. The two tools are complementary.
+[Agent Teams](https://docs.anthropic.com/en/docs/claude-code/agent-teams) is Claude Code's built-in runtime for interactive multi-agent orchestration. Skillfold is the declarative complement: you define your pipeline in version-controlled YAML, validate it at compile time, and output native agent files for any supported platform. Agent Teams is ideal for ad-hoc exploration where you direct agents in real time. Skillfold is ideal for repeatable workflows where the same config should produce the same pipeline every time, across teams and CI.
+
+The two tools work together. Skillfold compiles agent definitions, state schemas, and flow graphs into the plain Markdown that Agent Teams picks up at execution time. You get compile-time guarantees and multi-platform portability from skillfold, and live coordination and parallel dispatch from Agent Teams.
+
+| | Agent Teams | Skillfold |
+|---|---|---|
+| Definition | Natural language, ad-hoc | YAML config, version-controlled |
+| Validation | Runtime | Compile-time |
+| Reproducibility | Each run is unique | Same config, same pipeline |
+| Platforms | Claude Code | 6 targets (Claude Code, Cursor, Windsurf, Codex, Copilot, Gemini) |
+| Best for | Interactive exploration | Repeatable team workflows |
 
 ---
 
