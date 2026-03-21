@@ -10,6 +10,7 @@ const SELF_IMPORT_PREFIX = "node_modules/skillfold/";
 import { ConfigError, didYouMean } from "./errors.js";
 import { type Graph, type GraphNode, type SubFlowNode, isMapNode, isSubFlowNode, parseGraph, validateGraph } from "./graph.js";
 import { isNpmRef, resolveNpmImportPath } from "./npm.js";
+import { isSkillsRef } from "./skills-prefix.js";
 import { fetchRemoteConfig } from "./remote.js";
 import { parseState, StateSchema } from "./state.js";
 
@@ -595,7 +596,7 @@ export function validateAndBuild(raw: RawConfig): Config {
 }
 
 // Rebase imported atomic skill paths from importDir-relative to targetDir-relative.
-// Remote (https://) and npm: paths are left unchanged.
+// Remote (https://), npm:, and skills: paths are left unchanged.
 function rebaseSkillPaths(
   skills: Record<string, SkillEntry>,
   importDir: string,
@@ -603,7 +604,7 @@ function rebaseSkillPaths(
 ): Record<string, SkillEntry> {
   const result: Record<string, SkillEntry> = {};
   for (const [name, skill] of Object.entries(skills)) {
-    if (isAtomic(skill) && !skill.path.startsWith("https://") && !isNpmRef(skill.path)) {
+    if (isAtomic(skill) && !skill.path.startsWith("https://") && !isNpmRef(skill.path) && !isSkillsRef(skill.path)) {
       const abs = resolve(importDir, skill.path);
       const rebased = relative(targetDir, abs);
       result[name] = { path: rebased };

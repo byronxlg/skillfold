@@ -5,6 +5,7 @@ import { type Config, isAtomic } from "./config.js";
 import { ResolveError } from "./errors.js";
 import { isNpmRef, resolveNpmSkillPath } from "./npm.js";
 import { fetchRemoteSkill } from "./remote.js";
+import { isSkillsRef, resolveSkillsPath } from "./skills-prefix.js";
 
 export function stripFrontmatter(content: string): string {
   const trimmed = content.trim();
@@ -37,11 +38,16 @@ export async function resolveSkills(
 
     const skillDir = isNpmRef(skill.path)
       ? resolveNpmSkillPath(skill.path, baseDir)
-      : resolve(baseDir, skill.path);
+      : isSkillsRef(skill.path)
+        ? resolveSkillsPath(skill.path, baseDir)
+        : resolve(baseDir, skill.path);
     const skillFile = join(skillDir, "SKILL.md");
 
     if (!existsSync(skillDir)) {
-      throw new ResolveError(name, `Directory not found: ${skillDir}`);
+      const hint = isSkillsRef(skill.path)
+        ? ` (try: npx skills add ${skill.path.slice("skills:".length)})`
+        : "";
+      throw new ResolveError(name, `Directory not found: ${skillDir}${hint}`);
     }
 
     if (!existsSync(skillFile)) {

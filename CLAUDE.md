@@ -181,12 +181,13 @@ Located in `library/examples/`:
 - `skillfold search [query]` command for discovering pipeline configs on npm (searches for `skillfold-pipeline` keyword)
 - npm skill discovery: `agentskills` field in package.json uses flat key-value format for ecosystem compatibility
 - `npm:` prefix support for skill references and imports (resolves to node_modules paths)
+- `skills:` prefix support for Vercel skills CLI interop (resolves to .skills/ directory)
 - Publishing guide (`docs/publishing.md`) for sharing skills via npm
 - `skillfold.local.yaml` support for local config overrides (gitignored), with merge semantics for skills/state/team
 - Built-in state integrations for GitHub services (github-issues, github-discussions, github-pull-requests) with auto-generated URLs, filter options, and orchestrator instructions
 - `skillfold run` command for linear pipeline execution with `ClaudeSpawner`, state management via `state.json`, dry-run mode, and async node skipping (MVP: linear flows only)
 - VitePress documentation site (`docs/`) with GitHub Pages deployment, config reference, CLI reference, live demo with interactive pipeline visualizer, interactive pipeline builder (YAML editor with live Mermaid graph), examples gallery, skill authoring guide, comparison table, detailed comparisons page (vs Agent Teams, CrewAI, manual SKILL.md), and existing guides
-- Test suite with 740 tests across 138 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, integrations, visualize, remote, init, adopt, library, validate, list, search, npm, watch, errors, subflow, api, run, cli, and e2e modules
+- Test suite with 756 tests across 143 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, integrations, visualize, remote, init, adopt, library, validate, list, search, npm, skills-prefix, watch, errors, subflow, api, run, cli, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next
