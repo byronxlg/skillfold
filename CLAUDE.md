@@ -162,11 +162,13 @@ Located in `library/examples/`:
 - Resolved location URLs in orchestrator state table output (base URL templates from skill resources)
 - Compiler warnings for implicit state locations (skills without resource declarations)
 - Sub-flow imports: flow nodes can reference external pipeline configs via `flow:` field, with recursive resolution, skill/state merging, circular reference detection, orchestrator rendering with hierarchical steps, and Mermaid visualization as subgraphs
-- `skillfold search [query]` command for discovering skill packages on npm (searches for `skillfold-skill` keyword)
-- Test suite with 517 tests across 96 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, adopt, library, validate, list, search, watch, errors, subflow, and e2e modules
+- `skillfold search [query]` command for discovering skill packages on npm (searches for `agentskills` keyword)
+- npm skill discovery: `agentskills` field in package.json uses flat key-value format for ecosystem compatibility
+- Publishing guide (`docs/publishing.md`) for sharing skills via npm
+- Test suite with 524 tests across 98 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, adopt, library, validate, list, search, watch, errors, subflow, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next
 
 See BRIEF.md "Open Questions" section. Potential next work:
-1. Package registry for shared skills
+1. Interactive pipeline visualization (web-based)

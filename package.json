@@ -36,52 +36,17 @@
     "skill-md"
   ],
   "agentskills": {
-    "skills": [
-      {
-        "name": "planning",
-        "path": "./library/skills/planning"
-      },
-      {
-        "name": "research",
-        "path": "./library/skills/research"
-      },
-      {
-        "name": "decision-making",
-        "path": "./library/skills/decision-making"
-      },
-      {
-        "name": "code-writing",
-        "path": "./library/skills/code-writing"
-      },
-      {
-        "name": "code-review",
-        "path": "./library/skills/code-review"
-      },
-      {
-        "name": "testing",
-        "path": "./library/skills/testing"
-      },
-      {
-        "name": "writing",
-        "path": "./library/skills/writing"
-      },
-      {
-        "name": "summarization",
-        "path": "./library/skills/summarization"
-      },
-      {
-        "name": "github-workflow",
-        "path": "./library/skills/github-workflow"
-      },
-      {
-        "name": "file-management",
-        "path": "./library/skills/file-management"
-      },
-      {
-        "name": "skillfold-cli",
-        "path": "./library/skills/skillfold-cli"
-      }
-    ]
+    "planning": "./library/skills/planning",
+    "research": "./library/skills/research",
+    "decision-making": "./library/skills/decision-making",
+    "code-writing": "./library/skills/code-writing",
+    "code-review": "./library/skills/code-review",
+    "testing": "./library/skills/testing",
+    "writing": "./library/skills/writing",
+    "summarization": "./library/skills/summarization",
+    "github-workflow": "./library/skills/github-workflow",
+    "file-management": "./library/skills/file-management",
+    "skillfold-cli": "./library/skills/skillfold-cli"
   },
   "homepage": "https://github.com/byronxlg/skillfold",
   "bugs": "https://github.com/byronxlg/skillfold/issues",
