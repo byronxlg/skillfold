@@ -8,6 +8,23 @@
   },
   "plugins": [
     {
+      "source": "./library",
+      "name": "skillfold-library",
+      "skills": [
+        "./skills/code-review",
+        "./skills/code-writing",
+        "./skills/decision-making",
+        "./skills/file-management",
+        "./skills/github-workflow",
+        "./skills/planning",
+        "./skills/research",
+        "./skills/skillfold-cli",
+        "./skills/summarization",
+        "./skills/testing",
+        "./skills/writing"
+      ]
+    },
+    {
       "name": "skillfold",
       "source": {
         "source": "npm",
