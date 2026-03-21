@@ -25,8 +25,8 @@ skills:
 
   composed:
     strategist:
-      compose: [skillfold-context, product-strategy]
-      description: "Reads the project board and open issues, assesses priorities, and sets direction for the next increment."
+      compose: [skillfold-context, product-strategy, github]
+      description: "Reads the project board and open issues, assesses priorities, and posts direction to Strategy discussions."
 
     architect:
       compose: [skillfold-context, create-implementation-plan, github]
@@ -61,17 +61,23 @@ state:
     approved: bool
     feedback: string
 
+  human-discussion:
+    type: string
+    location:
+      skill: github
+      path: discussions/human
+
   direction:
     type: string
     location:
       skill: github
-      path: discussions/general
+      path: discussions/strategy
 
   plan:
     type: string
     location:
       skill: github
-      path: discussions/general
+      path: discussions/strategy
       kind: reply
 
   tasks:
@@ -93,14 +99,19 @@ state:
       path: pull-requests
       kind: review
 
+  announcement:
+    type: string
+    location:
+      skill: github
+      path: discussions/announcements
+
 team:
   orchestrator: orchestrator
 
   flow:
-    - owner:
-        async: true
+    - strategist:
+        reads: [state.human-discussion, state.tasks, state.announcement]
         writes: [state.direction]
-        policy: block
       then: architect
 
     - architect:
@@ -124,4 +135,5 @@ team:
 
     - marketer:
         reads: [state.direction, state.implementation]
+        writes: [state.announcement]
       then: end

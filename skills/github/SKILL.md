@@ -42,8 +42,11 @@ Your message here...
 - List issues: `gh issue list --repo byronxlg/skillfold`
 - Filter by label: `gh issue list --repo byronxlg/skillfold --label "task"`
 - View an issue: `gh issue view NUMBER --repo byronxlg/skillfold`
+- View with comments: `gh issue view NUMBER --repo byronxlg/skillfold --comments`
 - Close an issue: `gh issue close NUMBER --repo byronxlg/skillfold`
 - Add a comment: `gh issue comment NUMBER --repo byronxlg/skillfold --body "..."`
+
+**Important:** Before planning or working on an issue, always read its comments with `--comments`. Comments contain feedback, clarifications, and constraints that must inform the work.
 
 ## Project Board
 
@@ -123,11 +126,26 @@ When done: set Status to Done.
 
 ## Discussions
 
-Discussions use the GitHub GraphQL API via `gh api graphql`. Repo ID: `R_kgDORrIFQw`. General category ID: `DIC_kwDORrIFQ84C42C8`.
+Discussions use the GitHub GraphQL API via `gh api graphql`. Repo ID: `R_kgDORrIFQw`.
+
+### Categories
+
+| Category | ID | Purpose |
+|----------|----|---------|
+| Strategy | `DIC_kwDORrIFQ84C42C8` | Strategist direction, architect plans |
+| Engineering | `DIC_kwDORrIFQ84C46kq` | Technical feedback, design discussions |
+| Human | `DIC_kwDORrIFQ84C46lh` | Human input, guidance, and feedback for the strategist |
+| Announcements | `DIC_kwDORrIFQ84C42C7` | Releases, changelog summaries |
+
+### Commands
 
 - List discussions:
   ```
-  gh api graphql -f query='{ repository(owner: "byronxlg", name: "skillfold") { discussions(first: 10, orderBy: {field: CREATED_AT, direction: DESC}) { nodes { number title createdAt } } } }'
+  gh api graphql -f query='{ repository(owner: "byronxlg", name: "skillfold") { discussions(first: 10, orderBy: {field: CREATED_AT, direction: DESC}) { nodes { number title category { name } createdAt } } } }'
+  ```
+- List by category (filter by category ID):
+  ```
+  gh api graphql -f query='{ repository(owner: "byronxlg", name: "skillfold") { discussions(first: 10, categoryId: "CATEGORY_ID", orderBy: {field: CREATED_AT, direction: DESC}) { nodes { number title createdAt } } } }'
   ```
 - View a discussion:
   ```
@@ -135,7 +153,7 @@ Discussions use the GitHub GraphQL API via `gh api graphql`. Repo ID: `R_kgDORrI
   ```
 - Create a discussion:
   ```
-  gh api graphql -f query='mutation { createDiscussion(input: {repositoryId: "R_kgDORrIFQw", categoryId: "DIC_kwDORrIFQ84C42C8", title: "...", body: "..."}) { discussion { number url } } }'
+  gh api graphql -f query='mutation { createDiscussion(input: {repositoryId: "R_kgDORrIFQw", categoryId: "CATEGORY_ID", title: "...", body: "..."}) { discussion { number url } } }'
   ```
 - Get a discussion's node ID (needed for commenting):
   ```
