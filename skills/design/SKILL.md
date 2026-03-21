@@ -1,6 +1,8 @@
 ---
 name: design
 description: Designs the visual structure and presentation of text-based content for clarity and impact.
+metadata:
+  internal: true
 ---
 
 # Design
