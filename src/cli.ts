@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -42,6 +43,7 @@ Options:
   --template <name>    Start from a library template (init only)
   --check              Verify compiled output is up-to-date (exit 1 if stale)
   --dry-run            Show execution plan without running (run only)
+  --resume             Resume from last checkpoint (run only)
   --max-iterations <n> Max loop iterations before aborting (default: 10, run only)
   --on-error <mode>    Error handling: retry, skip, or abort (default: abort, run only)
   --max-retries <n>    Max retry attempts per step (default: 3, run only)
@@ -66,6 +68,7 @@ interface Args {
   query: string | undefined;
   check: boolean;
   dryRun: boolean;
+  resume: boolean;
   maxIterations: number;
   onError: OnErrorMode;
   maxRetries: number;
@@ -86,6 +89,7 @@ function parseArgs(argv: string[]): Args {
   let query: string | undefined;
   let checkMode = false;
   let dryRun = false;
+  let resume = false;
   let maxIterations = 10;
   let onError: OnErrorMode = "abort";
   let maxRetries = 3;
@@ -162,6 +166,8 @@ function parseArgs(argv: string[]): Args {
       checkMode = true;
     } else if (argv[i] === "--dry-run") {
       dryRun = true;
+    } else if (argv[i] === "--resume") {
+      resume = true;
     } else if (argv[i] === "--max-iterations" && argv[i + 1]) {
       const val = Number(argv[++i]);
       if (!Number.isInteger(val) || val < 1) {
@@ -222,6 +228,7 @@ function parseArgs(argv: string[]): Args {
     query,
     check: checkMode,
     dryRun,
+    resume,
     maxIterations,
     onError,
     maxRetries,
@@ -434,12 +441,17 @@ async function main(): Promise<void> {
         process.stderr.write(`skillfold: running ${config.name} (${nodeCount} steps)\n`);
       }
 
+      const configContent = readFileSync(args.configPath, "utf-8");
+      const configHash = createHash("sha256").update(configContent).digest("hex");
+
       const result = await run({
         config,
         bodies,
         target: args.target,
         outDir: args.outDir,
         dryRun: args.dryRun,
+        resume: args.resume,
+        configHash,
         maxIterations: args.maxIterations,
         onError: args.onError,
         maxRetries: args.maxRetries,

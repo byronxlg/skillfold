@@ -9,6 +9,7 @@ build/
 !.claude/skills/
 .claude/skills/*
 !.claude/skills/build/
+.skillfold/
 test-output/
 docs/.vitepress/dist/
 docs/.vitepress/cache/

@@ -7,7 +7,7 @@ import { tmpdir } from "node:os";
 import type { Config } from "./config.js";
 import { RunError } from "./errors.js";
 import type { Graph } from "./graph.js";
-import type { OnErrorMode, Spawner, StepResult } from "./run.js";
+import type { Checkpoint, OnErrorMode, Spawner, StepResult } from "./run.js";
 import { evaluateWhenClause, formatDuration, getStateValue, run } from "./run.js";
 
 function makeTmpDir(): string {
@@ -1396,6 +1396,216 @@ describe("run", () => {
     it("handles deeply nested paths", () => {
       const state = { a: { b: { c: { d: "deep" } } } };
       assert.equal(getStateValue(state, "a.b.c.d"), "deep");
+    });
+  });
+
+  describe("checkpoint and resume", () => {
+    it("resumes from mid-pipeline when checkpoint exists", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          { skill: "planner", reads: [], writes: ["state.plan"], then: "engineer" },
+          { skill: "engineer", reads: ["state.plan"], writes: ["state.code"], then: "reviewer" },
+          { skill: "reviewer", reads: ["state.code"], writes: ["state.review"] },
+        ],
+      });
+
+      // Write a checkpoint indicating planner and engineer are done
+      const checkpointDir = join(tmpDir, ".skillfold", "run");
+      mkdirSync(checkpointDir, { recursive: true });
+      const checkpoint: Checkpoint = {
+        configHash: "abc123",
+        completedSteps: ["planner", "engineer"],
+        currentStepIndex: 2,
+        state: { plan: "the plan", code: "the code" },
+        startedAt: "2026-03-22T00:00:00.000Z",
+      };
+      writeFileSync(join(checkpointDir, "checkpoint.json"), JSON.stringify(checkpoint));
+
+      // Also write state.json (which would exist from the previous partial run)
+      writeFileSync(join(tmpDir, "state.json"), JSON.stringify({ plan: "the plan", code: "the code" }));
+
+      const { spawner, calls } = recordingSpawner({
+        reviewer: { review: "LGTM" },
+      });
+
+      const result = await run(
+        {
+          config,
+          bodies: makeBodies(),
+          target: "claude-code",
+          outDir: "build",
+          dryRun: false,
+          resume: true,
+          configHash: "abc123",
+        },
+        spawner,
+      );
+
+      // Only the reviewer should have been called
+      assert.equal(calls.length, 1);
+      assert.equal(calls[0].agent, "reviewer");
+      // State from checkpoint should have been passed to the spawner
+      assert.equal(calls[0].state.plan, "the plan");
+      assert.equal(calls[0].state.code, "the code");
+      assert.equal(result.steps.length, 1);
+      assert.equal(result.steps[0].status, "ok");
+      assert.equal(result.state.review, "LGTM");
+    });
+
+    it("throws RunError when resuming with no checkpoint", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          { skill: "planner", reads: [], writes: ["state.plan"] },
+        ],
+      });
+
+      await assert.rejects(
+        () => run(
+          {
+            config,
+            bodies: makeBodies(),
+            target: "claude-code",
+            outDir: "build",
+            dryRun: false,
+            resume: true,
+          },
+          mockSpawner({}),
+        ),
+        (err: Error) => {
+          assert.ok(err instanceof RunError);
+          assert.ok(err.message.includes("No checkpoint found"));
+          return true;
+        },
+      );
+    });
+
+    it("throws RunError when config hash does not match checkpoint", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          { skill: "planner", reads: [], writes: ["state.plan"] },
+        ],
+      });
+
+      // Write checkpoint with one hash
+      const checkpointDir = join(tmpDir, ".skillfold", "run");
+      mkdirSync(checkpointDir, { recursive: true });
+      const checkpoint: Checkpoint = {
+        configHash: "original-hash",
+        completedSteps: [],
+        currentStepIndex: 0,
+        state: {},
+        startedAt: "2026-03-22T00:00:00.000Z",
+      };
+      writeFileSync(join(checkpointDir, "checkpoint.json"), JSON.stringify(checkpoint));
+
+      // Resume with a different hash
+      await assert.rejects(
+        () => run(
+          {
+            config,
+            bodies: makeBodies(),
+            target: "claude-code",
+            outDir: "build",
+            dryRun: false,
+            resume: true,
+            configHash: "different-hash",
+          },
+          mockSpawner({}),
+        ),
+        (err: Error) => {
+          assert.ok(err instanceof RunError);
+          assert.ok(err.message.includes("Config has changed"));
+          return true;
+        },
+      );
+    });
+
+    it("clean run clears previous checkpoint", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      // Write an existing checkpoint
+      const checkpointDir = join(tmpDir, ".skillfold", "run");
+      mkdirSync(checkpointDir, { recursive: true });
+      writeFileSync(
+        join(checkpointDir, "checkpoint.json"),
+        JSON.stringify({ configHash: "old", completedSteps: ["planner"], currentStepIndex: 1, state: {}, startedAt: "" }),
+      );
+
+      const config = makeConfig({
+        nodes: [
+          { skill: "planner", reads: [], writes: ["state.plan"] },
+        ],
+      });
+
+      await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        mockSpawner({ planner: { plan: "fresh" } }),
+      );
+
+      // The old checkpoint dir should have been cleared and a new checkpoint written
+      const newCheckpoint = JSON.parse(readFileSync(join(checkpointDir, "checkpoint.json"), "utf-8")) as Checkpoint;
+      assert.equal(newCheckpoint.completedSteps.length, 1);
+      assert.equal(newCheckpoint.completedSteps[0], "planner");
+    });
+
+    it("checkpoint is written after each successful step", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          { skill: "planner", reads: [], writes: ["state.plan"], then: "engineer" },
+          { skill: "engineer", reads: ["state.plan"], writes: ["state.code"] },
+        ],
+      });
+
+      // Use a spawner that checks checkpoint after planner runs
+      let checkpointAfterPlanner: Checkpoint | undefined;
+      const spawner: Spawner = {
+        async spawn(agentName: string, _skillContent: string, _state: Record<string, unknown>) {
+          if (agentName === "engineer") {
+            // Read checkpoint that was written after planner completed
+            const cpPath = join(tmpDir!, ".skillfold", "run", "checkpoint.json");
+            if (existsSync(cpPath)) {
+              checkpointAfterPlanner = JSON.parse(readFileSync(cpPath, "utf-8")) as Checkpoint;
+            }
+          }
+          if (agentName === "planner") return { plan: "done" };
+          return { code: "done" };
+        },
+      };
+
+      await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        spawner,
+      );
+
+      // After planner ran but before engineer, checkpoint should show planner completed
+      assert.ok(checkpointAfterPlanner);
+      assert.deepEqual(checkpointAfterPlanner!.completedSteps, ["planner"]);
+      assert.equal(checkpointAfterPlanner!.state.plan, "done");
+
+      // Final checkpoint should show both steps completed
+      const finalCheckpoint = JSON.parse(
+        readFileSync(join(tmpDir, ".skillfold", "run", "checkpoint.json"), "utf-8"),
+      ) as Checkpoint;
+      assert.deepEqual(finalCheckpoint.completedSteps, ["planner", "engineer"]);
+      assert.equal(finalCheckpoint.state.code, "done");
     });
   });
 });
