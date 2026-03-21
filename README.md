@@ -236,7 +236,7 @@ The two tools work together. Skillfold compiles agent definitions, state schemas
 | Definition | Natural language, ad-hoc | YAML config, version-controlled |
 | Validation | Runtime | Compile-time |
 | Reproducibility | Each run is unique | Same config, same pipeline |
-| Platforms | Claude Code | 6 targets (Claude Code, Cursor, Windsurf, Codex, Copilot, Gemini) |
+| Platforms | Claude Code | 8 targets (Claude Code, Agent Teams, Cursor, Windsurf, Codex, Copilot, Gemini, generic) |
 | Best for | Interactive exploration | Repeatable team workflows |
 
 ---
@@ -496,7 +496,7 @@ Options:
   --config <path>      Config file (default: skillfold.yaml)
   --out-dir <path>     Output directory (default: build, or .claude for claude-code target)
   --dir <path>         Target directory for init (default: .)
-  --target <mode>      Output mode: skill, claude-code, cursor, windsurf, codex, copilot, gemini
+  --target <mode>      Output mode: skill, claude-code, agent-teams, cursor, windsurf, codex, copilot, gemini
   --template <name>    Start from a library template (init only)
   --html               Output interactive HTML instead of Mermaid (graph only)
   --check              Verify compiled output is up-to-date (exit 1 if stale)

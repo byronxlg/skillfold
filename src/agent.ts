@@ -4,7 +4,7 @@ import { stringify } from "yaml";
 
 import { type Config, isComposed } from "./config.js";
 import type { GraphNode, StepNode } from "./graph.js";
-import { isAsyncNode, isMapNode, isSubFlowNode } from "./graph.js";
+import { isAsyncNode, isConditionalThen, isMapNode, isSubFlowNode } from "./graph.js";
 import {
   buildStepMap,
   formatLocation,
@@ -367,6 +367,135 @@ export function generateRunCommand(
 
   return {
     name: "run-pipeline",
+    path: "",
+    content,
+  };
+}
+
+/** Generate a team bootstrap prompt for the agent-teams target. */
+export function generateTeamBootstrap(
+  config: Config,
+  version: string,
+  configFile: string,
+): AgentResult | null {
+  if (!config.team) return null;
+
+  const lines: string[] = [];
+  const orchestratorName = config.team.orchestrator;
+
+  lines.push(
+    `Create an Agent Team for the **${config.name}** pipeline.`,
+  );
+  lines.push("");
+
+  // Describe team structure
+  const workerNames = collectWorkerNames(config);
+  if (workerNames.length > 0) {
+    lines.push("## Team Structure");
+    lines.push("");
+    if (orchestratorName) {
+      lines.push(
+        `You are the team lead. Spawn ${workerNames.length} teammates:`,
+      );
+    } else {
+      lines.push(`Spawn ${workerNames.length} teammates:`);
+    }
+    lines.push("");
+    for (const name of workerNames) {
+      const skill = config.skills[name];
+      const desc = isComposed(skill) ? skill.description : name;
+      lines.push(`- **${name}**: ${desc}`);
+    }
+  }
+
+  // State table
+  if (config.state) {
+    lines.push("");
+    lines.push("## Shared State");
+    lines.push("");
+    lines.push(
+      "Teammates coordinate through these shared state fields. The team lead manages state handoffs between teammates.",
+    );
+    lines.push("");
+    lines.push("| Field | Type | Location |");
+    lines.push("|-------|------|----------|");
+
+    for (const [name, field] of Object.entries(config.state.fields)) {
+      const typeStr = formatType(field.type);
+      const locStr = formatLocation(field);
+      lines.push(`| ${name} | ${typeStr} | ${locStr} |`);
+    }
+  }
+
+  // Task sequence derived from flow
+  lines.push("");
+  lines.push("## Task Sequence");
+  lines.push("");
+  lines.push(
+    "Create these tasks for the team, in order. Each task should be assigned to the specified teammate. Tasks with dependencies should not be claimable until their dependencies are completed.",
+  );
+  lines.push("");
+
+  const nodes = config.team.flow.nodes;
+  let taskNum = 0;
+  for (const node of nodes) {
+    if (isAsyncNode(node)) continue;
+    if (isMapNode(node)) {
+      taskNum++;
+      lines.push(
+        `${taskNum}. **Map over \`${node.over}\`**: For each item in \`${node.over}\`, run the following subtasks in parallel:`,
+      );
+      for (const subNode of node.flow) {
+        if (!isAsyncNode(subNode) && !isMapNode(subNode) && !isSubFlowNode(subNode)) {
+          const subSkill = config.skills[subNode.skill];
+          const subDesc = isComposed(subSkill) ? subSkill.description : subNode.skill;
+          lines.push(`   - **${subNode.skill}**: ${subDesc}`);
+          if (subNode.reads.length > 0) lines.push(`     Reads: ${subNode.reads.map(r => `\`${r}\``).join(", ")}`);
+          if (subNode.writes.length > 0) lines.push(`     Writes: ${subNode.writes.map(w => `\`${w}\``).join(", ")}`);
+        }
+      }
+      continue;
+    }
+    if (isSubFlowNode(node)) {
+      taskNum++;
+      lines.push(`${taskNum}. **Sub-flow: ${node.name}** (imported from \`${node.flow}\`)`);
+      continue;
+    }
+
+    taskNum++;
+    const skill = config.skills[node.skill];
+    const desc = isComposed(skill) ? skill.description : node.skill;
+    lines.push(`${taskNum}. **${node.skill}**: ${desc}`);
+    if (node.reads.length > 0) lines.push(`   Reads: ${node.reads.map(r => `\`${r}\``).join(", ")}`);
+    if (node.writes.length > 0) lines.push(`   Writes: ${node.writes.map(w => `\`${w}\``).join(", ")}`);
+
+    if (node.then) {
+      if (isConditionalThen(node.then)) {
+        lines.push("   Routing:");
+        for (const branch of node.then) {
+          lines.push(`   - If \`${branch.when}\`: next is **${branch.to === "end" ? "done" : branch.to}**`);
+        }
+      } else if (node.then !== "end") {
+        lines.push(`   Then: **${node.then}**`);
+      }
+    }
+  }
+
+  // Coordination instructions
+  lines.push("");
+  lines.push("## Coordination");
+  lines.push("");
+  lines.push("- Teammates load their skills automatically from `.claude/agents/{name}.md`");
+  lines.push("- Use the shared task list to track progress");
+  lines.push("- The team lead manages state handoffs: when a teammate completes a task, pass its output state to the next teammate");
+  lines.push("- For conditional routing, evaluate the condition and assign the next task accordingly");
+  lines.push("- Wait for all teammates to complete before synthesizing results");
+
+  const provenance = `<!-- Generated by skillfold v${version} from ${config.name} (${configFile}). Do not edit directly. -->\n`;
+  const content = provenance + lines.join("\n") + "\n";
+
+  return {
+    name: "start-team",
     path: "",
     content,
   };

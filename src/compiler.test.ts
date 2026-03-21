@@ -1247,6 +1247,293 @@ describe("compile with copilot target", () => {
   });
 });
 
+describe("compile with agent-teams target", () => {
+  let tmpDir: string | undefined;
+
+  afterEach(() => {
+    if (tmpDir) {
+      rmSync(tmpDir, { recursive: true, force: true });
+      tmpDir = undefined;
+    }
+  });
+
+  it("outputs skills under skills/ subdirectory", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        leaf: { path: "./skills/leaf" },
+        bundle: { compose: ["leaf"], description: "A bundle skill." },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("leaf", "Leaf body");
+
+    const results = compile(config, bodies, outDir, "0.0.0", "test.yaml", "agent-teams");
+
+    const skillResult = results.find((r) => r.name === "bundle" && r.path.includes("skills"));
+    assert.ok(skillResult);
+    assert.equal(skillResult.path, join(outDir, "skills", "bundle", "SKILL.md"));
+    assert.ok(existsSync(skillResult.path));
+  });
+
+  it("outputs agent markdown files under agents/ subdirectory", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        leaf: { path: "./skills/leaf" },
+        bundle: { compose: ["leaf"], description: "A bundle skill." },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("leaf", "Leaf body");
+
+    const results = compile(config, bodies, outDir, "0.0.0", "test.yaml", "agent-teams");
+
+    const agentResult = results.find((r) => r.path.includes("agents"));
+    assert.ok(agentResult);
+    assert.equal(agentResult.path, join(outDir, "agents", "bundle.md"));
+    assert.ok(existsSync(agentResult.path));
+  });
+
+  it("generates start-team command instead of run-pipeline when team flow exists", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const graph: Graph = {
+      nodes: [
+        { skill: "planner", reads: [], writes: ["state.plan"] },
+        { skill: "worker", reads: ["state.plan"], writes: [] },
+      ],
+    };
+
+    const state: StateSchema = {
+      types: {},
+      fields: {
+        plan: { type: { kind: "primitive", value: "string" } },
+      },
+    };
+
+    const config: Config = {
+      name: "test-pipeline",
+      skills: {
+        planning: { path: "./skills/planning" },
+        working: { path: "./skills/working" },
+        planner: { compose: ["planning"], description: "Plans things." },
+        worker: { compose: ["working"], description: "Does work." },
+      },
+      state,
+      team: { flow: graph },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("planning", "Planning body.");
+    bodies.set("working", "Working body.");
+
+    const results = compile(config, bodies, outDir, "0.0.0", "test.yaml", "agent-teams");
+
+    const cmdResult = results.find((r) => r.path.includes("commands"));
+    assert.ok(cmdResult);
+    assert.equal(cmdResult.path, join(outDir, "commands", "start-team.md"));
+    assert.ok(existsSync(cmdResult.path));
+
+    const content = readFileSync(cmdResult.path, "utf-8");
+    assert.ok(content.includes("Create an Agent Team"));
+    assert.ok(content.includes("test-pipeline"));
+    assert.ok(content.includes("planner"));
+    assert.ok(content.includes("worker"));
+  });
+
+  it("start-team prompt includes team structure and task sequence", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const graph: Graph = {
+      nodes: [
+        { skill: "planner", reads: [], writes: ["state.plan"], then: "worker" },
+        { skill: "worker", reads: ["state.plan"], writes: ["state.output"] },
+      ],
+    };
+
+    const state: StateSchema = {
+      types: {},
+      fields: {
+        plan: { type: { kind: "primitive", value: "string" } },
+        output: { type: { kind: "primitive", value: "string" } },
+      },
+    };
+
+    const config: Config = {
+      name: "test-team",
+      skills: {
+        planning: { path: "./skills/planning" },
+        working: { path: "./skills/working" },
+        planner: { compose: ["planning"], description: "Creates plans." },
+        worker: { compose: ["working"], description: "Executes plans." },
+      },
+      state,
+      team: { flow: graph },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("planning", "Planning body.");
+    bodies.set("working", "Working body.");
+
+    compile(config, bodies, outDir, "0.0.0", "test.yaml", "agent-teams");
+
+    const content = readFileSync(join(outDir, "commands", "start-team.md"), "utf-8");
+    assert.ok(content.includes("Team Structure"));
+    assert.ok(content.includes("Task Sequence"));
+    assert.ok(content.includes("Creates plans."));
+    assert.ok(content.includes("Executes plans."));
+    assert.ok(content.includes("`state.plan`"));
+    assert.ok(content.includes("`state.output`"));
+    assert.ok(content.includes("Then: **worker**"));
+  });
+
+  it("start-team prompt includes conditional routing", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const graph: Graph = {
+      nodes: [
+        { skill: "worker", reads: [], writes: ["state.result"] },
+        {
+          skill: "reviewer",
+          reads: ["state.result"],
+          writes: ["state.review"],
+          then: [
+            { when: "review.approved == true", to: "end" },
+            { when: "review.approved == false", to: "worker" },
+          ],
+        },
+      ],
+    };
+
+    const state: StateSchema = {
+      types: {
+        Review: {
+          approved: { kind: "primitive", value: "bool" },
+          feedback: { kind: "primitive", value: "string" },
+        },
+      },
+      fields: {
+        result: { type: { kind: "primitive", value: "string" } },
+        review: { type: { kind: "custom", name: "Review" } },
+      },
+    };
+
+    const config: Config = {
+      name: "review-loop",
+      skills: {
+        coding: { path: "./skills/coding" },
+        reviewing: { path: "./skills/reviewing" },
+        worker: { compose: ["coding"], description: "Writes code." },
+        reviewer: { compose: ["reviewing"], description: "Reviews code." },
+      },
+      state,
+      team: { flow: graph },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("coding", "Code body.");
+    bodies.set("reviewing", "Review body.");
+
+    compile(config, bodies, outDir, "0.0.0", "test.yaml", "agent-teams");
+
+    const content = readFileSync(join(outDir, "commands", "start-team.md"), "utf-8");
+    assert.ok(content.includes("Routing:"));
+    assert.ok(content.includes("review.approved == true"));
+    assert.ok(content.includes("review.approved == false"));
+  });
+
+  it("does not generate start-team when no team flow", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        leaf: { path: "./skills/leaf" },
+        bundle: { compose: ["leaf"], description: "A bundle." },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("leaf", "Leaf body");
+
+    const results = compile(config, bodies, outDir, "0.0.0", "test.yaml", "agent-teams");
+    const cmdResult = results.find((r) => r.path.includes("commands"));
+    assert.equal(cmdResult, undefined);
+  });
+
+  it("check works with agent-teams target", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        leaf: { path: "./skills/leaf" },
+        bundle: { compose: ["leaf"], description: "A bundle." },
+      },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("leaf", "Leaf body");
+
+    compile(config, bodies, outDir, "0.0.0", "test.yaml", "agent-teams");
+    const results = check(config, bodies, outDir, "0.0.0", "test.yaml", "agent-teams");
+    for (const result of results) {
+      assert.equal(result.status, "ok");
+    }
+  });
+
+  it("start-team prompt includes state table", () => {
+    tmpDir = makeTmpDir();
+    const outDir = join(tmpDir, "dist");
+
+    const graph: Graph = {
+      nodes: [
+        { skill: "worker", reads: [], writes: ["state.output"] },
+      ],
+    };
+
+    const state: StateSchema = {
+      types: {},
+      fields: {
+        output: { type: { kind: "primitive", value: "string" } },
+      },
+    };
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        working: { path: "./skills/working" },
+        worker: { compose: ["working"], description: "Works." },
+      },
+      state,
+      team: { flow: graph },
+    };
+
+    const bodies = new Map<string, string>();
+    bodies.set("working", "Working body.");
+
+    compile(config, bodies, outDir, "0.0.0", "test.yaml", "agent-teams");
+
+    const content = readFileSync(join(outDir, "commands", "start-team.md"), "utf-8");
+    assert.ok(content.includes("Shared State"));
+    assert.ok(content.includes("| output | string |"));
+  });
+});
+
 describe("compile with gemini target", () => {
   let tmpDir: string | undefined;
 

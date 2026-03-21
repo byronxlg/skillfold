@@ -1,12 +1,12 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
-import { generateAgents, generateGeminiAgents, generateRunCommand } from "./agent.js";
+import { generateAgents, generateGeminiAgents, generateRunCommand, generateTeamBootstrap } from "./agent.js";
 import { type Config, isComposed } from "./config.js";
 import { CompileError } from "./errors.js";
 import { generateOrchestrator } from "./orchestrator.js";
 
-export type CompileTarget = "skill" | "claude-code" | "cursor" | "windsurf" | "codex" | "copilot" | "gemini";
+export type CompileTarget = "skill" | "claude-code" | "agent-teams" | "cursor" | "windsurf" | "codex" | "copilot" | "gemini";
 
 function expand(
   name: string,
@@ -237,6 +237,50 @@ export function generateClaudeCode(
   if (runCommand) {
     runCommand.path = join(outDir, "commands", "run-pipeline.md");
     results.push(runCommand);
+  }
+
+  return results;
+}
+
+/**
+ * Generate output for agent-teams target: same as claude-code but with
+ * a team bootstrap prompt instead of a run-pipeline command.
+ */
+export function generateAgentTeams(
+  config: Config,
+  bodies: Map<string, string>,
+  outDir: string,
+  version: string,
+  configFile: string,
+): GenerateResult[] {
+  const results: GenerateResult[] = [];
+
+  // Generate skills under skills/ subdirectory (same as claude-code)
+  const skillResults = generate(config, bodies, outDir, version, configFile);
+  for (const result of skillResults) {
+    result.path = join(outDir, "skills", result.name, "SKILL.md");
+    results.push(result);
+  }
+
+  // Generate agent markdown files (same as claude-code)
+  const composedBodies = expandComposedBodies(config, bodies);
+  const agentResults = generateAgents(
+    config,
+    composedBodies,
+    outDir,
+    version,
+    configFile,
+    "claude-code",
+  );
+  for (const agent of agentResults) {
+    results.push(agent);
+  }
+
+  // Generate team bootstrap prompt instead of run-pipeline command
+  const bootstrap = generateTeamBootstrap(config, version, configFile);
+  if (bootstrap) {
+    bootstrap.path = join(outDir, "commands", "start-team.md");
+    results.push(bootstrap);
   }
 
   return results;
@@ -536,6 +580,9 @@ export function compile(
     case "claude-code":
       generated = generateClaudeCode(config, bodies, outDir, version, configFile);
       break;
+    case "agent-teams":
+      generated = generateAgentTeams(config, bodies, outDir, version, configFile);
+      break;
     case "cursor":
       generated = generateCursor(config, bodies, outDir, version, configFile);
       break;
@@ -572,6 +619,9 @@ export function check(
   switch (target) {
     case "claude-code":
       generated = generateClaudeCode(config, bodies, outDir, version, configFile);
+      break;
+    case "agent-teams":
+      generated = generateAgentTeams(config, bodies, outDir, version, configFile);
       break;
     case "cursor":
       generated = generateCursor(config, bodies, outDir, version, configFile);
