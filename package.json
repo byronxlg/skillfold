@@ -1,6 +1,6 @@
 {
   "name": "skillfold",
-  "version": "1.21.0",
+  "version": "1.22.0",
   "description": "Configuration language and compiler for multi-agent AI pipelines. Compiles YAML into agent skills for Claude Code, Cursor, Windsurf, Codex, Copilot, and Gemini.",
   "type": "module",
   "main": "./dist/index.js",
