@@ -24,6 +24,7 @@ export default defineConfig({
           { text: "Live Demo", link: "/demo" },
           { text: "Platform Integration", link: "/integrations" },
           { text: "Publishing Skills", link: "/publishing" },
+          { text: "Authoring Skills", link: "/authoring" },
         ],
       },
       {
