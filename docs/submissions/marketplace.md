@@ -51,14 +51,14 @@ Create `plugin/.claude-plugin/marketplace.json`:
   },
   "metadata": {
     "description": "Multi-agent pipeline compiler with reusable skills library",
-    "version": "1.5.0"
+    "version": "1.6.0"
   },
   "plugins": [
     {
       "name": "skillfold",
       "source": ".",
       "description": "Multi-agent pipeline compiler. Compose skills, wire team flows, generate orchestrators.",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "author": {
         "name": "byronxlg"
       },
@@ -117,8 +117,7 @@ Or for Option B:
 
 ## Version Alignment
 
-The `plugin.json` currently declares version `1.3.0` while the npm package is
-at `1.5.0`. This should be updated to match before publishing the marketplace.
+All version references are aligned at `1.6.0`.
 
 ## Compatibility with skills.sh
 
