@@ -373,14 +373,16 @@ composed:
 
 ### Remote Skills and Imports
 
-Reference skills by GitHub URL or import them from other configs. Team flows stay local.
+Reference skills by GitHub URL, npm package, or import them from other configs. Team flows stay local.
 
 ```yaml
 skills:
   atomic:
     shared: https://github.com/org/repo/tree/main/skills/shared
+    planning: npm:skillfold-skill-planning    # resolve from npm package
 imports:
-  - node_modules/skillfold/library/skillfold.yaml
+  - npm:skillfold/library/skillfold.yaml      # npm: prefix (preferred)
+  - node_modules/skillfold/library/skillfold.yaml  # direct path (also works)
 ```
 
 > [!TIP]

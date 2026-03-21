@@ -1,6 +1,6 @@
 {
   "name": "skillfold",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "Compiler for multi-agent AI pipelines. Compose skills, wire team flows, generate orchestrators.",
   "type": "module",
   "main": "./dist/index.js",

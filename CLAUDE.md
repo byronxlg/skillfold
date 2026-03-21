@@ -174,4 +174,4 @@ Located in `library/examples/`:
 ## What's Next
 
 See BRIEF.md "Open Questions" section. Potential next work:
-1. Interactive pipeline visualization (web-based)
+1. Features driven by user demand
