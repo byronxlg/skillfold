@@ -1,6 +1,10 @@
 # Examples
 
-Skillfold ships with three starter templates in the shared skills library. Each demonstrates a different pipeline pattern and can be scaffolded with a single command. All templates import the 11 built-in library skills, so you can start composing agents immediately.
+Skillfold ships with three starter templates in the shared skills library. Each demonstrates a different pipeline pattern and can be scaffolded with a single command. All templates import the [11 built-in library skills](/library), so you can start composing agents immediately.
+
+::: tip Standalone installation
+Don't need a full pipeline? Install any library skill individually with `npx skills add byronxlg/skillfold -s <skill-name>`. See the [Library Skills](/library) page for the full list.
+:::
 
 ## dev-team
 

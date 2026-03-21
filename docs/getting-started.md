@@ -162,7 +162,11 @@ npx skillfold graph      # output a Mermaid flowchart
 
 ## 5. Import library skills
 
-Skillfold ships with 11 generic skills you can use instead of writing your own. Uncomment the imports line in your config:
+Skillfold ships with 11 generic skills you can use instead of writing your own. These skills also work standalone with any coding agent - see the [Library Skills](/library) page for individual install commands.
+
+**Option A: Import into a skillfold pipeline**
+
+Uncomment the imports line in your config:
 
 ```yaml
 imports:
@@ -195,6 +199,18 @@ skills:
 ```
 
 The import makes all 11 library skills available: `planning`, `research`, `decision-making`, `code-writing`, `code-review`, `testing`, `writing`, `summarization`, `github-workflow`, `file-management`, and `skillfold-cli`.
+
+**Option B: Install standalone with the skills CLI**
+
+If you don't use skillfold pipelines, install individual skills directly:
+
+```bash
+npx skills add byronxlg/skillfold -s code-writing
+npx skills add byronxlg/skillfold -s testing
+npx skills add byronxlg/skillfold -s code-review
+```
+
+Or install all 11 at once: `npx skills add byronxlg/skillfold`. Each skill installs as a standard SKILL.md file that any coding agent can read.
 
 ## 6. Add async nodes for external agents
 

@@ -22,6 +22,7 @@ export default defineConfig({
         text: "Guide",
         items: [
           { text: "Getting Started", link: "/getting-started" },
+          { text: "Library Skills", link: "/library" },
           { text: "Live Demo", link: "/demo" },
           { text: "Pipeline Builder", link: "/builder" },
           { text: "Examples", link: "/examples" },
