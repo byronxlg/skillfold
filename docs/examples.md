@@ -74,7 +74,14 @@ team:
 | engineer | planning, code-writing, testing | Implements the plan by writing production code and tests. |
 | reviewer | code-review, testing | Reviews code for correctness, clarity, and test coverage. |
 
-**Flow:** planner -> engineer -> reviewer -> (approved? end : engineer)
+**Flow:**
+
+```mermaid
+graph LR
+    planner --> engineer --> reviewer
+    reviewer -->|approved| END([end])
+    reviewer -->|not approved| engineer
+```
 
 ---
 
@@ -147,7 +154,17 @@ team:
 | writer | research, writing | Drafts content for a given topic with supporting research. |
 | editor | summarization, writing | Reviews and refines drafted content for clarity and completeness. |
 
-**Flow:** researcher -> map over topics (writer -> editor -> (approved? end : writer))
+**Flow:**
+
+```mermaid
+graph LR
+    researcher --> map
+    subgraph map["map over topics"]
+        writer --> editor
+        editor -->|approved| END2([end])
+        editor -->|not approved| writer
+    end
+```
 
 ---
 
@@ -202,7 +219,12 @@ team:
 | analyzer | code-review, file-management | Reads code files and analyzes them for issues. |
 | reporter | writing, summarization | Produces a structured report from code review findings. |
 
-**Flow:** analyzer -> reporter -> end
+**Flow:**
+
+```mermaid
+graph LR
+    analyzer --> reporter --> END([end])
+```
 
 ---
 

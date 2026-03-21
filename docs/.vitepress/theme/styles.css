@@ -1008,3 +1008,88 @@ html {
   font-weight: 500;
   color: var(--vp-c-brand-1);
 }
+
+/* ============================================
+   Demo page - interaction hints
+   ============================================ */
+.vp-doc .demo-hints {
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
+.vp-doc .demo-hints strong {
+  color: var(--vp-c-text-1);
+}
+
+.vp-doc .demo-hints ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.vp-doc .demo-hints li {
+  margin: 4px 0;
+  color: var(--vp-c-text-2);
+  line-height: 1.5;
+}
+
+/* ============================================
+   Inner page refinements
+   ============================================ */
+
+/* Better spacing for doc page headers */
+.vp-doc h1 {
+  letter-spacing: -0.02em;
+}
+
+/* Improve table readability across all pages */
+.vp-doc table {
+  display: table;
+  width: 100%;
+}
+
+.vp-doc th {
+  white-space: nowrap;
+}
+
+.vp-doc tr:hover td {
+  background: var(--vp-c-bg-soft);
+}
+
+/* Tip/info boxes - softer corners */
+.vp-doc .custom-block {
+  border-radius: 10px;
+}
+
+/* Badge styling in headers */
+.vp-doc h2 .VPBadge {
+  vertical-align: middle;
+  margin-left: 8px;
+}
+
+/* Better code block styling inside cards */
+.vp-doc .ba-card div[class*="language-"],
+.vp-doc .pipeline-demo div[class*="language-"] {
+  border-radius: 8px;
+}
+
+/* Smooth iframe loading */
+.vp-doc iframe {
+  background: var(--vp-c-bg-soft);
+  transition: opacity 0.3s ease;
+}
+
+/* Flow description in examples */
+.vp-doc .example-flow {
+  display: inline-block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-1);
+  margin: 8px 0 16px;
+}

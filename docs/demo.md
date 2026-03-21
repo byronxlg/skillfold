@@ -2,15 +2,26 @@
 
 ## Interactive Pipeline Visualizer
 
-The graph below shows a `dev-team` pipeline compiled from `skillfold.yaml`. Click any node to see its composition, state reads/writes, and description.
+The graph below shows a `dev-team` pipeline compiled from `skillfold.yaml`. It renders the execution flow the compiler produces from YAML config.
+
+<div class="demo-hints">
+
+**How to interact:**
+- **Click a node** to see its skill composition, state reads/writes, and description
+- **Drag** to pan around the graph
+- **Scroll** to zoom in and out
+- Conditional branches show their `when` clause on the edge labels
+
+</div>
 
 <iframe src="/skillfold/demo-graph.html" width="100%" height="500" style="border: 1px solid var(--vp-c-divider); border-radius: 8px;" allow="clipboard-write"></iframe>
 
-Generate this for your own pipeline:
-
+::: tip Generate this for your own pipeline
 ```bash
 npx skillfold graph --html > pipeline.html
 ```
+Open `pipeline.html` in a browser to get the same interactive view for any config.
+:::
 
 ## Quick Start
 
@@ -106,3 +117,7 @@ Running `npx skillfold` on this config generates four SKILL.md files:
 | `orchestrator` | planning + generated execution plan | Coordinates the flow |
 
 The `engineer` agent's SKILL.md contains the bodies of `planning`, `code-writing`, and `testing` concatenated in order - no duplication, no drift.
+
+## Try the Builder
+
+Want to edit configs interactively? The [Pipeline Builder](/builder) lets you modify YAML and see the graph update in real time.
