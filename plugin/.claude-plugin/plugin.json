@@ -1,12 +1,13 @@
 {
   "name": "skillfold",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "description": "Multi-agent pipeline compiler. Compose skills, wire team flows, generate orchestrators.",
   "author": {
-    "name": "byronxlg"
+    "name": "byronxlg",
+    "url": "https://github.com/byronxlg"
   },
   "homepage": "https://github.com/byronxlg/skillfold",
   "repository": "https://github.com/byronxlg/skillfold",
   "license": "MIT",
-  "keywords": ["pipeline", "skills", "agents", "compiler", "orchestrator"]
+  "keywords": ["pipeline", "skills", "agents", "compiler", "orchestrator", "multi-agent", "yaml", "claude-code"]
 }

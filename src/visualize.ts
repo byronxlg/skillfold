@@ -271,3 +271,241 @@ export function generateMermaid(config: Config): string {
   );
   return lines.join("\n") + "\n";
 }
+
+// Metadata for each node, used by the interactive HTML view.
+interface NodeMeta {
+  id: string;
+  label: string;
+  type: "step" | "async" | "map" | "subflow";
+  composition?: string[];
+  reads: string[];
+  writes: string[];
+  description?: string;
+}
+
+// Collect metadata for all nodes in the graph.
+function collectNodeMeta(
+  nodes: GraphNode[],
+  skills: Record<string, SkillEntry>,
+): NodeMeta[] {
+  const metas: NodeMeta[] = [];
+
+  for (const node of nodes) {
+    if (isMapNode(node)) {
+      metas.push({
+        id: `map_${sanitizeId(node.over)}`,
+        label: `map over ${node.over}`,
+        type: "map",
+        reads: [],
+        writes: [],
+      });
+      metas.push(...collectNodeMeta(node.graph, skills));
+    } else if (isSubFlowNode(node)) {
+      const meta: NodeMeta = {
+        id: `subflow_${sanitizeId(node.name)}`,
+        label: node.name,
+        type: "subflow",
+        reads: node.reads,
+        writes: node.writes,
+      };
+      metas.push(meta);
+      if (node.graph) {
+        metas.push(...collectNodeMeta(node.graph, skills));
+      }
+    } else if (isAsyncNode(node)) {
+      metas.push({
+        id: sanitizeId(node.name),
+        label: node.name,
+        type: "async",
+        reads: node.reads,
+        writes: node.writes,
+      });
+    } else {
+      const skill = skills[node.skill];
+      const composed = skill !== undefined && isComposed(skill);
+      const meta: NodeMeta = {
+        id: sanitizeId(node.skill),
+        label: node.skill,
+        type: "step",
+        reads: node.reads,
+        writes: node.writes,
+      };
+      if (composed) {
+        meta.composition = getLeafAtomics(node.skill, skills);
+        meta.description = skill.description;
+      }
+      metas.push(meta);
+    }
+  }
+
+  return metas;
+}
+
+export function generateHtml(config: Config): string {
+  const mermaid = generateMermaid(config);
+  const nodeMeta = collectNodeMeta(config.team!.flow.nodes, config.skills);
+  const metaJson = JSON.stringify(nodeMeta);
+  const escapedMermaid = mermaid
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${config.name} - Pipeline Graph</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0d1117; color: #c9d1d9; display: flex; height: 100vh; overflow: hidden; }
+  #graph-container { flex: 1; overflow: auto; padding: 24px; display: flex; align-items: flex-start; justify-content: center; }
+  #graph-container svg { max-width: 100%; height: auto; }
+  #sidebar { width: 320px; background: #161b22; border-left: 1px solid #30363d; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; transition: transform 0.2s; }
+  #sidebar.collapsed { transform: translateX(320px); }
+  h1 { font-size: 16px; font-weight: 600; color: #f0f6fc; }
+  h2 { font-size: 13px; font-weight: 600; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; }
+  .meta-section { display: flex; flex-direction: column; gap: 8px; }
+  .meta-label { font-size: 11px; color: #8b949e; text-transform: uppercase; letter-spacing: 0.5px; }
+  .meta-value { font-size: 13px; color: #c9d1d9; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; margin: 2px; }
+  .tag-read { background: #0d419d; color: #79c0ff; }
+  .tag-write { background: #3d1e00; color: #f0883e; }
+  .tag-skill { background: #1b4721; color: #56d364; }
+  .tag-type { background: #3d1e3e; color: #d2a8ff; }
+  .placeholder { color: #484f58; font-size: 13px; text-align: center; margin-top: 40px; }
+  #toolbar { display: flex; gap: 8px; padding: 12px 20px; background: #161b22; border-bottom: 1px solid #30363d; position: absolute; top: 0; left: 0; z-index: 10; }
+  .btn { padding: 6px 12px; background: #21262d; border: 1px solid #30363d; border-radius: 6px; color: #c9d1d9; font-size: 12px; cursor: pointer; }
+  .btn:hover { background: #30363d; }
+  #graph-container { padding-top: 56px; }
+  .node-label, .nodeLabel, .label { cursor: pointer !important; }
+  .cluster-label span, .nodeLabel p { cursor: pointer !important; }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <button class="btn" onclick="exportSvg()">Export SVG</button>
+  <button class="btn" onclick="toggleSidebar()">Toggle Details</button>
+</div>
+
+<div id="graph-container">
+  <pre class="mermaid">${escapedMermaid}</pre>
+</div>
+
+<div id="sidebar">
+  <h1>${config.name}</h1>
+  <div id="detail-content">
+    <p class="placeholder">Click a node to see details</p>
+  </div>
+</div>
+
+<script type="module">
+import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+
+const nodeMeta = ${metaJson};
+const metaMap = new Map(nodeMeta.map(n => [n.id, n]));
+
+mermaid.initialize({
+  startOnLoad: true,
+  theme: "dark",
+  securityLevel: "loose",
+  flowchart: { curve: "basis", padding: 16 },
+});
+
+// Wait for Mermaid to render, then attach click handlers
+setTimeout(() => {
+  const svg = document.querySelector("#graph-container svg");
+  if (!svg) return;
+
+  // Click handlers for nodes and subgraphs
+  svg.querySelectorAll(".node, .cluster").forEach(el => {
+    el.style.cursor = "pointer";
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const id = el.id || el.getAttribute("data-id") || "";
+      // Mermaid prefixes IDs; extract the node name
+      const cleanId = id.replace(/^flowchart-/, "").replace(/-\\d+$/, "");
+      showDetail(cleanId);
+    });
+  });
+}, 500);
+
+function showDetail(nodeId) {
+  const meta = metaMap.get(nodeId);
+  const detail = document.getElementById("detail-content");
+  if (!meta) {
+    // Try partial match
+    for (const [key, val] of metaMap) {
+      if (nodeId.includes(key) || key.includes(nodeId)) {
+        renderDetail(val);
+        return;
+      }
+    }
+    detail.innerHTML = '<p class="placeholder">No metadata for this node</p>';
+    return;
+  }
+  renderDetail(meta);
+}
+
+function renderDetail(meta) {
+  const detail = document.getElementById("detail-content");
+  let html = '<div class="meta-section">';
+  html += '<div><span class="meta-label">Name</span><div class="meta-value">' + esc(meta.label) + '</div></div>';
+  html += '<div><span class="meta-label">Type</span><div class="meta-value"><span class="tag tag-type">' + meta.type + '</span></div></div>';
+
+  if (meta.description) {
+    html += '<div><span class="meta-label">Description</span><div class="meta-value">' + esc(meta.description) + '</div></div>';
+  }
+
+  if (meta.composition && meta.composition.length > 0) {
+    html += '<div><span class="meta-label">Composition</span><div class="meta-value">';
+    meta.composition.forEach(s => { html += '<span class="tag tag-skill">' + esc(s) + '</span>'; });
+    html += '</div></div>';
+  }
+
+  if (meta.reads.length > 0) {
+    html += '<div><span class="meta-label">Reads</span><div class="meta-value">';
+    meta.reads.forEach(r => { html += '<span class="tag tag-read">' + esc(r) + '</span>'; });
+    html += '</div></div>';
+  }
+
+  if (meta.writes.length > 0) {
+    html += '<div><span class="meta-label">Writes</span><div class="meta-value">';
+    meta.writes.forEach(w => { html += '<span class="tag tag-write">' + esc(w) + '</span>'; });
+    html += '</div></div>';
+  }
+
+  html += '</div>';
+  detail.innerHTML = html;
+}
+
+function esc(s) {
+  const el = document.createElement("span");
+  el.textContent = s;
+  return el.innerHTML;
+}
+
+// Expose to global for button handlers
+window.exportSvg = function() {
+  const svg = document.querySelector("#graph-container svg");
+  if (!svg) return;
+  const serializer = new XMLSerializer();
+  const svgStr = serializer.serializeToString(svg);
+  const blob = new Blob([svgStr], { type: "image/svg+xml" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "${config.name}-pipeline.svg";
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+window.toggleSidebar = function() {
+  document.getElementById("sidebar").classList.toggle("collapsed");
+};
+</script>
+</body>
+</html>
+`;
+}
