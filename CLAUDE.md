@@ -37,6 +37,7 @@ src/
   orchestrator.ts - Orchestrator SKILL.md generation from graph definition
   plugin.ts       - Claude Code plugin packaging (skillfold plugin)
   list.ts         - Pipeline introspection (skillfold list)
+  npm.ts          - npm package resolution (npm: prefix in skill refs and imports)
   search.ts       - npm registry search for skillfold-skill packages (skillfold search)
   watch.ts        - File watching and auto-recompile (skillfold watch)
   init.ts         - skillfold init scaffolding
@@ -109,7 +110,8 @@ The `library/` directory contains 11 generic, reusable atomic skills and 3 examp
 
 ```yaml
 imports:
-  - node_modules/skillfold/library/skillfold.yaml
+  - npm:skillfold/library/skillfold.yaml   # npm: prefix (preferred)
+  - node_modules/skillfold/library/skillfold.yaml  # direct path (also works)
 ```
 
 This makes all 11 library skills available as atomic skills in the importing config. Composed skills and team flows reference them by name.
