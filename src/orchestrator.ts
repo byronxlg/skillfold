@@ -1,6 +1,7 @@
 import type { Config } from "./config.js";
 import { isAsyncNode, isConditionalThen, isMapNode, isSubFlowNode } from "./graph.js";
 import type { AsyncNode, GraphNode, Then } from "./graph.js";
+import { renderIntegrationInstructions, resolveIntegrationUrl } from "./integrations.js";
 import type { StateField, StateType } from "./state.js";
 
 export interface StepMapping {
@@ -24,7 +25,19 @@ export function formatLocation(
   resources?: Record<string, Record<string, string>>,
 ): string {
   if (!field.location) return "";
+
+  // Integration location (e.g., github-issues, github-discussions)
+  if (field.location.integration) {
+    const url = resolveIntegrationUrl(field.location.integration);
+    const instructions = renderIntegrationInstructions(field.location.integration);
+    const kind = field.location.kind;
+    const locationStr = kind ? `${url} (${kind})` : url;
+    return `${locationStr} - ${instructions}`;
+  }
+
+  // Traditional skill+path location
   const { skill, path, kind } = field.location;
+  if (!skill || !path) return "";
 
   const skillResources = resources?.[skill];
   if (skillResources) {

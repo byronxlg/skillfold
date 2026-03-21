@@ -1,4 +1,9 @@
 import { ConfigError, didYouMean } from "./errors.js";
+import {
+  type IntegrationLocation,
+  isIntegrationLocation,
+  parseIntegrationLocation,
+} from "./integrations.js";
 
 export interface SkillResources {
   resources?: Record<string, string>;
@@ -12,9 +17,10 @@ export type StateType =
   | { kind: "custom"; name: string };
 
 export interface StateLocation {
-  skill: string;
-  path: string;
+  skill?: string;
+  path?: string;
   kind?: string;
+  integration?: IntegrationLocation;
 }
 
 export interface CustomType {
@@ -118,9 +124,20 @@ function validateLocation(
 
   const loc = location as Record<string, unknown>;
 
+  // Check for built-in integration location (e.g., github-issues, github-discussions)
+  if (isIntegrationLocation(loc)) {
+    const integration = parseIntegrationLocation(fieldName, loc);
+    const result: StateLocation = { integration };
+    if ("kind" in loc && typeof loc.kind === "string") {
+      result.kind = loc.kind;
+    }
+    return result;
+  }
+
+  // Traditional skill+path location format
   if (!("skill" in loc) || typeof loc.skill !== "string") {
     throw new ConfigError(
-      `State field "${fieldName}": location must have a "skill" field`
+      `State field "${fieldName}": location must have a "skill" field or use a built-in integration (github-issues, github-discussions, github-pull-requests)`
     );
   }
 

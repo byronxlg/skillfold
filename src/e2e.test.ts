@@ -283,6 +283,121 @@ describe("e2e: dev-pipeline", () => {
   });
 });
 
+describe("e2e: integration locations", () => {
+  it("inline config with integration locations parses, validates, and renders", () => {
+    const raw = parseRawConfig(`
+name: integration-pipeline
+skills:
+  atomic:
+    coding: ./skills/coding
+  composed:
+    engineer:
+      compose: [coding]
+      description: "Writes code."
+state:
+  Task:
+    title: string
+    priority: number
+  direction:
+    type: string
+    location:
+      github-discussions:
+        repo: byronxlg/skillfold
+        category: strategy
+  tasks:
+    type: list<Task>
+    location:
+      github-issues:
+        repo: byronxlg/skillfold
+        label: task
+  review:
+    type: string
+    location:
+      github-pull-requests:
+        repo: byronxlg/skillfold
+team:
+  flow:
+    - engineer:
+        reads: [state.direction]
+        writes: [state.tasks]
+      then: end
+`);
+    const config = validateAndBuild(raw);
+
+    // Verify state fields have integration locations
+    assert.ok(config.state);
+    assert.ok(config.state.fields["direction"].location?.integration);
+    assert.equal(config.state.fields["direction"].location!.integration!.type, "github-discussions");
+    assert.equal(config.state.fields["direction"].location!.integration!.config.repo, "byronxlg/skillfold");
+    assert.equal(config.state.fields["direction"].location!.integration!.config.category, "strategy");
+
+    assert.ok(config.state.fields["tasks"].location?.integration);
+    assert.equal(config.state.fields["tasks"].location!.integration!.type, "github-issues");
+    assert.equal(config.state.fields["tasks"].location!.integration!.config.label, "task");
+
+    assert.ok(config.state.fields["review"].location?.integration);
+    assert.equal(config.state.fields["review"].location!.integration!.type, "github-pull-requests");
+
+    // Verify orchestrator output
+    const output = generateOrchestrator(config);
+    assert.ok(output.includes("https://github.com/byronxlg/skillfold/discussions"));
+    assert.ok(output.includes('category "strategy"'));
+    assert.ok(output.includes("https://github.com/byronxlg/skillfold/issues"));
+    assert.ok(output.includes('labeled "task"'));
+    assert.ok(output.includes("https://github.com/byronxlg/skillfold/pulls"));
+
+    // Verify list output
+    const listOutput = listPipeline(config);
+    assert.ok(listOutput.includes("https://github.com/byronxlg/skillfold/discussions"));
+    assert.ok(listOutput.includes("https://github.com/byronxlg/skillfold/issues"));
+    assert.ok(listOutput.includes("https://github.com/byronxlg/skillfold/pulls"));
+  });
+
+  it("integration locations coexist with traditional skill+path locations", () => {
+    const raw = parseRawConfig(`
+name: mixed-pipeline
+skills:
+  atomic:
+    coding: ./skills/coding
+    github: ./skills/github
+  composed:
+    engineer:
+      compose: [coding]
+      description: "Writes code."
+resources:
+  github:
+    discussions: "https://github.com/org/repo/discussions"
+state:
+  direction:
+    type: string
+    location:
+      github-discussions:
+        repo: org/repo
+        category: general
+  notes:
+    type: string
+    location:
+      skill: github
+      path: discussions/general
+team:
+  flow:
+    - engineer:
+        reads: [state.direction, state.notes]
+        writes: []
+      then: end
+`);
+    const config = validateAndBuild(raw);
+
+    const output = generateOrchestrator(config);
+
+    // Integration location renders its own URL and instructions
+    assert.ok(output.includes("https://github.com/org/repo/discussions - GitHub discussions in org/repo"));
+
+    // Traditional location renders resolved URL from resources
+    assert.ok(output.includes("https://github.com/org/repo/discussions/general"));
+  });
+});
+
 const asyncFixtureDir = join(__dirname, "..", "test", "fixtures", "async-pipeline");
 const asyncConfigPath = join(asyncFixtureDir, "skillfold.yaml");
 
