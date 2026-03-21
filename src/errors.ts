@@ -26,6 +26,13 @@ export class GraphError extends Error {
   }
 }
 
+export class RunError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RunError";
+  }
+}
+
 /**
  * Compute Levenshtein distance between two strings.
  * Used to power "Did you mean..." suggestions in error messages.

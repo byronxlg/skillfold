@@ -89,10 +89,15 @@ export type { Template } from "./init.js";
 export { adoptProject } from "./adopt.js";
 export type { AdoptedAgent, AdoptResult } from "./adopt.js";
 
+// Pipeline execution
+export { ClaudeSpawner, run } from "./run.js";
+export type { RunOptions, RunResult, Spawner, StepResult } from "./run.js";
+
 // Errors
 export {
   CompileError,
   ConfigError,
   GraphError,
   ResolveError,
+  RunError,
 } from "./errors.js";

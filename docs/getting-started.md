@@ -403,6 +403,7 @@ See the [Publishing Guide](publishing.md) for package structure, required fields
 
 ## 13. Next steps
 
+- Run your pipeline with `skillfold run --target claude-code` (linear flows), or preview with `--dry-run`
 - Read the full config specification in [BRIEF.md](https://github.com/byronxlg/skillfold/blob/main/BRIEF.md)
 - Explore the [shared library examples](https://github.com/byronxlg/skillfold/tree/main/library/examples/) for real pipeline patterns
 - Use `skillfold graph` to visualize your team flow as a Mermaid diagram, or `skillfold graph --html` for interactive HTML output with clickable nodes and SVG export
