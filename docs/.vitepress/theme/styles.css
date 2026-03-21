@@ -144,6 +144,26 @@
 }
 
 /* ============================================
+   Badges bar below stats
+   ============================================ */
+.vp-doc .badges-bar {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px 24px 0;
+  flex-wrap: wrap;
+}
+
+.vp-doc .badges-bar a {
+  display: inline-flex;
+  text-decoration: none;
+}
+
+.vp-doc .badges-bar img {
+  height: 20px;
+}
+
+/* ============================================
    Install banner below hero
    ============================================ */
 .vp-doc .install-banner {
@@ -193,6 +213,17 @@
   color: var(--vp-c-text-2);
   line-height: 1.7;
   margin-bottom: 20px;
+}
+
+/* ============================================
+   Problem section callout
+   ============================================ */
+.vp-doc .home-content h2 + p {
+  font-size: 16px;
+}
+
+.vp-doc .home-content h2 + p + p strong {
+  color: var(--vp-c-brand-1);
 }
 
 /* ============================================

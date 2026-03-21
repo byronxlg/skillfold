@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: Skillfold
-  text: Typed coordination for multi-agent pipelines
-  tagline: Compile YAML configs into agent skills, execution flows, and orchestrators - validated at compile time.
+  text: One config for every AI coding agent
+  tagline: Define agent pipelines in YAML. Compile to 12 platforms. Validate state, flows, and skills at compile time - before anything runs.
   image:
     light: /hero-light.svg
     dark: /hero-dark.svg
@@ -79,30 +79,39 @@ bun add skillfold
     <span class="stat-label">Library Skills</span>
   </div>
   <div class="stat">
-    <span class="stat-value">859</span>
-    <span class="stat-label">Tests</span>
+    <span class="stat-value">0</span>
+    <span class="stat-label">Runtime Dependencies</span>
   </div>
   <div class="stat">
-    <span class="stat-value">168</span>
-    <span class="stat-label">Test Suites</span>
+    <span class="stat-value">859+</span>
+    <span class="stat-label">Tests</span>
   </div>
+</div>
+
+<div class="badges-bar">
+  <a href="https://www.npmjs.com/package/skillfold"><img src="https://img.shields.io/npm/v/skillfold?color=10b981&label=npm" alt="npm version" /></a>
+  <a href="https://github.com/byronxlg/skillfold"><img src="https://img.shields.io/github/stars/byronxlg/skillfold?style=social" alt="GitHub stars" /></a>
+  <a href="https://github.com/byronxlg/skillfold/blob/main/LICENSE"><img src="https://img.shields.io/github/license/byronxlg/skillfold?color=10b981" alt="MIT License" /></a>
 </div>
 
 <div class="home-content">
 
-## What It Looks Like
+## The Problem
 
-Define your agent pipeline in YAML. The compiler validates everything - skill references, state types, flow transitions, cycle exit conditions - before anything runs.
+You have multiple AI coding agents. Each one needs a prompt file. When they share skills, you copy-paste. When state changes, nothing validates it. When you switch platforms, you rewrite everything.
+
+**Skillfold fixes this.** Define your pipeline once in YAML - skills, state, execution flow - and the compiler handles the rest.
+
+## What It Looks Like
 
 ```yaml
 skills:
   atomic:
     planning: npm:skillfold/library/skills/planning
     code-writing: npm:skillfold/library/skills/code-writing
-    testing: npm:skillfold/library/skills/testing
   composed:
     engineer:
-      compose: [planning, code-writing, testing]
+      compose: [planning, code-writing]
 
 state:
   tasks:
@@ -131,22 +140,22 @@ Compile to any platform:
 
 ```sh [Claude Code]
 npx skillfold --target claude-code
-# Output: .claude/agents/*.md, .claude/skills/*/SKILL.md
+# .claude/agents/*.md, .claude/skills/*/SKILL.md
 ```
 
 ```sh [Cursor]
 npx skillfold --target cursor
-# Output: .cursor/rules/*.mdc
+# .cursor/rules/*.mdc
 ```
 
 ```sh [Codex]
 npx skillfold --target codex
-# Output: AGENTS.md
+# AGENTS.md
 ```
 
 ```sh [Gemini]
 npx skillfold --target gemini
-# Output: .gemini/agents/*.md
+# .gemini/agents/*.md
 ```
 
 ```sh [More targets]
@@ -173,7 +182,7 @@ npx skillfold run --target claude-code --spawner sdk
 
 ## Compiler vs. Runtime Orchestration
 
-Skillfold validates your pipeline at compile time and emits plain files that agents read directly. Runtime tools like CrewAI, AutoGen, and LangGraph coordinate agents at execution time through a framework process. Both are valid - which one fits depends on your pipeline.
+Skillfold catches errors before agents run. Runtime tools like CrewAI and LangGraph catch them during execution. Both are valid approaches.
 
 <div class="comparison-grid">
   <div class="comparison-card">
@@ -233,19 +242,19 @@ One config, 12 platform targets. Write your pipeline in YAML and compile to whic
 ## Ready to get started?
 
 <div class="cta-grid">
-  <a class="cta-card" href="/skillfold/getting-started">
+  <a class="cta-card" :href="withBase('/getting-started')">
     <strong>Getting Started Guide</strong>
     <span>Build your first pipeline in 5 minutes</span>
   </a>
-  <a class="cta-card" href="/skillfold/demo">
+  <a class="cta-card" :href="withBase('/demo')">
     <strong>Live Demo</strong>
     <span>Try the interactive pipeline visualizer</span>
   </a>
-  <a class="cta-card" href="/skillfold/builder">
+  <a class="cta-card" :href="withBase('/builder')">
     <strong>Pipeline Builder</strong>
     <span>Edit YAML and see the graph update live</span>
   </a>
-  <a class="cta-card" href="/skillfold/library">
+  <a class="cta-card" :href="withBase('/library')">
     <strong>Library Skills</strong>
     <span>11 ready-to-use skills, no config needed</span>
   </a>

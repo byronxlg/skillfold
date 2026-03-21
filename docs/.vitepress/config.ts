@@ -2,7 +2,7 @@ import { defineConfig } from "vitepress";
 
 export default defineConfig({
   title: "Skillfold",
-  description: "Typed coordination for multi-agent pipelines",
+  description: "One config for every AI coding agent",
 
   // GitHub Pages: https://byronxlg.github.io/skillfold/
   base: "/skillfold/",
@@ -18,7 +18,7 @@ export default defineConfig({
       {
         property: "og:description",
         content:
-          "Typed coordination for multi-agent pipelines. Compile YAML configs into agent skills for 12 platforms.",
+          "One config for every AI coding agent. Compile YAML pipelines to 12 platforms.",
       },
     ],
     ["meta", { property: "og:type", content: "website" }],
@@ -29,14 +29,28 @@ export default defineConfig({
         content: "https://byronxlg.github.io/skillfold/",
       },
     ],
-    ["meta", { name: "twitter:card", content: "summary" }],
+    [
+      "meta",
+      {
+        property: "og:image",
+        content: "https://byronxlg.github.io/skillfold/og-image.svg",
+      },
+    ],
+    ["meta", { name: "twitter:card", content: "summary_large_image" }],
     ["meta", { name: "twitter:title", content: "Skillfold" }],
     [
       "meta",
       {
         name: "twitter:description",
         content:
-          "Typed coordination for multi-agent pipelines. Compile YAML configs into agent skills for 12 platforms.",
+          "One config for every AI coding agent. Compile YAML pipelines to 12 platforms.",
+      },
+    ],
+    [
+      "meta",
+      {
+        name: "twitter:image",
+        content: "https://byronxlg.github.io/skillfold/og-image.svg",
       },
     ],
   ],

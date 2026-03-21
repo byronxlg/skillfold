@@ -22,93 +22,19 @@ No skillfold config or compilation needed. Each skill installs as a standard `SK
 
 ## Available Skills
 
-### planning
-
-Break problems into steps, identify dependencies, and estimate scope.
-
-```bash
-npx skills add byronxlg/skillfold -s planning
-```
-
-### research
-
-Gather information, evaluate sources, and synthesize findings.
-
-```bash
-npx skills add byronxlg/skillfold -s research
-```
-
-### decision-making
-
-Evaluate trade-offs, document options, and justify recommendations.
-
-```bash
-npx skills add byronxlg/skillfold -s decision-making
-```
-
-### code-writing
-
-Write clean, correct, production-quality code.
-
-```bash
-npx skills add byronxlg/skillfold -s code-writing
-```
-
-### code-review
-
-Review code for correctness, clarity, and security.
-
-```bash
-npx skills add byronxlg/skillfold -s code-review
-```
-
-### testing
-
-Write and reason about tests, covering behavior, edge cases, and errors.
-
-```bash
-npx skills add byronxlg/skillfold -s testing
-```
-
-### writing
-
-Produce clear, structured prose and documentation.
-
-```bash
-npx skills add byronxlg/skillfold -s writing
-```
-
-### summarization
-
-Condense information with audience-appropriate detail levels.
-
-```bash
-npx skills add byronxlg/skillfold -s summarization
-```
-
-### github-workflow
-
-Work with GitHub branches, PRs, issues, and reviews via the gh CLI.
-
-```bash
-npx skills add byronxlg/skillfold -s github-workflow
-```
-
-### file-management
-
-Read, create, edit, and organize files and directories.
-
-```bash
-npx skills add byronxlg/skillfold -s file-management
-```
-
-### skillfold-cli
-
-Use the skillfold compiler to manage multi-agent pipeline configs.
-
-```bash
-npx skills add byronxlg/skillfold -s skillfold-cli
-```
+| Skill | Description | Install |
+|-------|-------------|---------|
+| **planning** | Break problems into steps, identify dependencies, and estimate scope | `npx skills add byronxlg/skillfold -s planning` |
+| **research** | Gather information, evaluate sources, and synthesize findings | `npx skills add byronxlg/skillfold -s research` |
+| **decision-making** | Evaluate trade-offs, document options, and justify recommendations | `npx skills add byronxlg/skillfold -s decision-making` |
+| **code-writing** | Write clean, correct, production-quality code | `npx skills add byronxlg/skillfold -s code-writing` |
+| **code-review** | Review code for correctness, clarity, and security | `npx skills add byronxlg/skillfold -s code-review` |
+| **testing** | Write and reason about tests, covering behavior, edge cases, and errors | `npx skills add byronxlg/skillfold -s testing` |
+| **writing** | Produce clear, structured prose and documentation | `npx skills add byronxlg/skillfold -s writing` |
+| **summarization** | Condense information with audience-appropriate detail levels | `npx skills add byronxlg/skillfold -s summarization` |
+| **github-workflow** | Work with GitHub branches, PRs, issues, and reviews via the gh CLI | `npx skills add byronxlg/skillfold -s github-workflow` |
+| **file-management** | Read, create, edit, and organize files and directories | `npx skills add byronxlg/skillfold -s file-management` |
+| **skillfold-cli** | Use the skillfold compiler to manage multi-agent pipeline configs | `npx skills add byronxlg/skillfold -s skillfold-cli` |
 
 ---
 

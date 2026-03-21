@@ -1,0 +1,64 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="brand" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
+    </linearGradient>
+    <linearGradient id="brand-fade" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.2"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+
+  <!-- Dot grid pattern -->
+  <pattern id="dots" x="0" y="0" width="24" height="24" patternUnits="userSpaceOnUse">
+    <circle cx="12" cy="12" r="1" fill="#10b981" opacity="0.15"/>
+  </pattern>
+  <rect width="1200" height="630" fill="url(#dots)"/>
+
+  <!-- Accent line at top -->
+  <rect x="0" y="0" width="1200" height="4" fill="url(#brand)"/>
+
+  <!-- Title -->
+  <text x="100" y="220" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="800" fill="url(#brand)">Skillfold</text>
+
+  <!-- Tagline -->
+  <text x="100" y="290" font-family="system-ui, -apple-system, sans-serif" font-size="32" font-weight="400" fill="#e2e8f0">One config for every AI coding agent</text>
+
+  <!-- Subtitle -->
+  <text x="100" y="340" font-family="system-ui, -apple-system, sans-serif" font-size="20" fill="#94a3b8">Define pipelines in YAML. Compile to 12 platforms. Validate at compile time.</text>
+
+  <!-- Platform pills -->
+  <rect x="100" y="400" width="140" height="36" rx="18" fill="url(#brand-fade)" stroke="#10b981" stroke-opacity="0.4"/>
+  <text x="170" y="424" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="500" fill="#34d399" text-anchor="middle">Claude Code</text>
+
+  <rect x="260" y="400" width="100" height="36" rx="18" fill="url(#brand-fade)" stroke="#10b981" stroke-opacity="0.4"/>
+  <text x="310" y="424" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="500" fill="#34d399" text-anchor="middle">Cursor</text>
+
+  <rect x="380" y="400" width="100" height="36" rx="18" fill="url(#brand-fade)" stroke="#10b981" stroke-opacity="0.4"/>
+  <text x="430" y="424" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="500" fill="#34d399" text-anchor="middle">Codex</text>
+
+  <rect x="500" y="400" width="110" height="36" rx="18" fill="url(#brand-fade)" stroke="#10b981" stroke-opacity="0.4"/>
+  <text x="555" y="424" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="500" fill="#34d399" text-anchor="middle">Gemini</text>
+
+  <rect x="630" y="400" width="120" height="36" rx="18" fill="url(#brand-fade)" stroke="#10b981" stroke-opacity="0.4"/>
+  <text x="690" y="424" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="500" fill="#34d399" text-anchor="middle">Windsurf</text>
+
+  <rect x="770" y="400" width="120" height="36" rx="18" fill="url(#brand-fade)" stroke="#10b981" stroke-opacity="0.4"/>
+  <text x="830" y="424" font-family="system-ui, -apple-system, sans-serif" font-size="14" font-weight="500" fill="#34d399" text-anchor="middle">+7 more</text>
+
+  <!-- Install command -->
+  <rect x="100" y="480" width="380" height="44" rx="8" fill="#1e293b" stroke="#334155"/>
+  <text x="120" y="508" font-family="ui-monospace, monospace" font-size="16" fill="#94a3b8">$</text>
+  <text x="140" y="508" font-family="ui-monospace, monospace" font-size="16" fill="#e2e8f0">npm install skillfold</text>
+
+  <!-- npm badge area -->
+  <text x="100" y="570" font-family="system-ui, -apple-system, sans-serif" font-size="14" fill="#64748b">MIT License | npmjs.com/package/skillfold</text>
+</svg>
