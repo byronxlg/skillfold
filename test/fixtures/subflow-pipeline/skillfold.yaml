@@ -1,0 +1,32 @@
+name: parent-pipeline
+
+skills:
+  atomic:
+    planner: ./skills/planner
+    coordinator: ./skills/coordinator
+
+  composed:
+    orchestrator:
+      compose: [planner, coordinator]
+      description: "Orchestrates the pipeline."
+
+state:
+  plan:
+    type: string
+
+  result:
+    type: string
+
+team:
+  orchestrator: orchestrator
+
+  flow:
+    - planner:
+        writes: [state.plan]
+      then: dev-cycle
+
+    - dev-cycle:
+        flow: ./subflow/skillfold.yaml
+        reads: [state.plan]
+        writes: [state.result]
+      then: end

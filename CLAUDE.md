@@ -72,7 +72,7 @@ Three top-level sections: `skills`, `state`, `team`.
 - **skills.composed**: Composition declarations combining atomic skills into agents
 - **state**: Typed state schema (top-level, importable independently)
 - **team.orchestrator**: Optional skill name to append generated plan to
-- **team.flow**: Directed execution graph with conditional routing, loops, and parallel map
+- **team.flow**: Directed execution graph with conditional routing, loops, parallel map, and sub-flow imports
 
 Imports pull in `skills` and `state`, ignore `team`.
 
@@ -159,11 +159,11 @@ Located in `library/examples/`:
 - Resource namespace declarations on atomic skills for compile-time state location path validation
 - Resolved location URLs in orchestrator state table output (base URL templates from skill resources)
 - Compiler warnings for implicit state locations (skills without resource declarations)
-- Test suite with 489 tests across 89 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, adopt, library, validate, list, watch, errors, and e2e modules
+- Sub-flow imports: flow nodes can reference external pipeline configs via `flow:` field, with recursive resolution, skill/state merging, circular reference detection, orchestrator rendering with hierarchical steps, and Mermaid visualization as subgraphs
+- Test suite with 508 tests across 95 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, adopt, library, validate, list, watch, errors, subflow, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next
 
 See BRIEF.md "Open Questions" section. Potential next work:
 1. Package registry for shared skills
-2. Sub-flow imports (flow nodes referencing imported flows as single nodes)

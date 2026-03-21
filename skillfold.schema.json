@@ -255,7 +255,7 @@
     },
     "stepBody": {
       "type": ["object", "null"],
-      "description": "Step node body with optional reads, writes, async flag, and policy.",
+      "description": "Step node body with optional reads, writes, async flag, policy, and flow reference.",
       "additionalProperties": false,
       "properties": {
         "reads": {
@@ -276,6 +276,10 @@
           "type": "string",
           "description": "How to handle unavailable async data. Only valid when async is true.",
           "enum": ["block", "skip", "use-latest"]
+        },
+        "flow": {
+          "type": "string",
+          "description": "Path to a sub-flow pipeline config. When set, this node runs the referenced pipeline as a nested flow instead of invoking a single skill."
         }
       }
     },

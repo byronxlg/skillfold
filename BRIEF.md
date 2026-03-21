@@ -234,6 +234,6 @@ These are intentionally left open — the right answers depend on implementation
 - How are external state backends handled at runtime?
 - How does the orchestrator communicate with individual agents in practice?
 - How are errors and failures handled mid-pipeline?
-- Should the language support importing or extending other pipeline configs?
+- ~~Should the language support importing or extending other pipeline configs?~~ (Done: pipeline imports and sub-flow imports)
 - How does versioning work for skills referenced by URL?
 - Should there be a package registry for shared skills?

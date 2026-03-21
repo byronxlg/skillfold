@@ -1,0 +1,37 @@
+name: dev-cycle
+
+skills:
+  atomic:
+    coder: ./skills/coder
+    tester: ./skills/tester
+
+  composed:
+    engineer:
+      compose: [coder]
+      description: "Implements code changes."
+
+    qa:
+      compose: [tester]
+      description: "Validates implementation."
+
+state:
+  code:
+    type: string
+
+  tests-pass:
+    type: bool
+
+team:
+  flow:
+    - engineer:
+        writes: [state.code]
+      then: qa
+
+    - qa:
+        reads: [state.code]
+        writes: [state.tests-pass]
+      then:
+        - when: state.tests-pass == false
+          to: engineer
+        - when: state.tests-pass == true
+          to: end
