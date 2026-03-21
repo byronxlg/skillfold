@@ -30,6 +30,8 @@ export interface AgentFrontmatter {
   effort?: "low" | "medium" | "high";
   maxTurns?: number;
   background?: boolean;
+  mcpServers?: Record<string, Record<string, unknown>>;
+  skills?: string[];
 }
 
 export const VALID_PERMISSION_MODES = ["default", "acceptEdits", "bypassPermissions", "plan"] as const;
@@ -48,6 +50,8 @@ export const AGENT_FRONTMATTER_KEYS = new Set<string>([
   "effort",
   "maxTurns",
   "background",
+  "mcpServers",
+  "skills",
 ]);
 
 export interface ComposedSkill {
@@ -272,6 +276,26 @@ function parseAgentFrontmatter(
       throw new ConfigError(`Skill "${name}": background must be a boolean`);
     }
     config.background = raw.background;
+    hasFields = true;
+  }
+
+  if ("mcpServers" in raw) {
+    if (typeof raw.mcpServers !== "object" || raw.mcpServers === null || Array.isArray(raw.mcpServers)) {
+      throw new ConfigError(`Skill "${name}": mcpServers must be a YAML map`);
+    }
+    for (const [serverName, serverConfig] of Object.entries(raw.mcpServers as Record<string, unknown>)) {
+      if (typeof serverConfig !== "object" || serverConfig === null || Array.isArray(serverConfig)) {
+        throw new ConfigError(
+          `Skill "${name}": mcpServers.${serverName} must be a YAML map`
+        );
+      }
+    }
+    config.mcpServers = raw.mcpServers as Record<string, Record<string, unknown>>;
+    hasFields = true;
+  }
+
+  if ("skills" in raw) {
+    config.skills = validateStringArray(name, "skills", raw.skills);
     hasFields = true;
   }
 

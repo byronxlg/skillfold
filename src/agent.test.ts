@@ -611,6 +611,95 @@ describe("generateAgents with agentConfig overrides", () => {
     // Legacy custom field should still be present
     assert.ok(planner.content.includes("customField: value"));
   });
+
+  it("agentConfig mcpServers emits correctly in claude-code target", () => {
+    const config = makeConfig({
+      skills: {
+        planning: { path: "./skills/planning" },
+        coding: { path: "./skills/coding" },
+        engineer: {
+          compose: ["planning", "coding"],
+          description: "Writes code.",
+          agentConfig: {
+            mcpServers: {
+              github: {
+                command: "npx",
+                args: ["-y", "@anthropic/github-mcp-server"],
+                env: { GITHUB_TOKEN: "${GITHUB_TOKEN}" },
+              },
+            },
+          },
+        },
+      },
+      team: undefined,
+    });
+    const bodies = new Map<string, string>();
+    bodies.set("engineer", "Write code.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml", "claude-code");
+    const engineer = results.find((r) => r.name === "engineer");
+    assert.ok(engineer);
+
+    assert.ok(engineer.content.includes("mcpServers:"));
+    assert.ok(engineer.content.includes("github:"));
+    assert.ok(engineer.content.includes("command: npx"));
+  });
+
+  it("agentConfig skills emits correctly in claude-code target", () => {
+    const config = makeConfig({
+      skills: {
+        planning: { path: "./skills/planning" },
+        coding: { path: "./skills/coding" },
+        engineer: {
+          compose: ["planning", "coding"],
+          description: "Writes code.",
+          agentConfig: {
+            skills: ["/path/to/skill-a", "/path/to/skill-b"],
+          },
+        },
+      },
+      team: undefined,
+    });
+    const bodies = new Map<string, string>();
+    bodies.set("engineer", "Write code.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml", "claude-code");
+    const engineer = results.find((r) => r.name === "engineer");
+    assert.ok(engineer);
+
+    assert.ok(engineer.content.includes("skills:"));
+    assert.ok(engineer.content.includes("- /path/to/skill-a"));
+    assert.ok(engineer.content.includes("- /path/to/skill-b"));
+  });
+
+  it("agentConfig mcpServers and skills are ignored in skill target", () => {
+    const config = makeConfig({
+      skills: {
+        planning: { path: "./skills/planning" },
+        coding: { path: "./skills/coding" },
+        engineer: {
+          compose: ["planning", "coding"],
+          description: "Writes code.",
+          agentConfig: {
+            mcpServers: {
+              github: { command: "npx", args: ["-y", "@anthropic/github-mcp-server"] },
+            },
+            skills: ["/path/to/skill-a"],
+          },
+        },
+      },
+      team: undefined,
+    });
+    const bodies = new Map<string, string>();
+    bodies.set("engineer", "Write code.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml", "skill");
+    const engineer = results.find((r) => r.name === "engineer");
+    assert.ok(engineer);
+
+    assert.ok(!engineer.content.includes("mcpServers:"));
+    assert.ok(!engineer.content.includes("skills:"));
+  });
 });
 
 describe("generateRunCommand with orchestrator", () => {

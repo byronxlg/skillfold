@@ -1575,6 +1575,121 @@ skills:
       tmpDir = undefined;
     }
   });
+
+  it("parses mcpServers field", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      mcpServers:
+        github:
+          command: npx
+          args:
+            - "-y"
+            - "@anthropic/github-mcp-server"
+          env:
+            GITHUB_TOKEN: "\${GITHUB_TOKEN}"
+`);
+    const config = readConfig(configPath);
+    const skill = config.skills["quality"];
+    assert.ok(isComposed(skill));
+    assert.ok(skill.agentConfig?.mcpServers);
+    assert.equal(skill.agentConfig.mcpServers.github.command, "npx");
+    assert.deepEqual(skill.agentConfig.mcpServers.github.args, ["-y", "@anthropic/github-mcp-server"]);
+  });
+
+  it("rejects non-object mcpServers", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      mcpServers: "not a map"
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /mcpServers must be a YAML map/);
+      return true;
+    });
+  });
+
+  it("rejects non-object mcpServers entry", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      mcpServers:
+        github: "not a map"
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /mcpServers\.github must be a YAML map/);
+      return true;
+    });
+  });
+
+  it("parses skills field", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      skills:
+        - /path/to/skill-a
+        - /path/to/skill-b
+`);
+    const config = readConfig(configPath);
+    const skill = config.skills["quality"];
+    assert.ok(isComposed(skill));
+    assert.deepEqual(skill.agentConfig?.skills, ["/path/to/skill-a", "/path/to/skill-b"]);
+  });
+
+  it("rejects non-array skills", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      skills: "not an array"
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /skills must be an array of strings/);
+      return true;
+    });
+  });
 });
 
 describe("type guards", () => {
