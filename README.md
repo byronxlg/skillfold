@@ -12,7 +12,7 @@
 
 Running multiple AI agents? Each one needs a [SKILL.md](https://agentskills.io/specification) - and when agents share skills, you end up copy-pasting instructions between them. Change one skill, manually update every agent that uses it.
 
-Skillfold fixes this. Define each skill once, compose them into agents, and compile one YAML config into a spec-compliant SKILL.md for every agent.
+Skillfold is a compile-time tool that fixes this. Define each skill once, compose them into agents, and compile one YAML config into plain Markdown files for every agent. No runtime, no daemon, no SDK - just YAML in and spec-compliant SKILL.md files out.
 
 ## The Problem
 
@@ -219,11 +219,12 @@ Agent Skills tools solve different problems at different layers:
 
 | Layer | What it does | Examples |
 |-------|-------------|----------|
-| **Skill authoring** | Define individual skills, ship them with packages | TanStack Intent, manual SKILL.md |
-| **Composition and orchestration** | Compose skills into agents, wire agents into typed team flows, compile output | **Skillfold** |
-| **Execution** | Run the agents | Claude Code, Cursor, Copilot, etc. |
+| **Skill authoring** | Define individual skills | TanStack Intent, manual SKILL.md |
+| **Compile-time composition** | Compose skills into agents, validate state and flow, compile output | **Skillfold** |
+| **Runtime coordination** | Coordinate agents during execution, manage sessions | Agent Teams, Pied Piper |
+| **Execution** | Run the agents | Claude Code, Cursor, Copilot |
 
-Authoring tools help library maintainers *ship* skills. Skillfold helps teams *consume and orchestrate* them. A library author ships skills with their package, a team imports those skills into a skillfold pipeline, and agent platforms run the compiled output. These tools work together.
+A library author ships skills with their package (authoring). A team imports those skills into a skillfold pipeline and compiles the output (compile-time). A runtime coordinator like Agent Teams manages agent sessions and handoffs (runtime). An agent platform reads the compiled Markdown and runs it (execution). These layers work together.
 
 ---
 
@@ -266,6 +267,12 @@ npx skillfold plugin
 See the [Integration Guide](docs/integrations.md) for setup details.
 
 Works with [Claude Code](https://claude.ai/code), [Cursor](https://cursor.com), [VS Code](https://code.visualstudio.com), [GitHub Copilot](https://github.com), [OpenAI Codex](https://developers.openai.com/codex), [Gemini CLI](https://geminicli.com), and [26 more](https://agentskills.io).
+
+---
+
+## Works with Agent Teams
+
+Skillfold and Agent Teams solve different problems at different times. Skillfold runs at build time to compile agent definitions, skills, and state schemas into plain Markdown. Agent Teams runs at execution time to coordinate live agent sessions, manage handoffs, and share context. Use skillfold to define *what each agent knows*, then use Agent Teams (or the generated `/run-pipeline` command) to orchestrate *when they run*.
 
 ---
 
