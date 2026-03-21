@@ -633,19 +633,18 @@ describe("run", () => {
         },
       };
 
-      // No bodies provided for the skill
-      const result = await run({
-        config,
-        bodies: new Map(),
-        outDir: tmpDir,
-        dryRun: false,
-        workDir: tmpDir,
-        spawner: new MockSpawner({}),
-      });
-
-      assert.equal(result.steps.length, 1);
-      assert.equal(result.steps[0].status, "error");
-      assert.ok(result.steps[0].error?.includes("missing"));
+      // No bodies provided - expandComposedBodies throws CompileError
+      await assert.rejects(
+        () => run({
+          config,
+          bodies: new Map(),
+          outDir: tmpDir!,
+          dryRun: false,
+          workDir: tmpDir!,
+          spawner: new MockSpawner({}),
+        }),
+        { message: /missing-base/ },
+      );
     });
   });
 
@@ -751,6 +750,47 @@ describe("run", () => {
 
       assert.equal(result.steps.length, 1);
       assert.equal(result.steps[0].status, "ok");
+    });
+
+    it("then: end on a middle node stops execution early", async () => {
+      tmpDir = makeTmpDir();
+      const config: Config = {
+        name: "test",
+        skills: {
+          "a-base": { path: "./skills/a" },
+          a: { compose: ["a-base"], description: "A" },
+          "b-base": { path: "./skills/b" },
+          b: { compose: ["b-base"], description: "B" },
+        },
+        team: {
+          flow: {
+            nodes: [
+              { skill: "a", reads: [], writes: ["state.x"], then: "end" },
+              { skill: "b", reads: ["state.x"], writes: ["state.y"] },
+            ],
+          },
+        },
+      };
+
+      const spawner = new MockSpawner({
+        a: { x: "done" },
+        b: { y: "should not run" },
+      });
+
+      const result = await run({
+        config,
+        bodies: new Map([["a-base", "A."], ["b-base", "B."]]),
+        outDir: tmpDir,
+        dryRun: false,
+        workDir: tmpDir,
+        spawner,
+      });
+
+      assert.equal(result.steps.length, 1);
+      assert.equal(result.steps[0].status, "ok");
+      assert.equal(result.steps[0].agent, "a");
+      assert.equal(spawner.calls.length, 1);
+      assert.deepEqual(result.state, { x: "done" });
     });
   });
 });

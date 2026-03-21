@@ -1,8 +1,9 @@
-import { execSync } from "node:child_process";
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import type { Config } from "./config.js";
+import { expandComposedBodies } from "./compiler.js";
 import {
   type GraphNode,
   type StepNode,
@@ -45,7 +46,7 @@ export class ClaudeSpawner implements Spawner {
   validate(): void {
     if (this.validated) return;
     try {
-      execSync("claude --version", { stdio: "pipe" });
+      execFileSync("claude", ["--version"], { stdio: "pipe" });
     } catch {
       throw new Error(
         "claude CLI not found. Install it from https://docs.anthropic.com/en/docs/claude-code"
@@ -73,8 +74,9 @@ export class ClaudeSpawner implements Spawner {
       "Wrap the JSON in ```json fences.",
     ].join("\n");
 
-    const result = execSync(
-      `claude --print --system-prompt ${JSON.stringify(skillContent)} ${JSON.stringify(prompt)}`,
+    const result = execFileSync(
+      "claude",
+      ["--print", "--system-prompt", skillContent, prompt],
       { encoding: "utf-8", maxBuffer: 10 * 1024 * 1024 },
     );
 
@@ -215,6 +217,7 @@ export async function run(options: RunOptions): Promise<RunResult> {
       const node = nodes[i];
       const label = nodeLabel(node);
       steps.push({ step: i + 1, agent: label, status: "skipped" });
+      if (node.then === "end") break;
     }
     return { steps, state: {} };
   }
@@ -243,6 +246,7 @@ export async function run(options: RunOptions): Promise<RunResult> {
         `  [${i + 1}/${nodes.length}] ${label}... skipped (async node - requires external input)\n`
       );
       steps.push({ step: i + 1, agent: label, status: "skipped" });
+      if (node.then === "end") break;
       continue;
     }
 
@@ -287,6 +291,7 @@ export async function run(options: RunOptions): Promise<RunResult> {
 
       process.stderr.write(" done\n");
       steps.push({ step: i + 1, agent: label, status: "ok" });
+      if (node.then === "end") break;
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
       process.stderr.write(` error\n`);
@@ -298,46 +303,3 @@ export async function run(options: RunOptions): Promise<RunResult> {
   return { steps, state };
 }
 
-/**
- * Expand a composed skill into its full body text by concatenating
- * all atomic skill bodies in composition order.
- */
-function expandSkill(
-  name: string,
-  config: Config,
-  bodies: Map<string, string>,
-  seen: Set<string>,
-): string[] {
-  if (seen.has(name)) return [];
-
-  const skill = config.skills[name];
-  if (!skill) return [];
-
-  if (!("compose" in skill)) {
-    const body = bodies.get(name);
-    return body !== undefined ? [body] : [];
-  }
-
-  seen.add(name);
-  const parts: string[] = [];
-  for (const ref of skill.compose) {
-    parts.push(...expandSkill(ref, config, bodies, new Set(seen)));
-  }
-  return parts;
-}
-
-/**
- * Build a map of composed skill name -> expanded body text.
- */
-function expandComposedBodies(
-  config: Config,
-  bodies: Map<string, string>,
-): Map<string, string> {
-  const result = new Map<string, string>();
-  for (const [name, skill] of Object.entries(config.skills)) {
-    if (!("compose" in skill)) continue;
-    const parts = expandSkill(name, config, bodies, new Set());
-    result.set(name, parts.join("\n\n"));
-  }
-  return result;
-}
