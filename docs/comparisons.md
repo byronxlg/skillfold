@@ -125,7 +125,7 @@ Skillfold is a compiler. It reads your `skillfold.yaml`, validates everything at
 | **Flow patterns** | Conditional routing, parallel map, loops, sub-flows | Sequential and hierarchical processes |
 | **State** | Typed schema with compile-time validation | Python objects at runtime |
 | **Output format** | Agent Skills standard (SKILL.md) | Proprietary CrewAI objects |
-| **Platform support** | 38+ platforms | CrewAI runtime only |
+| **Platform support** | 8 compilation targets | CrewAI runtime only |
 | **Validation** | Compile-time (types, references, conflicts, cycles) | Runtime errors |
 | **LLM support** | Any platform that reads Agent Skills | Multiple LLM providers via CrewAI SDK |
 | **Dynamic workflows** | Static topology, validated ahead of time | Can adapt structure at runtime |
