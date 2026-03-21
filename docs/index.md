@@ -5,6 +5,10 @@ hero:
   name: Skillfold
   text: Typed coordination for multi-agent pipelines
   tagline: Compile YAML configs into agent skills, execution flows, and orchestrators - validated at compile time.
+  image:
+    light: /hero-light.svg
+    dark: /hero-dark.svg
+    alt: Skillfold pipeline diagram
   actions:
     - theme: brand
       text: Get Started
@@ -91,3 +95,28 @@ Skillfold is a compiler, not a runtime framework. It validates your pipeline at 
 | **Best for** | Known pipelines with static topology and typed state | Dynamic workflows where topology changes based on intermediate results |
 
 Runtime tools are the better choice when your pipeline needs to make structural decisions mid-execution - spawning new agents, rewiring flows, or adapting the graph based on intermediate output. Skillfold is the better choice when you know the shape of your pipeline ahead of time and want the compiler to catch errors before anything runs.
+
+<div class="targets-section">
+
+## Compile Once, Run Anywhere
+
+One config, 12 platform targets. Write your pipeline in YAML and compile to whichever agent platform your team uses.
+
+<div class="targets-grid">
+  <div class="target">Claude Code</div>
+  <div class="target">Agent Teams</div>
+  <div class="target">Cursor</div>
+  <div class="target">Windsurf</div>
+  <div class="target">VS Code Copilot</div>
+  <div class="target">OpenAI Codex</div>
+  <div class="target">Gemini CLI</div>
+  <div class="target">Goose</div>
+  <div class="target">Roo Code</div>
+  <div class="target">Kiro</div>
+  <div class="target">Junie</div>
+  <div class="target">SKILL.md</div>
+</div>
+
+[See platform integration details ->](/integrations)
+
+</div>
