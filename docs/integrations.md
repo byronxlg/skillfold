@@ -148,6 +148,7 @@ skills:
       compose: [code-review, testing]
 
 state:
+  code: { type: string }
   review: { type: Review }
   Review: { approved: bool, feedback: string }
 
