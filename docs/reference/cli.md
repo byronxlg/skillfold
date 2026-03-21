@@ -114,6 +114,36 @@ npx skillfold graph --html > pipeline.html
 
 The `--html` output includes clickable nodes, a composition details sidebar, and SVG export.
 
+### Run
+
+Execute a compiled pipeline by spawning agents sequentially. Currently supports linear flows only (no conditionals, map, or sub-flows).
+
+```bash
+npx skillfold run --target claude-code             # execute the pipeline
+npx skillfold run --target claude-code --dry-run   # preview without running
+npx skillfold run --target claude-code --config my-pipeline.yaml
+```
+
+Requires a `--target` flag (cannot use the default `skill` target). The `--dry-run` flag prints each step with its reads and writes without spawning any agents.
+
+**State management**: The runner reads and writes `state.json` in the working directory. Before each step, the current state is passed to the agent. After each step, the agent's state updates are merged back. Only fields declared in the node's `writes` are persisted.
+
+**Async nodes**: Async nodes (external agents, humans) are skipped automatically. Execution continues to the next step.
+
+**Current limitations**:
+- Linear flows only (no conditional routing, no map/parallel, no sub-flows)
+- Requires the `claude` CLI to be installed for agent spawning
+- Agents output state updates via a JSON code block with a `stateUpdates` key
+
+Example dry-run output:
+
+```
+skillfold: dry run for my-pipeline (3 steps)
+Step 1: planner reads=[direction] writes=[plan]
+Step 2: engineer reads=[plan] writes=[code]
+Step 3: reviewer reads=[code] writes=[review]
+```
+
 ### Watch
 
 Compile and auto-recompile when config or skill files change.
