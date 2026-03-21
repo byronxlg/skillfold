@@ -467,7 +467,7 @@ describe("generateMermaid", () => {
     assert.ok(output.includes('top_unique["unique"]'));
   });
 
-  it("renders async nodes with stadium shape", () => {
+  it("renders async nodes with stadium shape and dashed-border class", () => {
     const asyncNode: AsyncNode = {
       name: "owner",
       async: true,
@@ -481,9 +481,11 @@ describe("generateMermaid", () => {
       ["worker"],
     );
     const output = generateMermaid(config);
-    // Async nodes use stadium shape: ([name])
-    assert.ok(output.includes("owner([owner])"));
+    // Async nodes use stadium shape with :::async class
+    assert.ok(output.includes("owner([owner]):::async"));
     assert.ok(output.includes("owner -->"));
+    // classDef footer emitted when async nodes exist
+    assert.ok(output.includes("classDef async stroke-dasharray: 5 5"));
   });
 
   it("renders async node with writes as edge label", () => {
@@ -497,8 +499,9 @@ describe("generateMermaid", () => {
     };
     const config = atomicConfig([asyncNode], []);
     const output = generateMermaid(config);
-    assert.ok(output.includes("ci([ci])"));
+    assert.ok(output.includes("ci([ci]):::async"));
     assert.ok(output.includes("|\"status\"|"));
+    assert.ok(output.includes("classDef async stroke-dasharray: 5 5"));
   });
 
   it("renders async node followed by step node with fall-through", () => {
@@ -514,9 +517,19 @@ describe("generateMermaid", () => {
       ["processor"],
     );
     const output = generateMermaid(config);
-    assert.ok(output.includes("external([external])"));
+    assert.ok(output.includes("external([external]):::async"));
     assert.ok(output.includes("external -->"));
     assert.ok(output.includes("processor"));
+    assert.ok(output.includes("classDef async stroke-dasharray: 5 5"));
+  });
+
+  it("does not emit classDef async when no async nodes exist", () => {
+    const config = atomicConfig([
+      step("alpha", { then: "bravo" }),
+      step("bravo"),
+    ]);
+    const output = generateMermaid(config);
+    assert.ok(!output.includes("classDef async"));
   });
 });
 

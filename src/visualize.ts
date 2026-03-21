@@ -145,9 +145,9 @@ function renderNodes(
         }
       }
     } else if (isAsyncNode(node)) {
-      // Async nodes render with stadium shape ([name])
+      // Async nodes render with stadium shape ([name]) and dashed-border class
       const currentId = sanitizeId(node.name);
-      lines.push(`${indent}${currentId}([${node.name}])`);
+      lines.push(`${indent}${currentId}([${node.name}]):::async`);
 
       if (node.then !== undefined) {
         renderThen(
@@ -260,6 +260,16 @@ function renderNodes(
   }
 }
 
+// Check whether any node in the graph (recursively) is async.
+function hasAsyncNodes(nodes: GraphNode[]): boolean {
+  for (const node of nodes) {
+    if (isAsyncNode(node)) return true;
+    if (isMapNode(node) && hasAsyncNodes(node.graph)) return true;
+    if (isSubFlowNode(node) && node.graph && hasAsyncNodes(node.graph)) return true;
+  }
+  return false;
+}
+
 export function generateMermaid(config: Config): string {
   const lines: string[] = ["graph TD"];
   renderNodes(
@@ -269,6 +279,9 @@ export function generateMermaid(config: Config): string {
     "end_node",
     config.skills,
   );
+  if (hasAsyncNodes(config.team!.flow.nodes)) {
+    lines.push("    classDef async stroke-dasharray: 5 5");
+  }
   return lines.join("\n") + "\n";
 }
 
