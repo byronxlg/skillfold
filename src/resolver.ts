@@ -3,7 +3,7 @@ import { join, resolve } from "node:path";
 
 import { type Config, isAtomic } from "./config.js";
 import { ResolveError } from "./errors.js";
-import { isNpmRef, resolveNpmSkillPath } from "./npm.js";
+import { isNpmRef, parseNpmRef, resolveNpmSkillPath } from "./npm.js";
 import { fetchRemoteSkill } from "./remote.js";
 import { isSkillsRef, resolveSkillsPath } from "./skills-prefix.js";
 
@@ -46,7 +46,9 @@ export async function resolveSkills(
     if (!existsSync(skillDir)) {
       const hint = isSkillsRef(skill.path)
         ? ` (try: npx skills add ${skill.path.slice("skills:".length)})`
-        : "";
+        : isNpmRef(skill.path)
+          ? ` (try: npm install ${parseNpmRef(skill.path).packageName})`
+          : "";
       throw new ResolveError(name, `Directory not found: ${skillDir}${hint}`);
     }
 

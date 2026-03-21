@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { basename, dirname, extname, relative, resolve } from "node:path";
+import { basename, dirname, extname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { parse } from "yaml";
@@ -9,7 +9,7 @@ const SELF_IMPORT_PREFIX = "node_modules/skillfold/";
 
 import { ConfigError, didYouMean } from "./errors.js";
 import { type Graph, type GraphNode, type SubFlowNode, isMapNode, isSubFlowNode, parseGraph, validateGraph } from "./graph.js";
-import { isNpmRef, resolveNpmImportPath } from "./npm.js";
+import { isNpmRef, parseNpmRef, resolveNpmImportPath } from "./npm.js";
 import { isSkillsRef } from "./skills-prefix.js";
 import { fetchRemoteConfig } from "./remote.js";
 import { parseState, StateSchema } from "./state.js";
@@ -786,12 +786,21 @@ async function resolveImports(
       content = await fetchRemoteConfig(importPath);
       // Remote imports keep their paths as-is (already URLs or relative to remote)
     } else if (isNpmRef(importPath)) {
-      const resolved = resolveNpmImportPath(importPath, baseDir);
+      let resolved = resolveNpmImportPath(importPath, baseDir);
+      // When running via npx, the npm package may not be installed locally.
+      // Fall back to the CLI's own package root for self-referencing imports.
+      if (!existsSync(resolved)) {
+        const { packageName, subpath } = parseNpmRef(importPath);
+        if (packageName === "skillfold") {
+          resolved = join(__pkgRoot, subpath || "skillfold.yaml");
+        }
+      }
       importDir = dirname(resolved);
       try {
         content = readFileSync(resolved, "utf-8");
       } catch {
-        throw new ConfigError(`Cannot read npm imported config: ${importPath} (resolved to ${resolved})`);
+        const { packageName } = parseNpmRef(importPath);
+        throw new ConfigError(`Cannot read npm imported config: ${importPath} (resolved to ${resolved}). Try running: npm install ${packageName}`);
       }
     } else {
       let resolved = resolve(baseDir, importPath);
