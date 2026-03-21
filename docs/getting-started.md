@@ -291,4 +291,5 @@ Skillfold also ships a built-in plugin with 11 generic skills. Install it by ref
 - Try parallel `map` to process lists of items concurrently
 - Add `skillfold --check` to CI to verify compiled output stays in sync
 - Use `skillfold plugin` to package your pipeline for distribution
+- Use `skillfold search` to discover community skill packages on npm
 - Set `GITHUB_TOKEN` to reference skills from private GitHub repositories

@@ -16,6 +16,7 @@ Configuration language and compiler for multi-agent AI pipelines. Compiles YAML 
 - **Validate config**: `npx tsx src/cli.ts validate`
 - **Check output is current**: `npx tsx src/cli.ts --check`
 - **List pipeline**: `npx tsx src/cli.ts list`
+- **Search npm skills**: `npx tsx src/cli.ts search [query]`
 - **Run with custom config**: `npx tsx src/cli.ts --config path.yaml --out-dir out/`
 - **Build**: `npm run build`
 - **Build plugin**: `npm run build:plugin`
@@ -36,6 +37,7 @@ src/
   orchestrator.ts - Orchestrator SKILL.md generation from graph definition
   plugin.ts       - Claude Code plugin packaging (skillfold plugin)
   list.ts         - Pipeline introspection (skillfold list)
+  search.ts       - npm registry search for skillfold-skill packages (skillfold search)
   watch.ts        - File watching and auto-recompile (skillfold watch)
   init.ts         - skillfold init scaffolding
   errors.ts       - ConfigError, ResolveError, CompileError, GraphError
@@ -160,7 +162,8 @@ Located in `library/examples/`:
 - Resolved location URLs in orchestrator state table output (base URL templates from skill resources)
 - Compiler warnings for implicit state locations (skills without resource declarations)
 - Sub-flow imports: flow nodes can reference external pipeline configs via `flow:` field, with recursive resolution, skill/state merging, circular reference detection, orchestrator rendering with hierarchical steps, and Mermaid visualization as subgraphs
-- Test suite with 508 tests across 95 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, adopt, library, validate, list, watch, errors, subflow, and e2e modules
+- `skillfold search [query]` command for discovering skill packages on npm (searches for `skillfold-skill` keyword)
+- Test suite with 517 tests across 96 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, adopt, library, validate, list, search, watch, errors, subflow, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next

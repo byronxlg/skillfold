@@ -29,6 +29,7 @@ Commands:
   graph             Output Mermaid flowchart of the team flow
   watch             Compile and watch for changes
   plugin            Package compiled output as a Claude Code plugin
+  search [query]    Search npm for skillfold skill packages
   (default)         Compile the pipeline config
 
 Options:
@@ -44,7 +45,7 @@ Options:
 Templates: ${TEMPLATES.join(", ")}`);
 }
 
-type Command = "init" | "adopt" | "compile" | "graph" | "list" | "validate" | "watch" | "plugin";
+type Command = "init" | "adopt" | "compile" | "graph" | "list" | "validate" | "watch" | "plugin" | "search";
 
 interface Args {
   command: Command;
@@ -54,6 +55,7 @@ interface Args {
   dir: string;
   target: CompileTarget;
   template: string | undefined;
+  query: string | undefined;
   check: boolean;
   help: boolean;
   version: boolean;
@@ -67,6 +69,7 @@ function parseArgs(argv: string[]): Args {
   let dir = ".";
   let target: CompileTarget = "skill";
   let template: string | undefined;
+  let query: string | undefined;
   let checkMode = false;
   let help = false;
   let version = false;
@@ -100,6 +103,18 @@ function parseArgs(argv: string[]): Args {
   } else if (argv.length > 0 && argv[0] === "plugin") {
     command = "plugin";
     i = 1;
+  } else if (argv.length > 0 && argv[0] === "search") {
+    command = "search";
+    i = 1;
+    // Capture remaining non-flag args as search query
+    const queryParts: string[] = [];
+    while (i < argv.length && !argv[i].startsWith("-")) {
+      queryParts.push(argv[i]);
+      i++;
+    }
+    if (queryParts.length > 0) {
+      query = queryParts.join(" ");
+    }
   }
 
   for (; i < argv.length; i++) {
@@ -145,6 +160,7 @@ function parseArgs(argv: string[]): Args {
     dir: resolve(dir),
     target,
     template,
+    query,
     check: checkMode,
     help,
     version,
@@ -213,6 +229,12 @@ async function main(): Promise<void> {
       }
       throw err;
     }
+    return;
+  }
+
+  if (args.command === "search") {
+    const { searchSkills } = await import("./search.js");
+    await searchSkills(args.query);
     return;
   }
 
