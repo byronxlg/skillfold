@@ -26,6 +26,7 @@ export default defineConfig({
           { text: "Live Demo", link: "/demo" },
           { text: "Pipeline Builder", link: "/builder" },
           { text: "Examples", link: "/examples" },
+          { text: "Running Pipelines", link: "/running-pipelines" },
           { text: "Platform Integration", link: "/integrations" },
           { text: "Publishing Skills", link: "/publishing" },
           { text: "Authoring Skills", link: "/authoring" },
