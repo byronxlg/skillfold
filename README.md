@@ -329,7 +329,7 @@ Then:
 
 ### Typed State Schemas
 
-Custom types, primitives, and `list<Type>`. The compiler validates that every read has a matching write, detects write conflicts, and maps state to external locations. Atomic skills can declare `resources` for compile-time validation of location paths.
+Custom types, primitives, and `list<Type>`. The compiler validates that every read has a matching write, detects write conflicts, and maps state to external locations. A top-level `resources` section declares namespace URLs for compile-time validation of location paths.
 
 ```yaml
 state:

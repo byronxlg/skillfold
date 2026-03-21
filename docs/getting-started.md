@@ -229,24 +229,25 @@ Async nodes participate in the flow graph like regular nodes - they have reads, 
 
 ## 7. Declare resource namespaces
 
-When a state field has a `location` pointing to an atomic skill, the compiler can validate that the location path matches a declared namespace. Add `resources` to your atomic skill definitions:
+When a state field has a `location`, the compiler can validate that the location path matches a declared namespace. Add a top-level `resources` section to your config:
 
 ```yaml
+resources:
+  github:
+    discussions: "https://github.com/org/repo/discussions"
+    issues: "https://github.com/org/repo/issues"
+    pull-requests: "https://github.com/org/repo/pulls"
+
 skills:
   atomic:
-    github:
-      path: ./skills/github
-      resources:
-        discussions: "https://github.com/org/repo/discussions"
-        issues: "https://github.com/org/repo/issues"
-        pull-requests: "https://github.com/org/repo/pulls"
+    github: ./skills/github
 ```
 
 Now when a state field references `github` with a `location.path`, the compiler checks that the first path segment matches a declared resource namespace. A path like `discussions/general` matches `discussions`; a path like `wikis/page` would fail with a clear error.
 
 The orchestrator state table also benefits: instead of abstract `github: discussions/general`, it renders the resolved URL `https://github.com/org/repo/discussions/general`, giving the orchestrator agent concrete locations to work with.
 
-Skills without `resources` still work - the compiler emits a warning suggesting you add declarations for compile-time validation.
+Resource groups without matching state locations still work. The compiler emits a warning suggesting you add resource declarations when a state location references a skill with no resource group.
 
 ## 8. Local overrides
 
