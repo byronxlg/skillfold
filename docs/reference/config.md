@@ -32,6 +32,21 @@ skills:
     library-skill: npm:skillfold-skill-planning
 ```
 
+#### Version pinning
+
+GitHub URL references can be pinned to a specific tag or commit SHA using the `@ref` suffix. This ensures reproducible pipelines by fetching from an exact version instead of the branch HEAD.
+
+```yaml
+skills:
+  atomic:
+    # Pin to a tag
+    shared: https://github.com/org/repo/tree/main/skills/shared@v1.0.0
+    # Pin to a commit SHA (7-40 hex characters)
+    review: https://github.com/org/repo/tree/main/skills/review@abc1234def
+```
+
+The `@ref` is stripped from the path and used as the Git ref when fetching. If the ref looks like a commit SHA (all hex characters), it must be 7-40 characters long.
+
 ### Composed Skills
 
 Combine atomic skills by concatenating their SKILL.md bodies in declared order. Composition is recursive.

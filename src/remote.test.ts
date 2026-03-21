@@ -114,6 +114,103 @@ describe("parseGitHubUrl", () => {
       path: "skills/shared",
     });
   });
+
+  it("parses a URL with @tag version pin", () => {
+    const parts = parseGitHubUrl(
+      "https://github.com/org/repo/tree/main/skills/foo@v1.0.0"
+    );
+    assert.deepEqual(parts, {
+      owner: "org",
+      repo: "repo",
+      ref: "v1.0.0",
+      path: "skills/foo",
+      pinnedRef: "v1.0.0",
+    });
+  });
+
+  it("parses a URL with @sha version pin (short SHA)", () => {
+    const parts = parseGitHubUrl(
+      "https://github.com/org/repo/tree/main/skills/foo@abc1234"
+    );
+    assert.deepEqual(parts, {
+      owner: "org",
+      repo: "repo",
+      ref: "abc1234",
+      path: "skills/foo",
+      pinnedRef: "abc1234",
+    });
+  });
+
+  it("parses a URL with @sha version pin (full 40-char SHA)", () => {
+    const sha = "a".repeat(40);
+    const parts = parseGitHubUrl(
+      `https://github.com/org/repo/tree/main/skills/foo@${sha}`
+    );
+    assert.deepEqual(parts, {
+      owner: "org",
+      repo: "repo",
+      ref: sha,
+      path: "skills/foo",
+      pinnedRef: sha,
+    });
+  });
+
+  it("parses a URL with @tag on nested path", () => {
+    const parts = parseGitHubUrl(
+      "https://github.com/org/repo/tree/develop/src/skills/review@v2.1.0"
+    );
+    assert.deepEqual(parts, {
+      owner: "org",
+      repo: "repo",
+      ref: "v2.1.0",
+      path: "src/skills/review",
+      pinnedRef: "v2.1.0",
+    });
+  });
+
+  it("does not set pinnedRef when no @ref is present", () => {
+    const parts = parseGitHubUrl(
+      "https://github.com/org/repo/tree/main/skills/foo"
+    );
+    assert.equal(parts.pinnedRef, undefined);
+    assert.equal(parts.ref, "main");
+    assert.equal(parts.path, "skills/foo");
+  });
+
+  it("throws on empty @ref (trailing @ with no value)", () => {
+    assert.throws(
+      () => parseGitHubUrl("https://github.com/org/repo/tree/main/skills/foo@"),
+      /Version pin ref cannot be empty/
+    );
+  });
+
+  it("throws on too-short commit SHA (less than 7 hex chars)", () => {
+    assert.throws(
+      () => parseGitHubUrl("https://github.com/org/repo/tree/main/skills/foo@abc12"),
+      /Invalid commit SHA.*must be 7-40 hex characters/
+    );
+  });
+
+  it("throws on too-long commit SHA (more than 40 hex chars)", () => {
+    const longSha = "a".repeat(41);
+    assert.throws(
+      () => parseGitHubUrl(`https://github.com/org/repo/tree/main/skills/foo@${longSha}`),
+      /Invalid commit SHA.*must be 7-40 hex characters/
+    );
+  });
+
+  it("accepts non-hex @ref as a tag without SHA validation", () => {
+    const parts = parseGitHubUrl(
+      "https://github.com/org/repo/tree/main/skills/foo@release-2024"
+    );
+    assert.deepEqual(parts, {
+      owner: "org",
+      repo: "repo",
+      ref: "release-2024",
+      path: "skills/foo",
+      pinnedRef: "release-2024",
+    });
+  });
 });
 
 describe("fetchRemoteSkill", () => {
@@ -164,6 +261,36 @@ describe("fetchRemoteSkill", () => {
       "Fetched content should contain Code Review"
     );
   });
+
+  it("rejects version-pinned URL with invalid SHA", async () => {
+    await assert.rejects(
+      () =>
+        fetchRemoteSkill(
+          "pinned",
+          "https://github.com/org/repo/tree/main/skills/foo@abc"
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof ResolveError);
+        assert.match(err.message, /Invalid commit SHA/);
+        return true;
+      }
+    );
+  });
+
+  it("rejects version-pinned URL with empty ref", async () => {
+    await assert.rejects(
+      () =>
+        fetchRemoteSkill(
+          "pinned",
+          "https://github.com/org/repo/tree/main/skills/foo@"
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof ResolveError);
+        assert.match(err.message, /Version pin ref cannot be empty/);
+        return true;
+      }
+    );
+  });
 });
 
 describe("fetchRemoteConfig", () => {
@@ -184,6 +311,20 @@ describe("fetchRemoteConfig", () => {
       (err: unknown) => {
         assert.ok(err instanceof ConfigError);
         assert.match(err.message, /Unsupported import URL format/);
+        return true;
+      }
+    );
+  });
+
+  it("rejects version-pinned URL with invalid SHA", async () => {
+    await assert.rejects(
+      () =>
+        fetchRemoteConfig(
+          "https://github.com/org/repo/tree/main/configs/team@abc"
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof ConfigError);
+        assert.match(err.message, /Invalid commit SHA/);
         return true;
       }
     );

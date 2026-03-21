@@ -3,6 +3,8 @@ import { ConfigError, ResolveError } from "./errors.js";
 const GITHUB_TREE_RE =
   /^https:\/\/github\.com\/([^/]+)\/([^/]+)\/tree\/([^/]+)\/(.+)$/;
 
+const SHA_RE = /^[0-9a-f]+$/i;
+
 export function getGitHubHeaders(): HeadersInit {
   const token = process.env.GITHUB_TOKEN;
   if (token) {
@@ -16,6 +18,22 @@ export interface GitHubUrlParts {
   repo: string;
   ref: string;
   path: string;
+  pinnedRef?: string;
+}
+
+/**
+ * Validate a version pin ref. Tags can be any non-empty string.
+ * If the ref looks like a commit SHA (all hex chars), it must be 7-40 chars.
+ */
+function validatePinnedRef(ref: string): void {
+  if (ref.length === 0) {
+    throw new Error("Version pin ref cannot be empty (trailing @ with no ref)");
+  }
+  if (SHA_RE.test(ref) && (ref.length < 7 || ref.length > 40)) {
+    throw new Error(
+      `Invalid commit SHA "${ref}": must be 7-40 hex characters`
+    );
+  }
 }
 
 export function parseGitHubUrl(url: string): GitHubUrlParts {
@@ -23,12 +41,33 @@ export function parseGitHubUrl(url: string): GitHubUrlParts {
   if (!match) {
     throw new Error("URL does not match GitHub tree URL pattern");
   }
-  return {
+
+  let path = match[4];
+  let ref = match[3];
+  let pinnedRef: string | undefined;
+
+  // Check for @ref version pin at the end of the path
+  const atIndex = path.lastIndexOf("@");
+  if (atIndex !== -1) {
+    const pin = path.slice(atIndex + 1);
+    validatePinnedRef(pin);
+    pinnedRef = pin;
+    path = path.slice(0, atIndex);
+    ref = pin;
+  }
+
+  const parts: GitHubUrlParts = {
     owner: match[1],
     repo: match[2],
-    ref: match[3],
-    path: match[4],
+    ref,
+    path,
   };
+
+  if (pinnedRef !== undefined) {
+    parts.pinnedRef = pinnedRef;
+  }
+
+  return parts;
 }
 
 export async function fetchRemoteSkill(
@@ -45,10 +84,13 @@ export async function fetchRemoteSkill(
   let parts: GitHubUrlParts;
   try {
     parts = parseGitHubUrl(url);
-  } catch {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     throw new ResolveError(
       name,
-      "Unsupported URL format. Only GitHub tree URLs are supported"
+      message.includes("Version pin") || message.includes("Invalid commit SHA")
+        ? message
+        : "Unsupported URL format. Only GitHub tree URLs are supported"
     );
   }
 
@@ -82,9 +124,12 @@ export async function fetchRemoteConfig(url: string): Promise<string> {
   let parts: GitHubUrlParts;
   try {
     parts = parseGitHubUrl(url);
-  } catch {
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     throw new ConfigError(
-      `Unsupported import URL format: ${url}. Only GitHub tree URLs are supported`
+      message.includes("Version pin") || message.includes("Invalid commit SHA")
+        ? message
+        : `Unsupported import URL format: ${url}. Only GitHub tree URLs are supported`
     );
   }
 
