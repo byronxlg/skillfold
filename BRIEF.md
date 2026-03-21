@@ -233,7 +233,7 @@ These are intentionally left open — the right answers depend on implementation
 - ~~How should the state type system work? How strict should it be?~~ (Done: typed schema with custom types, primitives, lists, compile-time validation)
 - How are external state backends handled at runtime?
 - ~~How does the orchestrator communicate with individual agents in practice?~~ (Done: Agent tool invocation with compiled SKILL.md as instructions)
-- How are errors and failures handled mid-pipeline?
+- ~~How are errors and failures handled mid-pipeline?~~ (Done: `--on-error` flag with retry/skip/abort modes, `--resume` for interrupted pipelines)
 - ~~Should the language support importing or extending other pipeline configs?~~ (Done: pipeline imports and sub-flow imports)
 - How does versioning work for skills referenced by URL?
 - ~~Should there be a package registry for shared skills?~~ (Done: npm-based registry with `npm:` prefix resolution and `skillfold search`)
