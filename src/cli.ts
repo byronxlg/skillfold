@@ -39,7 +39,7 @@ Options:
   --config <path>      Config file (default: skillfold.yaml)
   --out-dir <path>     Output directory (default: build, or .claude for claude-code target)
   --dir <path>         Target directory for init (default: .)
-  --target <mode>      Output mode: skill, claude-code, agent-teams, cursor, windsurf, codex, copilot, gemini
+  --target <mode>      Output mode: skill, claude-code, agent-teams, cursor, windsurf, codex, copilot, gemini, goose, roo-code, kiro, junie
   --template <name>    Start from a library template (init only)
   --check              Verify compiled output is up-to-date (exit 1 if stale)
   --dry-run            Show execution plan without running (run only)

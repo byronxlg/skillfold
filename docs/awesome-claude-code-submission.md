@@ -7,19 +7,17 @@
 Submit via the GitHub web UI at:
 https://github.com/hesreallyhim/awesome-claude-code/issues/new?template=recommend-resource.yml
 
-Earliest submission date: April 3, 2026 (cooldown expiry, see below).
+Earliest submission date: March 27, 2026 (7-day cooldown expiry from PR #1020, see below).
 
 ### Cooldown Warning
 
-Two prior violations pushed the earliest submission date back:
+A prior violation triggered a cooldown:
 
-- **PR #1020** and **PR #1022** were submitted directly as pull requests to
-  awesome-claude-code instead of through the required issue template.
-- Both were closed by the maintainer. The 14-day cooldown from March 20
-  sets the earliest retry to **April 3, 2026**.
-- The account is now **2 strikes** into a 7-strike-to-permanent-ban
-  escalation. A third violation would push the cooldown to approximately
-  30 days.
+- **PR #1020** was submitted directly as a pull request to awesome-claude-code
+  instead of through the required issue template.
+- It was auto-closed by their bot. The 7-day cooldown from March 20
+  sets the earliest retry to **March 27, 2026**.
+- **Do not submit early.** A repeat violation would escalate the cooldown.
 - The submission **MUST** go through the
   [issue template web UI](https://github.com/hesreallyhim/awesome-claude-code/issues/new?template=recommend-resource.yml),
   **NOT** via `gh` CLI, **NOT** as a direct PR.
@@ -44,7 +42,7 @@ Two prior violations pushed the earliest submission date back:
 
 **Description:**
 
-Configuration language and compiler for multi-agent AI pipelines. Compiles YAML config into standard SKILL.md files and Claude Code agent layouts at build time, with validation of skill references, state types, and write conflicts. Ships with 11 reusable library skills, a Claude Code plugin, and example pipeline templates.
+Configuration language and compiler for multi-agent AI pipelines. Compiles a single YAML config into agent skills for 11 platforms including Claude Code, Cursor, Copilot, and Gemini. Validates skill references, state types, and write conflicts at build time. Ships with 11 reusable library skills, a Claude Code plugin, and example pipeline templates.
 
 **Validate Claims:**
 
@@ -64,7 +62,7 @@ Install skillfold (`npm install skillfold`), then run: `npx skillfold init demo 
 
 **Additional Comments:**
 
-Every other orchestrator in the awesome-claude-code list is a runtime tool - it launches agents, manages sessions, and coordinates execution while agents run. Skillfold is the only compile-time entry in the Orchestrators category. It validates skill references, state types, write conflicts, and cycle exit conditions at build time, then produces plain Markdown files that Claude Code reads natively. The README's "Works with Agent Teams" section explains the complementary relationship: skillfold defines what each agent knows and how agents connect at build time, while Agent Teams coordinates live sessions at execution time. When a pipeline has a team flow, the compiler also generates an executable `/run-pipeline` command that orchestrates the agents with a step-by-step execution plan, state table, and Agent tool invocations. There is no process to run, no server to start, and no SDK to integrate.
+Every other orchestrator in the awesome-claude-code list is a runtime tool - it launches agents, manages sessions, and coordinates execution while agents run. Skillfold is the only compile-time entry in the Orchestrators category. It validates skill references, state types, write conflicts, and cycle exit conditions at build time, then produces plain Markdown files that Claude Code reads natively. Compiles to 11 platform targets: Claude Code, Agent Teams, Cursor, Windsurf, Codex, Copilot, Gemini, Goose, Roo Code, Kiro, and Junie. The README's "Works with Agent Teams" section explains the complementary relationship: skillfold defines what each agent knows and how agents connect at build time, while Agent Teams coordinates live sessions at execution time. When a pipeline has a team flow, the compiler also generates an executable `/run-pipeline` command that orchestrates the agents with a step-by-step execution plan, state table, and Agent tool invocations. There is no process to run, no server to start, and no SDK to integrate.
 
 Self-hosting: skillfold's own dev team pipeline is compiled by skillfold itself (`skillfold.yaml` in the repo root). The 7-agent pipeline (strategist, architect, designer, marketer, engineer, reviewer, orchestrator) produces the project's own discussions, issues, and pull requests.
 
@@ -72,7 +70,7 @@ CI integration: ships a reusable GitHub Action (`action.yml`) that verifies comp
 
 11 library skills (planning, research, code-writing, testing, etc.) are discoverable via `npx skills add byronxlg/skillfold`.
 
-Single dependency (`yaml`), 550 tests across 103 suites, Node 20+.
+Single dependency (`yaml`), 858 tests across 168 suites, Node 20+.
 
 ---
 
@@ -86,10 +84,10 @@ pre-runs that evaluation against skillfold and documents the results.
 
 | Dimension | What it checks | Assessment |
 |---|---|---|
-| Code quality | Structure, readability, correctness, consistency | Pass - TypeScript strict mode, ESM, consistent conventions, 550 tests |
+| Code quality | Structure, readability, correctness, consistency | Pass - TypeScript strict mode, ESM, consistent conventions, 858 tests |
 | Security / safety | Implicit execution, file/network access, credentials | Pass - Pure compiler, no hooks, no persistent state, no credential storage |
-| Documentation / transparency | Docs match implementation, side effects disclosed | Pass - README, getting-started guide, integration guide, JSON Schema |
-| Functionality / scope | Does what it claims, breadth of features | Pass - Compiles YAML to SKILL.md and Claude Code agents as advertised |
+| Documentation / transparency | Docs match implementation, side effects disclosed | Pass - README, getting-started guide, integration guide, JSON Schema, VitePress docs site |
+| Functionality / scope | Does what it claims, breadth of features | Pass - Compiles YAML to 11 platform targets as advertised |
 | Repo hygiene | Maintenance, licensing, publication quality | Pass - CI on Node 20+22, MIT license, npm provenance, semver policy |
 
 ### Claude-Code-Specific Checklist
@@ -152,13 +150,13 @@ and the documentation accurately describes what the tool does.
   stored or logged.
 - **Single dependency** - The only runtime dependency is `yaml` (YAML parser).
   No transitive dependency tree to audit.
-- **550 tests** across 103 suites, run with `node:test` (zero test framework
+- **858 tests** across 168 suites, run with `node:test` (zero test framework
   dependencies).
 - **MIT license**, clearly stated in LICENSE and package.json.
 - **CI on Node 20 + 22** via GitHub Actions, with `--check` flag for verifying
   compiled output is current.
-- **Comprehensive docs** - Getting-started tutorial, integration guide for 5
-  platforms, JSON Schema for IDE autocompletion, inline JSDoc on all exports.
+- **Comprehensive docs** - Getting-started tutorial, integration guide for 11
+  platforms, JSON Schema for IDE autocompletion, VitePress docs site.
 - **Self-hosting** - The project's own dev team pipeline is compiled by
   skillfold, providing a non-trivial real-world usage example.
 - **Semver policy** - Documented in CONTRIBUTING.md with automated npm publish
