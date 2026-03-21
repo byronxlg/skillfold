@@ -58,6 +58,20 @@ export type {
   StateType,
 } from "./state.js";
 
+// State integrations
+export {
+  getIntegration,
+  INTEGRATION_NAMES,
+  isIntegrationLocation,
+  parseIntegrationLocation,
+  renderIntegrationInstructions,
+  resolveIntegrationUrl,
+} from "./integrations.js";
+export type {
+  IntegrationLocation,
+  IntegrationType,
+} from "./integrations.js";
+
 // Orchestrator generation
 export { generateOrchestrator } from "./orchestrator.js";
 
