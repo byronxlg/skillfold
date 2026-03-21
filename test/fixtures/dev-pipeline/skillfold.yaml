@@ -6,9 +6,15 @@ skills:
     task-decomposition: ./skills/task-decomposition
     code-generation: ./skills/code-generation
     code-review: ./skills/code-review
-    slack: ./skills/slack
+    slack:
+      path: ./skills/slack
+      resources:
+        dev-pipeline-channel: "https://slack.com/archives/C0123"
     confluence: ./skills/confluence
-    jira: ./skills/jira
+    jira:
+      path: ./skills/jira
+      resources:
+        dev: "https://jira.example.com/project/DEV"
 
   composed:
     strategy:
@@ -54,7 +60,7 @@ state:
     type: "list<Task>"
     location:
       skill: jira
-      path: DEV/dev-board
+      path: dev/dev-board
 
 team:
   orchestrator: orchestrator

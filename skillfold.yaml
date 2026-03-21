@@ -12,7 +12,12 @@ skills:
     security-best-practices: https://github.com/openai/skills/tree/main/skills/.curated/security-best-practices
 
     # Project-specific skills
-    github: ./skills/github
+    github:
+      path: ./skills/github
+      resources:
+        discussions: "https://github.com/byronxlg/skillfold/discussions"
+        issues: "https://github.com/byronxlg/skillfold/issues"
+        pull-requests: "https://github.com/byronxlg/skillfold/pulls"
     moltbook: ./skills/moltbook
     product-strategy: ./skills/product-strategy
     skillfold-context: ./skills/skillfold-context

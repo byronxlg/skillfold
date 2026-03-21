@@ -2,10 +2,11 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 import { parseState } from "./state.js";
+import type { SkillInfo } from "./state.js";
 import { ConfigError } from "./errors.js";
 
-const NO_SKILLS = new Set<string>();
-const SOME_SKILLS = new Set(["review", "lint", "format"]);
+const NO_SKILLS: Record<string, SkillInfo> = {};
+const SOME_SKILLS: Record<string, SkillInfo> = { review: {}, lint: {}, format: {} };
 
 describe("parseState", () => {
   describe("custom type definitions", () => {
@@ -378,9 +379,6 @@ describe("parseState", () => {
 
   describe("ambiguous entries", () => {
     it("entry with non-object non-null value is ignored (no types or fields)", () => {
-      // Scalar values at top level are not objects, so they are skipped
-      // by both passes in parseState. This is an edge case - the YAML
-      // parser would produce a string value for something like `foo: bar`.
       const raw = {
         something: "not-an-object",
       };
@@ -532,6 +530,177 @@ describe("parseState", () => {
           return true;
         }
       );
+    });
+  });
+
+  describe("resource namespace validation (#277)", () => {
+    it("accepts location path matching a declared namespace", () => {
+      const skills: Record<string, SkillInfo> = {
+        github: {
+          resources: {
+            discussions: "https://github.com/owner/repo/discussions",
+            issues: "https://github.com/owner/repo/issues",
+          },
+        },
+      };
+      const raw = {
+        direction: {
+          type: "string",
+          location: { skill: "github", path: "discussions/general" },
+        },
+      };
+      const schema = parseState(raw, skills);
+      assert.deepEqual(schema.fields["direction"]!.location, {
+        skill: "github",
+        path: "discussions/general",
+      });
+    });
+
+    it("accepts location path that is just a namespace with no sub-path", () => {
+      const skills: Record<string, SkillInfo> = {
+        github: {
+          resources: {
+            issues: "https://github.com/owner/repo/issues",
+          },
+        },
+      };
+      const raw = {
+        tasks: {
+          type: "string",
+          location: { skill: "github", path: "issues" },
+        },
+      };
+      const schema = parseState(raw, skills);
+      assert.deepEqual(schema.fields["tasks"]!.location, {
+        skill: "github",
+        path: "issues",
+      });
+    });
+
+    it("rejects location path not matching any declared namespace", () => {
+      const skills: Record<string, SkillInfo> = {
+        github: {
+          resources: {
+            discussions: "https://github.com/owner/repo/discussions",
+            issues: "https://github.com/owner/repo/issues",
+          },
+        },
+      };
+      const raw = {
+        data: {
+          type: "string",
+          location: { skill: "github", path: "wiki/page" },
+        },
+      };
+      assert.throws(
+        () => parseState(raw, skills),
+        (err: unknown) => {
+          assert.ok(err instanceof ConfigError);
+          assert.match(err.message, /location path "wiki\/page" references namespace "wiki"/);
+          assert.match(err.message, /not declared by skill "github"/);
+          assert.match(err.message, /Declared namespaces: discussions, issues/);
+          return true;
+        }
+      );
+    });
+
+    it("includes didYouMean hint for close namespace name", () => {
+      const skills: Record<string, SkillInfo> = {
+        github: {
+          resources: {
+            discussions: "https://github.com/owner/repo/discussions",
+            issues: "https://github.com/owner/repo/issues",
+          },
+        },
+      };
+      const raw = {
+        data: {
+          type: "string",
+          location: { skill: "github", path: "discussons/general" },
+        },
+      };
+      assert.throws(
+        () => parseState(raw, skills),
+        (err: unknown) => {
+          assert.ok(err instanceof ConfigError);
+          assert.match(err.message, /namespace "discussons"/);
+          assert.match(err.message, /Did you mean "discussions"\?/);
+          return true;
+        }
+      );
+    });
+
+    it("skill with no resources accepts any path (backward compat)", () => {
+      const skills: Record<string, SkillInfo> = {
+        slack: {},
+      };
+      const raw = {
+        goal: {
+          type: "string",
+          location: { skill: "slack", path: "any/path/here" },
+        },
+      };
+      const schema = parseState(raw, skills);
+      assert.deepEqual(schema.fields["goal"]!.location, {
+        skill: "slack",
+        path: "any/path/here",
+      });
+    });
+
+    it("skill with undefined resources accepts any path (backward compat)", () => {
+      const skills: Record<string, SkillInfo> = {
+        slack: { resources: undefined },
+      };
+      const raw = {
+        goal: {
+          type: "string",
+          location: { skill: "slack", path: "channel/general" },
+        },
+      };
+      const schema = parseState(raw, skills);
+      assert.deepEqual(schema.fields["goal"]!.location, {
+        skill: "slack",
+        path: "channel/general",
+      });
+    });
+  });
+
+  describe("implicit location warning (#278)", () => {
+    it("emits warning for skill with no resources but config remains valid", () => {
+      const skills: Record<string, SkillInfo> = {
+        slack: {},
+      };
+      const raw = {
+        goal: {
+          type: "string",
+          location: { skill: "slack", path: "channel" },
+        },
+      };
+      // The config should still parse without error
+      const schema = parseState(raw, skills);
+      assert.deepEqual(schema.fields["goal"]!.location, {
+        skill: "slack",
+        path: "channel",
+      });
+    });
+
+    it("does not emit warning for skill with resources", () => {
+      const skills: Record<string, SkillInfo> = {
+        github: {
+          resources: {
+            issues: "https://github.com/owner/repo/issues",
+          },
+        },
+      };
+      const raw = {
+        tasks: {
+          type: "string",
+          location: { skill: "github", path: "issues" },
+        },
+      };
+      // Should parse without warning (resources declared)
+      const schema = parseState(raw, skills);
+      assert.ok(schema.fields["tasks"]!.location);
     });
   });
 });

@@ -44,6 +44,12 @@
                   "path": {
                     "type": "string",
                     "description": "Path to the skill directory."
+                  },
+                  "resources": {
+                    "type": "object",
+                    "description": "Resource namespaces this skill exposes, with base URL templates.",
+                    "additionalProperties": { "type": "string" },
+                    "propertyNames": { "pattern": "^[a-z0-9][a-z0-9-]*$" }
                   }
                 }
               }

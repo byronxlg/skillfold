@@ -227,7 +227,48 @@ The `owner` node is async - it does not invoke an agent. Instead, the orchestrat
 
 Async nodes participate in the flow graph like regular nodes - they have reads, writes, and transitions. But they are excluded from skill compilation (no SKILL.md is generated) and from the Agent tool list in the orchestrator.
 
-## 7. Start from a template
+## 7. Declare resource namespaces on skills
+
+When state fields have external locations (like GitHub issues or discussions), the location path references a namespace on the skill. You can declare these namespaces explicitly with `resources`, giving the compiler enough information to validate paths and render resolved URLs in the orchestrator output.
+
+```yaml
+skills:
+  atomic:
+    github:
+      path: ./skills/github
+      resources:
+        discussions: "https://github.com/{owner}/{repo}/discussions"
+        issues: "https://github.com/{owner}/{repo}/issues"
+        pull-requests: "https://github.com/{owner}/{repo}/pulls"
+
+state:
+  direction:
+    type: string
+    location:
+      skill: github
+      path: discussions/general
+
+  tasks:
+    type: list<Task>
+    location:
+      skill: github
+      path: issues
+```
+
+With resources declared, the compiler validates that each location path starts with a declared namespace (e.g. `discussions`, `issues`). Typos like `path: discussons/general` produce a clear error with a "Did you mean" suggestion.
+
+The orchestrator state table renders resolved URLs instead of abstract references:
+
+| Field | Type | Location |
+|-------|------|----------|
+| direction | string | https://github.com/{owner}/{repo}/discussions/general |
+| tasks | list\<Task\> | https://github.com/{owner}/{repo}/issues |
+
+Template variables like `{owner}` are preserved as-is - they are opaque strings that the orchestrator agent interprets at runtime.
+
+Skills without `resources` continue to work. The compiler emits a warning suggesting you add resource declarations for compile-time path validation, but the config remains valid.
+
+## 8. Start from a template
 
 If you prefer starting from a real-world pattern instead of the minimal starter:
 
@@ -245,7 +286,7 @@ Available templates:
 
 Templates use library skills via imports, so they work out of the box with no local skill directories needed.
 
-## 8. Deploy to your platform
+## 9. Deploy to your platform
 
 Compile directly to where your platform reads skills. See the [Integration Guide](integrations.md) for all platforms.
 
@@ -262,7 +303,7 @@ For Claude Code, `--target claude-code` generates agent markdown files alongside
 
 Skillfold also ships a built-in plugin with 11 generic skills. Install it by referencing `node_modules/skillfold/plugin/` from your Claude Code configuration.
 
-## 9. Next steps
+## 10. Next steps
 
 - Read the full config specification in [BRIEF.md](../BRIEF.md)
 - Explore the [shared library examples](../library/examples/) for real pipeline patterns

@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 import type { Config } from "./config.js";
-import { generateOrchestrator } from "./orchestrator.js";
+import { formatLocation, generateOrchestrator } from "./orchestrator.js";
 
 describe("generateOrchestrator", () => {
   it("linear graph - 3 steps with correct numbering, reads/writes, transitions", () => {
@@ -735,5 +735,180 @@ describe("generateOrchestrator: async nodes", () => {
     assert.ok(!asyncSection.includes("Agent tool"));
     // But the step node should
     assert.ok(output.includes("Invoke **worker** using the Agent tool."));
+  });
+});
+
+describe("generateOrchestrator: resolved location URLs (#279)", () => {
+  it("renders resolved URL when skill has resources", () => {
+    const config: Config = {
+      name: "resolved-test",
+      skills: {
+        github: {
+          path: "./skills/github",
+          resources: {
+            discussions: "https://github.com/{owner}/{repo}/discussions",
+            issues: "https://github.com/{owner}/{repo}/issues",
+            "pull-requests": "https://github.com/{owner}/{repo}/pulls",
+          },
+        },
+      },
+      state: {
+        types: {},
+        fields: {
+          direction: {
+            type: { kind: "primitive", value: "string" },
+            location: { skill: "github", path: "discussions/general" },
+          },
+          tasks: {
+            type: { kind: "primitive", value: "string" },
+            location: { skill: "github", path: "issues" },
+          },
+          review: {
+            type: { kind: "primitive", value: "string" },
+            location: { skill: "github", path: "pull-requests", kind: "review" },
+          },
+        },
+      },
+      team: {
+        flow: {
+          nodes: [
+            { skill: "github", reads: [], writes: [] },
+          ],
+        },
+      },
+    };
+
+    const output = generateOrchestrator(config);
+
+    assert.ok(
+      output.includes("| direction | string | https://github.com/{owner}/{repo}/discussions/general |"),
+      "should render resolved URL with sub-path"
+    );
+    assert.ok(
+      output.includes("| tasks | string | https://github.com/{owner}/{repo}/issues |"),
+      "should render resolved URL without sub-path"
+    );
+    assert.ok(
+      output.includes("| review | string | https://github.com/{owner}/{repo}/pulls (review) |"),
+      "should render resolved URL with kind"
+    );
+  });
+
+  it("falls back to abstract format when skill has no resources", () => {
+    const config: Config = {
+      name: "fallback-test",
+      skills: {
+        slack: { path: "./skills/slack" },
+      },
+      state: {
+        types: {},
+        fields: {
+          goal: {
+            type: { kind: "primitive", value: "string" },
+            location: { skill: "slack", path: "channel" },
+          },
+          plan: {
+            type: { kind: "primitive", value: "string" },
+            location: { skill: "slack", path: "channel", kind: "reply" },
+          },
+        },
+      },
+      team: {
+        flow: {
+          nodes: [
+            { skill: "slack", reads: [], writes: [] },
+          ],
+        },
+      },
+    };
+
+    const output = generateOrchestrator(config);
+
+    assert.ok(
+      output.includes("| goal | string | slack: channel |"),
+      "should use abstract format without resources"
+    );
+    assert.ok(
+      output.includes("| plan | string | slack: channel (reply) |"),
+      "should use abstract format with kind"
+    );
+  });
+
+  it("falls back for composed skill (not atomic, no resources)", () => {
+    const config: Config = {
+      name: "composed-test",
+      skills: {
+        base: { path: "./skills/base" },
+        agent: { compose: ["base"], description: "An agent." },
+      },
+      state: {
+        types: {},
+        fields: {
+          data: {
+            type: { kind: "primitive", value: "string" },
+            location: { skill: "agent", path: "output" },
+          },
+        },
+      },
+      team: {
+        flow: {
+          nodes: [
+            { skill: "agent", reads: [], writes: [] },
+          ],
+        },
+      },
+    };
+
+    const output = generateOrchestrator(config);
+    assert.ok(
+      output.includes("| data | string | agent: output |"),
+      "should fall back for composed skill"
+    );
+  });
+});
+
+describe("formatLocation unit tests (#279)", () => {
+  it("returns empty string when no location", () => {
+    const result = formatLocation({ type: { kind: "primitive", value: "string" } });
+    assert.equal(result, "");
+  });
+
+  it("resolves URL with sub-path", () => {
+    const result = formatLocation(
+      { type: { kind: "primitive", value: "string" }, location: { skill: "github", path: "discussions/general" } },
+      { discussions: "https://github.com/o/r/discussions" },
+    );
+    assert.equal(result, "https://github.com/o/r/discussions/general");
+  });
+
+  it("resolves URL without sub-path", () => {
+    const result = formatLocation(
+      { type: { kind: "primitive", value: "string" }, location: { skill: "github", path: "issues" } },
+      { issues: "https://github.com/o/r/issues" },
+    );
+    assert.equal(result, "https://github.com/o/r/issues");
+  });
+
+  it("resolves URL with kind", () => {
+    const result = formatLocation(
+      { type: { kind: "primitive", value: "string" }, location: { skill: "github", path: "pull-requests", kind: "review" } },
+      { "pull-requests": "https://github.com/o/r/pulls" },
+    );
+    assert.equal(result, "https://github.com/o/r/pulls (review)");
+  });
+
+  it("falls back when no resources provided", () => {
+    const result = formatLocation(
+      { type: { kind: "primitive", value: "string" }, location: { skill: "slack", path: "channel" } },
+    );
+    assert.equal(result, "slack: channel");
+  });
+
+  it("falls back when namespace not in resources", () => {
+    const result = formatLocation(
+      { type: { kind: "primitive", value: "string" }, location: { skill: "github", path: "wiki/page" } },
+      { issues: "https://github.com/o/r/issues" },
+    );
+    assert.equal(result, "github: wiki/page");
   });
 });

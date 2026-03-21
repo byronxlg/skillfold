@@ -1594,3 +1594,137 @@ describe("type guards", () => {
     assert.equal(isComposed({ path: "./skills/review" }), false);
   });
 });
+
+describe("readConfig resource declarations (#276)", () => {
+  let tmpDir: string | undefined;
+
+  afterEach(() => {
+    if (tmpDir) {
+      rmSync(tmpDir, { recursive: true, force: true });
+      tmpDir = undefined;
+    }
+  });
+
+  it("atomic skill with valid resources map parses correctly", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    github:
+      path: ./skills/github
+      resources:
+        discussions: "https://github.com/owner/repo/discussions"
+        issues: "https://github.com/owner/repo/issues"
+`);
+    const config = readConfig(configPath);
+    const skill = config.skills["github"];
+    assert.ok(isAtomic(skill));
+    assert.deepEqual(skill.resources, {
+      discussions: "https://github.com/owner/repo/discussions",
+      issues: "https://github.com/owner/repo/issues",
+    });
+  });
+
+  it("atomic skill with empty resources map has no resources", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    github:
+      path: ./skills/github
+      resources: {}
+`);
+    const config = readConfig(configPath);
+    const skill = config.skills["github"];
+    assert.ok(isAtomic(skill));
+    assert.equal(skill.resources, undefined);
+  });
+
+  it("string shorthand still works (no resources)", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    github: ./skills/github
+`);
+    const config = readConfig(configPath);
+    const skill = config.skills["github"];
+    assert.ok(isAtomic(skill));
+    assert.equal(skill.resources, undefined);
+  });
+
+  it("rejects resources with uppercase key", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    github:
+      path: ./skills/github
+      resources:
+        Issues: "https://example.com"
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /resource name "Issues" must be lowercase/);
+      return true;
+    });
+  });
+
+  it("rejects resources with non-string value", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    github:
+      path: ./skills/github
+      resources:
+        issues: 42
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /resource "issues" must be a non-empty string/);
+      return true;
+    });
+  });
+
+  it("rejects resources that is not an object", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    github:
+      path: ./skills/github
+      resources: "not-an-object"
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /resources must be a YAML map/);
+      return true;
+    });
+  });
+
+  it("rejects resources that is an array", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    github:
+      path: ./skills/github
+      resources:
+        - issues
+        - pulls
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /resources must be a YAML map/);
+      return true;
+    });
+  });
+});

@@ -68,7 +68,7 @@ BRIEF.md               - Full design brief
 
 Three top-level sections: `skills`, `state`, `team`.
 
-- **skills.atomic**: Path references to atomic skill directories
+- **skills.atomic**: Path references to atomic skill directories, with optional `resources` map for namespace declarations
 - **skills.composed**: Composition declarations combining atomic skills into agents
 - **state**: Typed state schema (top-level, importable independently)
 - **team.orchestrator**: Optional skill name to append generated plan to
@@ -82,7 +82,7 @@ Read BRIEF.md for full context. Key points:
 
 - **Skill composition**: Atomic skills define reusable fragments. Composed skills concatenate atomic skill bodies in declared order. Composition is recursive.
 - **Team flow**: Agents wired into typed execution graphs with conditional routing, loops, and parallel map. Parsed and validated.
-- **State schema**: Typed state schema with custom types, primitives, lists, and external locations. Reads/writes validated against team flow.
+- **State schema**: Typed state schema with custom types, primitives, lists, and external locations. Reads/writes validated against team flow. Location paths validated against skill resource declarations when available.
 - **Orchestrator generation**: Generated from the team flow definition. Produces structured execution plan with step numbering, state table, and conditional/map rendering.
 
 ## Shared Skills Library
@@ -156,7 +156,8 @@ Located in `library/examples/`:
 - `skillfold plugin` command for packaging pipelines as distributable Claude Code plugins
 - `skillfold adopt` command for adopting existing Claude Code agents into a pipeline
 - Async flow nodes for external agents (humans, CI, other teams) with `async: true` and policy options (block, skip, use-latest)
-- Test suite with 469 tests across 85 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, adopt, library, validate, list, watch, errors, and e2e modules
+- State location resolution: atomic skills declare `resources` namespaces with base URL templates, location paths validated against declared namespaces, orchestrator renders resolved URLs in state table
+- Test suite with 493 tests across 90 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, adopt, library, validate, list, watch, errors, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next

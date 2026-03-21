@@ -100,10 +100,15 @@ function parseCustomType(
   return { fields };
 }
 
+/** Minimal skill info needed for location validation. */
+export interface SkillInfo {
+  resources?: Record<string, string>;
+}
+
 function validateLocation(
   fieldName: string,
   location: unknown,
-  skillNames: Set<string>
+  skills: Record<string, SkillInfo>,
 ): StateLocation {
   if (typeof location !== "object" || location === null) {
     throw new ConfigError(
@@ -125,9 +130,27 @@ function validateLocation(
     );
   }
 
-  if (!skillNames.has(loc.skill)) {
+  if (!(loc.skill in skills)) {
     throw new ConfigError(
       `State field "${fieldName}": location references unknown skill "${loc.skill}"`
+    );
+  }
+
+  const skill = skills[loc.skill];
+  if (skill.resources && Object.keys(skill.resources).length > 0) {
+    // Validate namespace against declared resources
+    const namespace = loc.path.split("/")[0];
+    if (!(namespace in skill.resources)) {
+      const declared = Object.keys(skill.resources);
+      const hint = didYouMean(namespace, declared);
+      throw new ConfigError(
+        `State field "${fieldName}": location path "${loc.path}" references namespace "${namespace}" which is not declared by skill "${loc.skill}". Declared namespaces: ${declared.join(", ")}${hint}`
+      );
+    }
+  } else {
+    // Emit warning for implicit location (skill has no resources)
+    process.stderr.write(
+      `Warning: state field "${fieldName}" has a location referencing skill "${loc.skill}" which has no resource declarations. Consider adding a "resources" map to the "${loc.skill}" skill definition for compile-time path validation.\n`
     );
   }
 
@@ -141,7 +164,7 @@ function validateLocation(
 
 export function parseState(
   raw: Record<string, unknown>,
-  skillNames: Set<string>
+  skills: Record<string, SkillInfo>,
 ): StateSchema {
   const types: Record<string, CustomType> = {};
   const fields: Record<string, StateField> = {};
@@ -180,7 +203,7 @@ export function parseState(
     const field: StateField = { type: stateType };
 
     if ("location" in obj) {
-      field.location = validateLocation(name, obj.location, skillNames);
+      field.location = validateLocation(name, obj.location, skills);
     }
 
     fields[name] = field;

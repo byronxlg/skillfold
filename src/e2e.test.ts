@@ -195,16 +195,17 @@ describe("e2e: dev-pipeline", () => {
 
     assert.ok(content.includes("## State"));
     assert.ok(content.includes("| Field | Type | Location |"));
+    // With resources declared, locations resolve to full URLs
     assert.ok(
-      content.includes("| goal | string | slack: dev-pipeline-channel |")
+      content.includes("| goal | string | https://slack.com/archives/C0123 |")
     );
     assert.ok(
       content.includes(
-        "| plan | string | slack: dev-pipeline-channel (reply) |"
+        "| plan | string | https://slack.com/archives/C0123 (reply) |"
       )
     );
     assert.ok(
-      content.includes("| tasks | list<Task> | jira: DEV/dev-board |")
+      content.includes("| tasks | list<Task> | https://jira.example.com/project/DEV/dev-board |")
     );
   });
 
