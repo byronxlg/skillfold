@@ -243,6 +243,11 @@ function parseGraphNodes(raw: unknown[], insideMap = false): GraphNode[] {
 
         if (stepObj.async === true) {
           isAsync = true;
+          if (flowPath !== undefined) {
+            throw new GraphError(
+              `Graph element "${primaryKey}": a node cannot be both a sub-flow and async`
+            );
+          }
           if (insideMap) {
             throw new GraphError(
               `Graph element "${primaryKey}": async nodes are not allowed inside map subgraphs`

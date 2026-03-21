@@ -1940,6 +1940,16 @@ describe("parseGraph: sub-flow nodes", () => {
     );
   });
 
+  it("rejects node with both flow and async", () => {
+    const raw = [
+      { "sub": { flow: "child.yaml", async: true }, then: "end" },
+    ];
+    assert.throws(
+      () => parseGraph(raw),
+      (err: unknown) => err instanceof GraphError && err.message.includes("cannot be both a sub-flow and async"),
+    );
+  });
+
   it("parses sub-flow node in a chain with step nodes", () => {
     const raw = [
       { planner: { writes: ["state.plan"] }, then: "build" },
