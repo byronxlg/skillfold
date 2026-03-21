@@ -91,7 +91,33 @@ describe("parseGraph", () => {
     assert.equal(node.then[1].to, "end");
   });
 
-  it("parses a map node with nested subgraph", () => {
+  it("parses a map node with nested subgraph using flow key", () => {
+    const raw = [
+      {
+        map: {
+          over: "state.tasks",
+          as: "task",
+          flow: [
+            {
+              engineer: { reads: ["task.description"], writes: ["task.output"] },
+              then: "end",
+            },
+          ],
+        },
+        then: "end",
+      },
+    ];
+    const graph = parseGraph(raw);
+    assert.equal(graph.nodes.length, 1);
+    const node = graph.nodes[0];
+    assert.ok(isMapNode(node));
+    assert.equal(node.over, "state.tasks");
+    assert.equal(node.as, "task");
+    assert.equal(node.flow.length, 1);
+    assert.equal(node.then, "end");
+  });
+
+  it("parses a map node with nested subgraph using graph key (backward compat)", () => {
     const raw = [
       {
         map: {
@@ -113,7 +139,7 @@ describe("parseGraph", () => {
     assert.ok(isMapNode(node));
     assert.equal(node.over, "state.tasks");
     assert.equal(node.as, "task");
-    assert.equal(node.graph.length, 1);
+    assert.equal(node.flow.length, 1);
     assert.equal(node.then, "end");
   });
 
@@ -255,12 +281,30 @@ describe("parseGraph", () => {
       );
     });
 
-    it("rejects map node missing graph", () => {
+    it("rejects map node missing flow", () => {
       assert.throws(
         () => parseGraph([{ map: { over: "state.tasks", as: "task" } }]),
         (err: unknown) => {
           assert.ok(err instanceof GraphError);
-          assert.match(err.message, /must have "graph"/);
+          assert.match(err.message, /must have "flow"/);
+          return true;
+        },
+      );
+    });
+
+    it("rejects map node with both flow and graph", () => {
+      assert.throws(
+        () => parseGraph([{
+          map: {
+            over: "state.tasks",
+            as: "task",
+            flow: [{ worker: {} }],
+            graph: [{ worker: {} }],
+          },
+        }]),
+        (err: unknown) => {
+          assert.ok(err instanceof GraphError);
+          assert.match(err.message, /cannot have both "flow" and "graph"/);
           return true;
         },
       );
@@ -504,7 +548,7 @@ describe("validateGraph", () => {
           {
             over: "state.tasks",
             as: "task",
-            graph: [
+            flow: [
               { skill: "engineer", reads: [], writes: ["state.goal"] },
             ],
           },
@@ -528,7 +572,7 @@ describe("validateGraph", () => {
           {
             over: "state.goal",
             as: "item",
-            graph: [
+            flow: [
               { skill: "engineer", reads: [], writes: [] },
             ],
           },
@@ -554,7 +598,7 @@ describe("validateGraph", () => {
           {
             over: "state.missing",
             as: "item",
-            graph: [
+            flow: [
               { skill: "engineer", reads: [], writes: [] },
             ],
           },
@@ -580,7 +624,7 @@ describe("validateGraph", () => {
           {
             over: "state.tasks",
             as: "goal",
-            graph: [
+            flow: [
               { skill: "engineer", reads: [], writes: [] },
             ],
           },
@@ -607,7 +651,7 @@ describe("validateGraph", () => {
           {
             over: "state.tasks",
             as: "task",
-            graph: [
+            flow: [
               { skill: "engineer", reads: ["task.description"], writes: ["task.output"] },
             ],
           },
@@ -646,7 +690,7 @@ describe("validateGraph", () => {
           {
             over: "state.tasks",
             as: "task",
-            graph: [
+            flow: [
               { skill: "engineer", reads: ["task.description"], writes: ["task.output"] },
             ],
           },
@@ -662,7 +706,7 @@ describe("validateGraph", () => {
           {
             over: "state.tasks",
             as: "task",
-            graph: [
+            flow: [
               { skill: "engineer", reads: ["task.nonexistent"], writes: [] },
             ],
           },
@@ -688,7 +732,7 @@ describe("validateGraph", () => {
           {
             over: "state.tasks",
             as: "task",
-            graph: [
+            flow: [
               { skill: "engineer", reads: [], writes: ["task.missing"] },
             ],
           },
@@ -714,7 +758,7 @@ describe("validateGraph", () => {
           {
             over: "state.tasks",
             as: "task",
-            graph: [
+            flow: [
               {
                 skill: "engineer",
                 reads: ["task.description"],
@@ -741,7 +785,7 @@ describe("validateGraph", () => {
           {
             over: "items",
             as: "item",
-            graph: [
+            flow: [
               { skill: "worker", reads: ["item.name"], writes: ["item.result"] },
             ],
           },
@@ -981,7 +1025,7 @@ describe("validateGraph when-clause validation", () => {
         {
           over: "state.tasks",
           as: "task",
-          graph: [
+          flow: [
             {
               skill: "engineer",
               reads: ["task.description"],
@@ -1011,7 +1055,7 @@ describe("validateGraph when-clause validation", () => {
         {
           over: "state.tasks",
           as: "task",
-          graph: [
+          flow: [
             {
               skill: "engineer",
               reads: ["task.description"],
@@ -1235,7 +1279,7 @@ describe("validateGraph: map over state without state declared", () => {
         {
           over: "state.items",
           as: "item",
-          graph: [
+          flow: [
             { skill: "worker", reads: [], writes: [] },
           ],
         },
@@ -1424,7 +1468,7 @@ describe("validateGraph: when-clause with custom type sub-field", () => {
 
 describe("type guards", () => {
   it("isMapNode returns true for MapNode", () => {
-    assert.equal(isMapNode({ over: "state.tasks", as: "task", graph: [] }), true);
+    assert.equal(isMapNode({ over: "state.tasks", as: "task", flow: [] }), true);
   });
 
   it("isMapNode returns false for StepNode", () => {
@@ -1612,31 +1656,75 @@ describe("parseGraph: async nodes", () => {
     );
   });
 
-  it("rejects async nodes inside map subgraphs", () => {
+  it("allows async nodes inside map subgraphs", () => {
     const raw = [
       {
         map: {
           over: "state.items",
           as: "item",
-          graph: [
+          flow: [
             {
               "async-worker": {
                 async: true,
                 writes: ["item.result"],
+                policy: "block",
               },
             },
           ],
         },
       },
     ];
-    assert.throws(
-      () => parseGraph(raw),
-      (err: unknown) => {
-        assert.ok(err instanceof GraphError);
-        assert.match(err.message, /async nodes are not allowed inside map subgraphs/);
-        return true;
+    const graph = parseGraph(raw);
+    assert.equal(graph.nodes.length, 1);
+    assert.ok(isMapNode(graph.nodes[0]));
+    const mapNode = graph.nodes[0];
+    assert.equal(mapNode.flow.length, 1);
+    assert.ok(isAsyncNode(mapNode.flow[0]));
+  });
+
+  it("async node inside map with conditional routing", () => {
+    const raw = [
+      {
+        map: {
+          over: "state.tasks",
+          as: "task",
+          flow: [
+            {
+              "task-router": {
+                reads: ["task.agent"],
+              },
+              then: [
+                { when: "task.agent == \"human\"", to: "human-worker" },
+                { when: "task.agent == \"engineer\"", to: "engineer" },
+              ],
+            },
+            {
+              "human-worker": {
+                async: true,
+                reads: ["task"],
+                policy: "block",
+              },
+              then: "end",
+            },
+            {
+              engineer: {
+                reads: ["task"],
+                writes: ["task.output"],
+              },
+              then: "end",
+            },
+          ],
+        },
       },
-    );
+    ];
+    const graph = parseGraph(raw);
+    assert.equal(graph.nodes.length, 1);
+    assert.ok(isMapNode(graph.nodes[0]));
+    const mapNode = graph.nodes[0];
+    assert.equal(mapNode.flow.length, 3);
+    assert.ok(!isAsyncNode(mapNode.flow[0]));
+    assert.ok(isAsyncNode(mapNode.flow[1]));
+    assert.ok(!isAsyncNode(mapNode.flow[2]));
   });
 
   it("isAsyncNode returns true for AsyncNode", () => {
@@ -1655,7 +1743,7 @@ describe("parseGraph: async nodes", () => {
   });
 
   it("isAsyncNode returns false for MapNode", () => {
-    assert.equal(isAsyncNode({ over: "state.tasks", as: "task", graph: [] }), false);
+    assert.equal(isAsyncNode({ over: "state.tasks", as: "task", flow: [] }), false);
   });
 
   it("async node in a chain with step nodes", () => {
@@ -1864,6 +1952,89 @@ describe("validateGraph: async nodes", () => {
     };
     const skills = makeSkills("engineer");
     const state = makeState({ ok: { kind: "primitive", value: "bool" } });
+    assert.doesNotThrow(() => validateGraph(graph, skills, state));
+  });
+
+  it("async node inside map with conditional routing validates", () => {
+    const state: StateSchema = {
+      types: {
+        Task: {
+          fields: {
+            title: "string",
+            description: "string",
+            agent: "string",
+            output: "string",
+            approved: "bool",
+          },
+        },
+      },
+      fields: {
+        direction: { type: { kind: "primitive", value: "string" } },
+        plan: { type: { kind: "primitive", value: "string" } },
+        tasks: { type: { kind: "list", element: "Task" } },
+      },
+    };
+    const skills = makeSkills("strategist", "architect", "task-router", "engineer", "reviewer", "marketer");
+    const graph: Graph = {
+      nodes: [
+        {
+          skill: "strategist",
+          reads: ["state.tasks"],
+          writes: ["state.direction"],
+          then: "architect",
+        },
+        {
+          skill: "architect",
+          reads: ["state.direction"],
+          writes: ["state.plan", "state.tasks"],
+          then: "map",
+        },
+        {
+          over: "state.tasks",
+          as: "task",
+          flow: [
+            {
+              skill: "task-router",
+              reads: ["task.agent"],
+              writes: [],
+              then: [
+                { when: "task.agent == \"human\"", to: "human-worker" },
+                { when: "task.agent == \"engineer\"", to: "engineer" },
+              ],
+            },
+            {
+              name: "human-worker",
+              async: true,
+              reads: ["task.title"],
+              writes: [],
+              policy: "block",
+              then: "end",
+            },
+            {
+              skill: "engineer",
+              reads: ["task.description"],
+              writes: ["task.output"],
+              then: "reviewer",
+            },
+            {
+              skill: "reviewer",
+              reads: ["task.output"],
+              writes: ["task.approved"],
+              then: [
+                { when: "task.approved == false", to: "engineer" },
+                { when: "task.approved == true", to: "end" },
+              ],
+            },
+          ],
+          then: "marketer",
+        },
+        {
+          skill: "marketer",
+          reads: ["state.direction"],
+          writes: [],
+        },
+      ],
+    };
     assert.doesNotThrow(() => validateGraph(graph, skills, state));
   });
 });

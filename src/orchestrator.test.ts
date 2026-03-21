@@ -160,7 +160,7 @@ describe("generateOrchestrator", () => {
             {
               over: "state.tasks",
               as: "task",
-              graph: [
+              flow: [
                 {
                   skill: "worker",
                   reads: ["task.description"],
@@ -459,7 +459,7 @@ describe("generateOrchestrator", () => {
             {
               over: "state.tasks",
               as: "task",
-              graph: [
+              flow: [
                 {
                   skill: "worker",
                   reads: ["task.description"],
@@ -736,6 +736,110 @@ describe("generateOrchestrator: async nodes", () => {
     assert.ok(!asyncSection.includes("Agent tool"));
     // But the step node should
     assert.ok(output.includes("Invoke **worker** using the Agent tool."));
+  });
+});
+
+describe("generateOrchestrator: async nodes inside map", () => {
+  it("renders async node inside map with correct step numbering", () => {
+    const config: Config = {
+      name: "async-map-pipeline",
+      skills: {
+        architect: { path: "./skills/architect" },
+        "task-router": { path: "./skills/task-router" },
+        engineer: { path: "./skills/engineer" },
+        reviewer: { path: "./skills/reviewer" },
+      },
+      state: {
+        types: {
+          Task: {
+            fields: {
+              agent: "string",
+              output: "string",
+              approved: "bool",
+            },
+          },
+        },
+        fields: {
+          tasks: { type: { kind: "list", element: "Task" } },
+        },
+      },
+      team: {
+        flow: {
+          nodes: [
+            {
+              skill: "architect",
+              reads: [],
+              writes: ["state.tasks"],
+              then: "map",
+            },
+            {
+              over: "state.tasks",
+              as: "task",
+              flow: [
+                {
+                  skill: "task-router",
+                  reads: ["task.agent"],
+                  writes: [],
+                  then: [
+                    { when: "task.agent == \"human\"", to: "human-worker" },
+                    { when: "task.agent == \"engineer\"", to: "engineer" },
+                  ],
+                },
+                {
+                  name: "human-worker",
+                  async: true,
+                  reads: [],
+                  writes: [],
+                  policy: "block",
+                  then: "end",
+                },
+                {
+                  skill: "engineer",
+                  reads: ["task.agent"],
+                  writes: ["task.output"],
+                  then: "reviewer",
+                },
+                {
+                  skill: "reviewer",
+                  reads: ["task.output"],
+                  writes: ["task.approved"],
+                  then: [
+                    { when: "task.approved == false", to: "engineer" },
+                    { when: "task.approved == true", to: "end" },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      },
+    };
+
+    const output = generateOrchestrator(config);
+
+    // Step 1: architect
+    assert.ok(output.includes("### Step 1: architect"));
+    assert.ok(output.includes("Invoke **architect**."));
+    assert.ok(output.includes("Then: proceed to step 2."));
+
+    // Step 2: map
+    assert.ok(output.includes("### Step 2: map over state.tasks"));
+
+    // Step 2.1: task-router
+    assert.ok(output.includes("#### Step 2.1: task-router"));
+    assert.ok(output.includes("Invoke **task-router**."));
+
+    // Step 2.2: human-worker (async)
+    assert.ok(output.includes("#### Step 2.2: human-worker (async)"));
+    assert.ok(output.includes("wait for the external agent"));
+
+    // Step 2.3: engineer
+    assert.ok(output.includes("#### Step 2.3: engineer"));
+
+    // Step 2.4: reviewer
+    assert.ok(output.includes("#### Step 2.4: reviewer"));
+    assert.ok(output.includes("- If `task.approved == false`: go to step 2.3"));
+    assert.ok(output.includes("- If `task.approved == true`: end"));
   });
 });
 

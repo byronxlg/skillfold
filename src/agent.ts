@@ -37,7 +37,7 @@ function collectStepNodes(nodes: GraphNode[]): StepNode[] {
   const steps: StepNode[] = [];
   for (const node of nodes) {
     if (isMapNode(node)) {
-      steps.push(...collectStepNodes(node.graph));
+      steps.push(...collectStepNodes(node.flow));
     } else if (isSubFlowNode(node)) {
       if (node.graph) {
         steps.push(...collectStepNodes(node.graph));

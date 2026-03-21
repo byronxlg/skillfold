@@ -22,13 +22,13 @@ function step(
 function map(
   over: string,
   as: string,
-  graph: GraphNode[],
+  flow: GraphNode[],
   then?: MapNode["then"],
 ): MapNode {
   return {
     over,
     as,
-    graph,
+    flow,
     ...(then !== undefined ? { then } : {}),
   };
 }

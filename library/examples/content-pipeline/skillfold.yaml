@@ -35,7 +35,7 @@ team:
     - map:
         over: state.topics
         as: topic
-        graph:
+        flow:
           - writer:
               reads: [topic.title]
               writes: [topic.draft]

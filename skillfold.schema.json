@@ -285,9 +285,13 @@
     },
     "mapBody": {
       "type": "object",
-      "description": "Map node that parallelizes over a list state field.",
-      "required": ["over", "as", "graph"],
+      "description": "Map node that parallelizes over a list state field. Use 'flow' for the sub-flow (preferred). 'graph' is accepted for backward compatibility.",
+      "required": ["over", "as"],
       "additionalProperties": false,
+      "oneOf": [
+        { "required": ["flow"] },
+        { "required": ["graph"] }
+      ],
       "properties": {
         "over": {
           "type": "string",
@@ -297,9 +301,17 @@
           "type": "string",
           "description": "Alias for the current item in the map iteration."
         },
-        "graph": {
+        "flow": {
           "type": "array",
           "description": "Sub-flow executed for each item.",
+          "items": {
+            "$ref": "#/$defs/flowElement"
+          },
+          "minItems": 1
+        },
+        "graph": {
+          "type": "array",
+          "description": "Sub-flow executed for each item (deprecated, use 'flow').",
           "items": {
             "$ref": "#/$defs/flowElement"
           },

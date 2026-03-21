@@ -132,7 +132,7 @@ function renderNodes(
       lines.push(`${indent}subgraph ${subgraphId}["${subgraphLabel}"]`);
       const innerIndent = indent + "    ";
       const innerEndId = `end_${subgraphId}`;
-      renderNodes(node.graph, lines, innerIndent, innerEndId, skills);
+      renderNodes(node.flow, lines, innerIndent, innerEndId, skills);
       lines.push(`${indent}end`);
 
       if (node.then !== undefined) {
@@ -263,7 +263,7 @@ function renderNodes(
 function hasAsyncNodes(nodes: GraphNode[]): boolean {
   for (const node of nodes) {
     if (isAsyncNode(node)) return true;
-    if (isMapNode(node) && hasAsyncNodes(node.graph)) return true;
+    if (isMapNode(node) && hasAsyncNodes(node.flow)) return true;
     if (isSubFlowNode(node) && node.graph && hasAsyncNodes(node.graph)) return true;
   }
   return false;
@@ -311,7 +311,7 @@ function collectNodeMeta(
         reads: [],
         writes: [],
       });
-      metas.push(...collectNodeMeta(node.graph, skills));
+      metas.push(...collectNodeMeta(node.flow, skills));
     } else if (isSubFlowNode(node)) {
       const meta: NodeMeta = {
         id: `subflow_${sanitizeId(node.name)}`,
