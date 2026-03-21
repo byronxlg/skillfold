@@ -489,6 +489,13 @@ npm install -g skillfold    # global install
 npx skillfold               # or run directly
 ```
 
+Install individual skills with the [skills CLI](https://skills.sh), compose them into pipelines with skillfold:
+
+```bash
+npx skills add byronxlg/skillfold              # install all 11 library skills
+npx skills add byronxlg/skillfold -s code-review   # install a specific skill
+```
+
 Requires Node.js 20+. Single dependency: `yaml`.
 
 **Claude Code plugin marketplace:** Install the skills library and `/skillfold` command directly in Claude Code:

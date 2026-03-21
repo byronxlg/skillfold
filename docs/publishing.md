@@ -82,6 +82,27 @@ skillfold search             # list all skillfold-skill packages
 
 This queries the npm registry for packages with the `skillfold-skill` keyword and displays their name, description, and version.
 
+### Skills CLI compatibility
+
+Packages that include an `agentskills` field in `package.json` are also discoverable by the [skills CLI](https://skills.sh). This field maps skill names to their directory paths:
+
+```json
+{
+  "agentskills": {
+    "planning": "./skills/planning",
+    "testing": "./skills/testing"
+  }
+}
+```
+
+Users can then install individual skills from your package:
+
+```bash
+npx skills add your-org/your-package -s planning
+```
+
+Skillfold's own library skills are installable this way: `npx skills add byronxlg/skillfold`.
+
 ## Versioning
 
 Follow standard semver conventions:

@@ -117,21 +117,31 @@ This exits with code 1 if the compiled output is stale, catching cases where som
 
 ## Working with the Skills CLI
 
-If you already manage individual skills with the [skills CLI](https://skills.sh) (`npx skills add`), skillfold sits one layer above it. The skills CLI installs and updates individual SKILL.md files. Skillfold composes multiple skills into agents, adds typed state schemas, and validates execution flows at compile time. They're complementary.
+The [skills CLI](https://skills.sh) (`npx skills add`) installs and updates individual SKILL.md files. Skillfold sits one layer above it: composing multiple skills into agents, adding typed state schemas, and validating execution flows at compile time. They're complementary.
 
-### Before: individual skills, managed separately
+### Installing skillfold skills
 
-```
-~/.agents/skills/
-  code-review/SKILL.md
-  planning/SKILL.md
-  testing/SKILL.md
-  code-writing/SKILL.md
+Install all 11 library skills from the skillfold package:
+
+```bash
+npx skills add byronxlg/skillfold
 ```
 
-Each agent references skills independently. No shared schema, no flow validation.
+Or install a specific skill:
 
-### After: composed agents with typed coordination
+```bash
+npx skills add byronxlg/skillfold -s code-review
+npx skills add byronxlg/skillfold -s planning
+npx skills add byronxlg/skillfold -s testing
+```
+
+The skills CLI reads the `agentskills` field in skillfold's `package.json` to discover available skills and their paths. Each skill installs as a standard `SKILL.md` file under your skills directory.
+
+See the [skills CLI leaderboard](https://skills.sh) for more installable skills from the ecosystem.
+
+### Composing installed skills into pipelines
+
+Once you have individual skills installed, use skillfold to compose them into a validated pipeline:
 
 ```yaml
 # skillfold.yaml
