@@ -248,7 +248,43 @@ The orchestrator state table also benefits: instead of abstract `github: discuss
 
 Skills without `resources` still work - the compiler emits a warning suggesting you add declarations for compile-time validation.
 
-## 8. Start from a template
+## 8. Local overrides
+
+On a multi-developer team, you may want personal overrides without modifying the shared config. Create a `skillfold.local.yaml` alongside your main config:
+
+```yaml
+# skillfold.local.yaml - personal overrides (gitignored)
+skills:
+  composed:
+    engineer:
+      compose: [planning, coding, testing]
+      description: "My local engineer with extra testing skill."
+      model: claude-sonnet-4-20250514
+```
+
+The local file merges on top of the main config:
+
+- **Skills** - adds or replaces atomic and composed skills
+- **State** - adds fields (does not remove existing ones)
+- **Team** - replaces the team flow entirely if present
+
+The local file does not need a `name` field (the name comes from the main config) and cannot have its own `imports`.
+
+When `skillfold init` scaffolds a project, it adds `*.local.yaml` to `.gitignore` automatically. Add it manually to existing projects:
+
+```bash
+echo "*.local.yaml" >> .gitignore
+```
+
+The compiler logs when a local override is applied:
+
+```
+skillfold: using local override from skillfold.local.yaml
+```
+
+The local filename is derived from the main config: if your config is `my-pipeline.yaml`, the local file is `my-pipeline.local.yaml`.
+
+## 9. Start from a template
 
 If you prefer starting from a real-world pattern instead of the minimal starter:
 
@@ -266,7 +302,7 @@ Available templates:
 
 Templates use library skills via imports, so they work out of the box with no local skill directories needed.
 
-## 9. Deploy to your platform
+## 10. Deploy to your platform
 
 Compile directly to where your platform reads skills. See the [Integration Guide](integrations.md) for all platforms.
 
@@ -283,7 +319,7 @@ For Claude Code, `--target claude-code` generates agent markdown files alongside
 
 Skillfold also ships a built-in plugin with 11 generic skills. Install it by referencing `node_modules/skillfold/plugin/` from your Claude Code configuration.
 
-## 10. Sharing skills
+## 11. Sharing skills
 
 Once you have skills worth reusing across projects or teams, publish them to npm. Any skill directory or pipeline config can be packaged and shared.
 
@@ -300,7 +336,7 @@ imports:
 
 See the [Publishing Guide](publishing.md) for package structure, required fields, and discovery via `skillfold search`.
 
-## 11. Next steps
+## 12. Next steps
 
 - Read the full config specification in [BRIEF.md](../BRIEF.md)
 - Explore the [shared library examples](../library/examples/) for real pipeline patterns

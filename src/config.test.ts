@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
-import { isAtomic, isComposed, loadConfig, readConfig } from "./config.js";
+import { getLocalConfigName, isAtomic, isComposed, loadConfig, readConfig } from "./config.js";
 import { compile } from "./compiler.js";
 import { ConfigError } from "./errors.js";
 import { resolveSkills } from "./resolver.js";
@@ -1717,5 +1717,360 @@ skills:
         return true;
       }
     );
+  });
+});
+
+describe("getLocalConfigName", () => {
+  it("derives local name from skillfold.yaml", () => {
+    assert.equal(getLocalConfigName("skillfold.yaml"), "skillfold.local.yaml");
+  });
+
+  it("derives local name from custom config path", () => {
+    assert.equal(getLocalConfigName("my-pipeline.yaml"), "my-pipeline.local.yaml");
+  });
+
+  it("handles path with directory", () => {
+    assert.equal(getLocalConfigName("/some/dir/skillfold.yaml"), "skillfold.local.yaml");
+  });
+
+  it("handles .yml extension", () => {
+    assert.equal(getLocalConfigName("pipeline.yml"), "pipeline.local.yml");
+  });
+});
+
+describe("local config override", () => {
+  let tmpDir: string | undefined;
+
+  afterEach(() => {
+    if (tmpDir) {
+      rmSync(tmpDir, { recursive: true, force: true });
+      tmpDir = undefined;
+    }
+  });
+
+  function writeMainConfig(dir: string, content: string): string {
+    const filePath = join(dir, "skillfold.yaml");
+    writeFileSync(filePath, content, "utf-8");
+    return filePath;
+  }
+
+  function writeLocalConfig(dir: string, content: string): void {
+    writeFileSync(join(dir, "skillfold.local.yaml"), content, "utf-8");
+  }
+
+  function writeSkill(dir: string, name: string, body: string): void {
+    const skillDir = join(dir, "skills", name);
+    mkdirSync(skillDir, { recursive: true });
+    writeFileSync(join(skillDir, "SKILL.md"), `---\nname: ${name}\ndescription: ${name} skill.\n---\n\n${body}\n`, "utf-8");
+  }
+
+  it("works without local config file", async () => {
+    tmpDir = makeTmpDir();
+    writeSkill(tmpDir, "alpha", "Alpha body.");
+    const configPath = writeMainConfig(tmpDir, `
+name: test
+skills:
+  atomic:
+    alpha: ./skills/alpha
+  composed:
+    bot:
+      compose: [alpha]
+      description: "A bot."
+`);
+    const config = await loadConfig(configPath);
+    assert.equal(config.name, "test");
+    assert.ok(isComposed(config.skills["bot"]));
+  });
+
+  it("merges local atomic skills on top of main config", async () => {
+    tmpDir = makeTmpDir();
+    writeSkill(tmpDir, "alpha", "Alpha body.");
+    writeSkill(tmpDir, "beta", "Beta body.");
+    const configPath = writeMainConfig(tmpDir, `
+name: test
+skills:
+  atomic:
+    alpha: ./skills/alpha
+  composed:
+    bot:
+      compose: [alpha]
+      description: "A bot."
+`);
+    writeLocalConfig(tmpDir, `
+skills:
+  atomic:
+    beta: ./skills/beta
+  composed:
+    bot:
+      compose: [alpha, beta]
+      description: "A better bot."
+`);
+    const config = await loadConfig(configPath);
+    assert.equal(config.name, "test");
+    assert.ok(isAtomic(config.skills["alpha"]));
+    assert.ok(isAtomic(config.skills["beta"]));
+    const bot = config.skills["bot"];
+    assert.ok(isComposed(bot));
+    assert.deepEqual(bot.compose, ["alpha", "beta"]);
+    assert.equal(bot.description, "A better bot.");
+  });
+
+  it("local composed skills override main composed skills", async () => {
+    tmpDir = makeTmpDir();
+    writeSkill(tmpDir, "alpha", "Alpha body.");
+    writeSkill(tmpDir, "beta", "Beta body.");
+    const configPath = writeMainConfig(tmpDir, `
+name: test
+skills:
+  atomic:
+    alpha: ./skills/alpha
+    beta: ./skills/beta
+  composed:
+    bot:
+      compose: [alpha]
+      description: "Uses alpha."
+`);
+    writeLocalConfig(tmpDir, `
+skills:
+  composed:
+    bot:
+      compose: [beta]
+      description: "Uses beta instead."
+`);
+    const config = await loadConfig(configPath);
+    const bot = config.skills["bot"];
+    assert.ok(isComposed(bot));
+    assert.deepEqual(bot.compose, ["beta"]);
+    assert.equal(bot.description, "Uses beta instead.");
+  });
+
+  it("local state adds fields to main state", async () => {
+    tmpDir = makeTmpDir();
+    writeSkill(tmpDir, "alpha", "Alpha body.");
+    const configPath = writeMainConfig(tmpDir, `
+name: test
+skills:
+  atomic:
+    alpha: ./skills/alpha
+  composed:
+    bot:
+      compose: [alpha]
+      description: "A bot."
+state:
+  plan:
+    type: string
+`);
+    writeLocalConfig(tmpDir, `
+state:
+  notes:
+    type: string
+`);
+    const config = await loadConfig(configPath);
+    assert.ok(config.state);
+    assert.ok("plan" in config.state.fields);
+    assert.ok("notes" in config.state.fields);
+  });
+
+  it("local team replaces main team entirely", async () => {
+    tmpDir = makeTmpDir();
+    writeSkill(tmpDir, "alpha", "Alpha body.");
+    writeSkill(tmpDir, "beta", "Beta body.");
+    const configPath = writeMainConfig(tmpDir, `
+name: test
+skills:
+  atomic:
+    alpha: ./skills/alpha
+    beta: ./skills/beta
+  composed:
+    bot-a:
+      compose: [alpha]
+      description: "Bot A."
+    bot-b:
+      compose: [beta]
+      description: "Bot B."
+state:
+  result:
+    type: string
+team:
+  flow:
+    - bot-a:
+        writes: [state.result]
+      then: bot-b
+    - bot-b:
+        reads: [state.result]
+      then: end
+`);
+    writeLocalConfig(tmpDir, `
+team:
+  flow:
+    - bot-b:
+        writes: [state.result]
+      then: end
+`);
+    const config = await loadConfig(configPath);
+    assert.ok(config.team);
+    // The local team has only bot-b, so the flow should have one node
+    assert.equal(config.team.flow.nodes.length, 1);
+    assert.equal((config.team.flow.nodes[0] as { skill: string }).skill, "bot-b");
+  });
+
+  it("local config does not require name field", async () => {
+    tmpDir = makeTmpDir();
+    writeSkill(tmpDir, "alpha", "Alpha body.");
+    writeSkill(tmpDir, "beta", "Beta body.");
+    const configPath = writeMainConfig(tmpDir, `
+name: test
+skills:
+  atomic:
+    alpha: ./skills/alpha
+  composed:
+    bot:
+      compose: [alpha]
+      description: "A bot."
+`);
+    writeLocalConfig(tmpDir, `
+skills:
+  atomic:
+    beta: ./skills/beta
+`);
+    const config = await loadConfig(configPath);
+    assert.equal(config.name, "test");
+    assert.ok(isAtomic(config.skills["beta"]));
+  });
+
+  it("local config does not require skills section", async () => {
+    tmpDir = makeTmpDir();
+    writeSkill(tmpDir, "alpha", "Alpha body.");
+    const configPath = writeMainConfig(tmpDir, `
+name: test
+skills:
+  atomic:
+    alpha: ./skills/alpha
+  composed:
+    bot:
+      compose: [alpha]
+      description: "A bot."
+state:
+  plan:
+    type: string
+`);
+    writeLocalConfig(tmpDir, `
+state:
+  notes:
+    type: string
+`);
+    const config = await loadConfig(configPath);
+    assert.ok(config.state);
+    assert.ok("notes" in config.state.fields);
+    // Original skills preserved
+    assert.ok(isAtomic(config.skills["alpha"]));
+    assert.ok(isComposed(config.skills["bot"]));
+  });
+
+  it("local config with only team section", async () => {
+    tmpDir = makeTmpDir();
+    writeSkill(tmpDir, "alpha", "Alpha body.");
+    const configPath = writeMainConfig(tmpDir, `
+name: test
+skills:
+  atomic:
+    alpha: ./skills/alpha
+  composed:
+    bot:
+      compose: [alpha]
+      description: "A bot."
+state:
+  result:
+    type: string
+team:
+  flow:
+    - bot:
+        writes: [state.result]
+      then: end
+`);
+    writeLocalConfig(tmpDir, `
+team:
+  flow:
+    - bot:
+        reads: [state.result]
+      then: end
+`);
+    const config = await loadConfig(configPath);
+    assert.ok(config.team);
+    assert.equal((config.team.flow.nodes[0] as { skill: string }).skill, "bot");
+  });
+
+  it("local config rejects imports", async () => {
+    tmpDir = makeTmpDir();
+    writeSkill(tmpDir, "alpha", "Alpha body.");
+    const configPath = writeMainConfig(tmpDir, `
+name: test
+skills:
+  atomic:
+    alpha: ./skills/alpha
+  composed:
+    bot:
+      compose: [alpha]
+      description: "A bot."
+`);
+    writeLocalConfig(tmpDir, `
+imports:
+  - some/path.yaml
+skills:
+  atomic:
+    beta: ./skills/beta
+`);
+    await assert.rejects(
+      () => loadConfig(configPath),
+      (err: unknown) => {
+        assert.ok(err instanceof ConfigError);
+        assert.match(err.message, /Local config cannot have imports/);
+        return true;
+      }
+    );
+  });
+
+  it("local config uses custom config name", async () => {
+    tmpDir = makeTmpDir();
+    writeSkill(tmpDir, "alpha", "Alpha body.");
+    writeSkill(tmpDir, "beta", "Beta body.");
+    const configPath = join(tmpDir, "my-pipeline.yaml");
+    writeFileSync(configPath, `
+name: test
+skills:
+  atomic:
+    alpha: ./skills/alpha
+  composed:
+    bot:
+      compose: [alpha]
+      description: "A bot."
+`, "utf-8");
+    writeFileSync(join(tmpDir, "my-pipeline.local.yaml"), `
+skills:
+  atomic:
+    beta: ./skills/beta
+`, "utf-8");
+    const config = await loadConfig(configPath);
+    assert.ok(isAtomic(config.skills["beta"]));
+  });
+
+  it("empty local config is a no-op", async () => {
+    tmpDir = makeTmpDir();
+    writeSkill(tmpDir, "alpha", "Alpha body.");
+    const configPath = writeMainConfig(tmpDir, `
+name: test
+skills:
+  atomic:
+    alpha: ./skills/alpha
+  composed:
+    bot:
+      compose: [alpha]
+      description: "A bot."
+`);
+    // An empty YAML document parses as null, which should be caught
+    writeLocalConfig(tmpDir, `# empty local config\n{}`);
+    const config = await loadConfig(configPath);
+    assert.equal(config.name, "test");
+    assert.ok(isComposed(config.skills["bot"]));
   });
 });

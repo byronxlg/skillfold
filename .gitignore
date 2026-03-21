@@ -4,6 +4,7 @@ build/
 *.tsbuildinfo
 *.tmp
 .tmp-*
+*.local.yaml
 .claude/*
 !.claude/skills/
 .claude/skills/*

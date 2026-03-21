@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from "node:fs";
-import { dirname, relative, resolve } from "node:path";
+import { basename, dirname, extname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { parse } from "yaml";
@@ -553,6 +553,123 @@ function mergeRawState(
   return { ...base, ...overlay };
 }
 
+// Derive the local config filename from the main config path.
+// skillfold.yaml -> skillfold.local.yaml
+// my-pipeline.yaml -> my-pipeline.local.yaml
+export function getLocalConfigName(configPath: string): string {
+  const base = basename(configPath);
+  const ext = extname(base);
+  const name = base.slice(0, -ext.length);
+  return `${name}.local${ext}`;
+}
+
+// Parse a local override config. Unlike parseRawConfig, this does not require
+// a name field or a skills section - any section is optional.
+function parseLocalConfig(content: string): Partial<RawConfig> {
+  const raw = parse(content);
+  if (typeof raw !== "object" || raw === null) {
+    throw new ConfigError("Local config must be a YAML object");
+  }
+
+  const result: Partial<RawConfig> = {};
+
+  if (raw.imports !== undefined) {
+    throw new ConfigError(
+      "Local config cannot have imports. Imports come from the main config only."
+    );
+  }
+
+  if (raw.skills !== undefined) {
+    if (typeof raw.skills !== "object" || raw.skills === null) {
+      throw new ConfigError("Local config: skills must be an object");
+    }
+
+    let skills: Record<string, SkillEntry> = {};
+
+    if (raw.skills.atomic !== undefined) {
+      if (typeof raw.skills.atomic !== "object" || raw.skills.atomic === null) {
+        throw new ConfigError("Local config: skills.atomic must be an object");
+      }
+      skills = normalizeAtomicSkills(raw.skills.atomic as Record<string, unknown>);
+    }
+
+    if (raw.skills.composed !== undefined) {
+      if (typeof raw.skills.composed !== "object" || raw.skills.composed === null) {
+        throw new ConfigError("Local config: skills.composed must be an object");
+      }
+      const composed = normalizeComposedSkills(raw.skills.composed as Record<string, unknown>);
+      for (const name of Object.keys(composed)) {
+        if (name in skills) {
+          throw new ConfigError(
+            `Local config: skill "${name}" appears in both atomic and composed sections`
+          );
+        }
+      }
+      skills = { ...skills, ...composed };
+    }
+
+    if (!raw.skills.atomic && !raw.skills.composed) {
+      throw new ConfigError(
+        "Local config: skills must have 'atomic' and/or 'composed' sub-sections"
+      );
+    }
+
+    validateNames(skills);
+    result.skills = skills;
+  }
+
+  if (raw.state !== undefined) {
+    if (typeof raw.state !== "object" || raw.state === null) {
+      throw new ConfigError("Local config: state must be a YAML object");
+    }
+    result.rawState = raw.state as Record<string, unknown>;
+  }
+
+  if (raw.team !== undefined) {
+    if (typeof raw.team !== "object" || raw.team === null) {
+      throw new ConfigError("Local config: team must be a YAML object");
+    }
+    if (!raw.team.flow) {
+      throw new ConfigError("Local config: team must have a 'flow' field");
+    }
+    if (!Array.isArray(raw.team.flow)) {
+      throw new ConfigError("Local config: team.flow must be a YAML array");
+    }
+    const rawTeam: NonNullable<RawConfig["rawTeam"]> = { rawFlow: raw.team.flow };
+    if (raw.team.orchestrator !== undefined) {
+      if (typeof raw.team.orchestrator !== "string") {
+        throw new ConfigError("Local config: team.orchestrator must be a string (skill name)");
+      }
+      rawTeam.orchestrator = raw.team.orchestrator;
+    }
+    result.rawTeam = rawTeam;
+  }
+
+  return result;
+}
+
+// Merge a local override on top of a (possibly already import-merged) RawConfig.
+function mergeLocalOverride(raw: RawConfig, localPath: string): RawConfig {
+  let content: string;
+  try {
+    content = readFileSync(localPath, "utf-8");
+  } catch {
+    throw new ConfigError(`Cannot read local config file: ${localPath}`);
+  }
+
+  const local = parseLocalConfig(content);
+
+  return {
+    name: raw.name,
+    skills: local.skills ? mergeSkills(raw.skills, local.skills) : raw.skills,
+    rawState: local.rawState !== undefined
+      ? mergeRawState(raw.rawState, local.rawState)
+      : raw.rawState,
+    rawTeam: local.rawTeam !== undefined ? local.rawTeam : raw.rawTeam,
+    _resolvedGraph: local.rawTeam !== undefined ? undefined : raw._resolvedGraph,
+  };
+}
+
 // Resolve imports: load each import, merge skills and state, ignore team/imports
 async function resolveImports(
   raw: RawConfig,
@@ -752,7 +869,16 @@ export async function loadConfig(configPath: string): Promise<Config> {
   try {
     const raw = parseRawConfig(content);
     const merged = await resolveImports(raw, dirname(configPath));
-    const resolved = await resolveSubFlows(merged, dirname(configPath));
+    let resolved = await resolveSubFlows(merged, dirname(configPath));
+
+    // Check for local override file (e.g. skillfold.local.yaml)
+    const localName = getLocalConfigName(configPath);
+    const localPath = resolve(dirname(configPath), localName);
+    if (existsSync(localPath)) {
+      process.stderr.write(`skillfold: using local override from ${localName}\n`);
+      resolved = mergeLocalOverride(resolved, localPath);
+    }
+
     return validateAndBuild(resolved);
   } catch (err) {
     if (err instanceof ConfigError && !err.message.includes(configPath)) {

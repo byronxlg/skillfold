@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -114,6 +114,19 @@ You review code for correctness, clarity, and security.
 - Provide specific, actionable feedback
 `;
 
+const LOCAL_GITIGNORE_ENTRY = "*.local.yaml\n";
+
+function ensureGitignoreLocal(dir: string): void {
+  const gitignorePath = join(dir, ".gitignore");
+  if (existsSync(gitignorePath)) {
+    const content = readFileSync(gitignorePath, "utf-8");
+    if (content.includes("*.local.yaml")) return;
+    appendFileSync(gitignorePath, (content.endsWith("\n") ? "" : "\n") + LOCAL_GITIGNORE_ENTRY, "utf-8");
+  } else {
+    writeFileSync(gitignorePath, LOCAL_GITIGNORE_ENTRY, "utf-8");
+  }
+}
+
 export const TEMPLATES = ["dev-team", "content-pipeline", "code-review-bot"] as const;
 export type Template = (typeof TEMPLATES)[number];
 
@@ -154,8 +167,9 @@ export function initFromTemplate(dir: string, template: string): string[] {
 
   mkdirSync(dir, { recursive: true });
   writeFileSync(configPath, config, "utf-8");
+  ensureGitignoreLocal(dir);
 
-  return ["skillfold.yaml"];
+  return ["skillfold.yaml", ".gitignore"];
 }
 
 export function initProject(dir: string): string[] {
@@ -185,6 +199,9 @@ export function initProject(dir: string): string[] {
     writeFileSync(join(skillDir, "SKILL.md"), content, "utf-8");
     files.push(`skills/${name}/SKILL.md`);
   }
+
+  ensureGitignoreLocal(dir);
+  files.push(".gitignore");
 
   return files;
 }
