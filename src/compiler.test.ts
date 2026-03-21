@@ -1420,8 +1420,10 @@ describe("compile with agent-teams target", () => {
     const state: StateSchema = {
       types: {
         Review: {
-          approved: { kind: "primitive", value: "bool" },
-          feedback: { kind: "primitive", value: "string" },
+          fields: {
+            approved: "bool",
+            feedback: "string",
+          },
         },
       },
       fields: {
