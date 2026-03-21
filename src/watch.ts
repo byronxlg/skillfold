@@ -1,7 +1,7 @@
-import { watch, type FSWatcher } from "node:fs";
+import { existsSync, watch, type FSWatcher } from "node:fs";
 import { basename, dirname, resolve } from "node:path";
 
-import { isAtomic, loadConfig } from "./config.js";
+import { getLocalConfigName, isAtomic, loadConfig } from "./config.js";
 import { type CompileTarget, compile } from "./compiler.js";
 import { ConfigError, CompileError, GraphError, ResolveError } from "./errors.js";
 import { resolveSkills } from "./resolver.js";
@@ -85,6 +85,26 @@ export async function watchPipeline(
 
     const configWatcher = watch(configPath, onChange);
     watchers.push(configWatcher);
+
+    // Watch the local override file if it exists
+    const localName = getLocalConfigName(configPath);
+    const localPath = resolve(dirname(configPath), localName);
+    if (existsSync(localPath)) {
+      const localWatcher = watch(localPath, onChange);
+      watchers.push(localWatcher);
+    }
+
+    // Watch the config directory for local file creation
+    try {
+      const dirWatcher = watch(dirname(configPath), (_, filename) => {
+        if (filename === localName) {
+          onChange();
+        }
+      });
+      watchers.push(dirWatcher);
+    } catch {
+      // Directory watcher may not be supported
+    }
 
     for (const dir of skillDirs) {
       try {

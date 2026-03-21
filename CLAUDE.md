@@ -171,7 +171,8 @@ Located in `library/examples/`:
 - npm skill discovery: `agentskills` field in package.json uses flat key-value format for ecosystem compatibility
 - `npm:` prefix support for skill references and imports (resolves to node_modules paths)
 - Publishing guide (`docs/publishing.md`) for sharing skills via npm
-- Test suite with 565 tests across 105 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, adopt, library, validate, list, search, npm, watch, errors, subflow, api, and e2e modules
+- `skillfold.local.yaml` support for local config overrides (gitignored), with merge semantics for skills/state/team
+- Test suite with 580 tests across 107 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, adopt, library, validate, list, search, npm, watch, errors, subflow, api, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next

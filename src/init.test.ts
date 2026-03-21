@@ -126,8 +126,9 @@ describe("initFromTemplate", () => {
     tmpDir = makeTmpDir();
     const files = initFromTemplate(tmpDir, "dev-team");
 
-    assert.deepEqual(files, ["skillfold.yaml"]);
+    assert.deepEqual(files, ["skillfold.yaml", ".gitignore"]);
     assert.ok(existsSync(join(tmpDir, "skillfold.yaml")));
+    assert.ok(existsSync(join(tmpDir, ".gitignore")));
 
     const config = readFileSync(join(tmpDir, "skillfold.yaml"), "utf-8");
     assert.ok(config.includes("name: dev-team"));
@@ -149,7 +150,7 @@ describe("initFromTemplate", () => {
     for (const template of TEMPLATES) {
       tmpDir = makeTmpDir();
       const files = initFromTemplate(tmpDir, template);
-      assert.deepEqual(files, ["skillfold.yaml"]);
+      assert.deepEqual(files, ["skillfold.yaml", ".gitignore"]);
 
       const config = readFileSync(join(tmpDir, "skillfold.yaml"), "utf-8");
       assert.ok(config.includes(`name: ${template}`));
