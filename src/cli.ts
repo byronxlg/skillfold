@@ -467,9 +467,17 @@ async function main(): Promise<void> {
             step.status === "skipped" ? (step.error ? "skip" : "skip (async)") :
             "FAIL";
           const errorSuffix = step.status === "error" && step.error ? `: ${step.error}` : "";
-          process.stderr.write(
-            `  ${statusLabel.padEnd(12)} ${step.agent}${retries}${duration}${errorSuffix}\n`,
-          );
+          if (step.agent === "map" && step.mapItems) {
+            const okItems = step.mapItems.filter(i => i.status === "ok").length;
+            const failItems = step.mapItems.filter(i => i.status === "error").length;
+            process.stderr.write(
+              `  ${statusLabel.padEnd(12)} map (${step.mapItems.length} items: ${okItems} ok, ${failItems} failed)${duration}\n`,
+            );
+          } else {
+            process.stderr.write(
+              `  ${statusLabel.padEnd(12)} ${step.agent}${retries}${duration}${errorSuffix}\n`,
+            );
+          }
         }
 
         const okCount = result.steps.filter(s => s.status === "ok").length;

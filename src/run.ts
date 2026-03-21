@@ -9,6 +9,7 @@ import { RunError } from "./errors.js";
 import {
   type ConditionalBranch,
   type GraphNode,
+  type MapNode,
   isAsyncNode,
   isConditionalThen,
   isMapNode,
@@ -42,6 +43,16 @@ export interface Checkpoint {
   currentStepIndex: number;
   state: Record<string, unknown>;
   startedAt: string;
+  /** Tracks completed item indices for map nodes during resume. */
+  completedMapItems?: Record<string, number[]>;
+}
+
+export interface MapItemResult {
+  index: number;
+  status: "ok" | "error" | "skipped";
+  steps: StepResult[];
+  error?: string;
+  durationMs?: number;
 }
 
 export interface StepResult {
@@ -51,6 +62,7 @@ export interface StepResult {
   error?: string;
   attempts?: number;
   durationMs?: number;
+  mapItems?: MapItemResult[];
 }
 
 export interface RunResult {
@@ -241,6 +253,347 @@ function clearCheckpointDir(): void {
   }
 }
 
+interface MapExecutionResult {
+  stepResult: StepResult;
+  updatedItems: unknown[];
+}
+
+/**
+ * Execute a map node by running its subgraph for each item in the list concurrently.
+ */
+async function executeMapNode(
+  node: MapNode,
+  stepNumber: number,
+  state: Record<string, unknown>,
+  composedBodies: Map<string, string>,
+  spawner: Spawner | undefined,
+  dryRun: boolean,
+  onError: OnErrorMode,
+  maxRetries: number,
+  maxIterations: number,
+  _completedSteps: string[],
+  _configHash: string,
+  _startedAt: string,
+  _currentIndex: number,
+): Promise<MapExecutionResult> {
+  const overField = stripStatePrefix(node.over);
+  const items = state[overField];
+
+  if (dryRun) {
+    const count = Array.isArray(items) ? items.length : 0;
+    process.stderr.write(
+      `Step ${stepNumber}: map over ${node.over} (${count} items)\n`,
+    );
+    for (let si = 0; si < node.flow.length; si++) {
+      const subNode = node.flow[si];
+      const subLabel = nodeLabel(subNode);
+      process.stderr.write(
+        `  Step ${stepNumber}.${si + 1}: ${subLabel}\n`,
+      );
+    }
+    return {
+      stepResult: {
+        step: stepNumber,
+        agent: "map",
+        status: "skipped",
+        mapItems: Array.isArray(items)
+          ? items.map((_, i) => ({ index: i, status: "skipped" as const, steps: [] as StepResult[] }))
+          : [],
+      },
+      updatedItems: Array.isArray(items) ? items : [],
+    };
+  }
+
+  if (!Array.isArray(items)) {
+    throw new RunError(
+      `Step ${stepNumber} "map": "${node.over}" is not an array in current state`,
+    );
+  }
+
+  const mapStart = Date.now();
+
+  // Execute all items concurrently
+  const itemPromises = items.map((item, itemIndex) =>
+    executeMapItem(
+      node,
+      stepNumber,
+      itemIndex,
+      item,
+      state,
+      composedBodies,
+      spawner!,
+      onError,
+      maxRetries,
+      maxIterations,
+    ),
+  );
+
+  const itemResults = await Promise.allSettled(itemPromises);
+
+  const mapItems: MapItemResult[] = [];
+  const updatedItems: unknown[] = [...items];
+  let hasError = false;
+
+  for (let i = 0; i < itemResults.length; i++) {
+    const result = itemResults[i];
+    if (result.status === "fulfilled") {
+      mapItems.push(result.value.itemResult);
+      updatedItems[i] = result.value.updatedItem;
+      if (result.value.itemResult.status === "error") {
+        hasError = true;
+      }
+    } else {
+      hasError = true;
+      mapItems.push({
+        index: i,
+        status: "error",
+        steps: [],
+        error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+      });
+    }
+  }
+
+  const mapDuration = Date.now() - mapStart;
+
+  // Determine overall map status
+  const allOk = mapItems.every(r => r.status === "ok" || r.status === "skipped");
+  const overallStatus: "ok" | "error" | "skipped" =
+    allOk ? "ok" : (onError === "skip" ? "ok" : "error");
+
+  return {
+    stepResult: {
+      step: stepNumber,
+      agent: "map",
+      status: overallStatus,
+      durationMs: mapDuration,
+      mapItems,
+    },
+    updatedItems,
+  };
+}
+
+interface MapItemExecutionResult {
+  itemResult: MapItemResult;
+  updatedItem: unknown;
+}
+
+/**
+ * Execute the subgraph for a single map item.
+ */
+async function executeMapItem(
+  node: MapNode,
+  parentStep: number,
+  itemIndex: number,
+  item: unknown,
+  parentState: Record<string, unknown>,
+  composedBodies: Map<string, string>,
+  spawner: Spawner,
+  onError: OnErrorMode,
+  maxRetries: number,
+  maxIterations: number,
+): Promise<MapItemExecutionResult> {
+  const subNodes = node.flow;
+  const subSteps: StepResult[] = [];
+  const itemStart = Date.now();
+
+  // The item scope: reads/writes using node.as prefix access fields on the item
+  let currentItem: Record<string, unknown> =
+    typeof item === "object" && item !== null ? { ...(item as Record<string, unknown>) } : {};
+
+  // Build node lookup for the subgraph
+  const subNodeLookup = new Map<string, number>();
+  for (let i = 0; i < subNodes.length; i++) {
+    const label = nodeLabel(subNodes[i]);
+    if (!subNodeLookup.has(label)) {
+      subNodeLookup.set(label, i);
+    }
+  }
+
+  const visitCounts = new Map<number, number>();
+  let subIndex = 0;
+  let subStepNumber = 0;
+
+  while (subIndex >= 0 && subIndex < subNodes.length) {
+    const subNode = subNodes[subIndex];
+    subStepNumber++;
+    const subLabel = nodeLabel(subNode);
+
+    // Loop detection
+    const visits = (visitCounts.get(subIndex) ?? 0) + 1;
+    visitCounts.set(subIndex, visits);
+    if (visits > maxIterations) {
+      throw new RunError(
+        `Step ${parentStep}.${subStepNumber} "${subLabel}" (item ${itemIndex}): exceeded max iterations (${maxIterations})`,
+      );
+    }
+
+    if (isAsyncNode(subNode)) {
+      subSteps.push({
+        step: subStepNumber,
+        agent: subLabel,
+        status: "skipped",
+      });
+      const nextIdx = resolveSubgraphNext(subNode, subIndex, subNodeLookup, parentState, currentItem, node.as);
+      if (nextIdx === -1) break;
+      subIndex = nextIdx;
+      continue;
+    }
+
+    if (isMapNode(subNode) || isSubFlowNode(subNode)) {
+      throw new RunError(
+        `Step ${parentStep}.${subStepNumber} "${subLabel}" (item ${itemIndex}): nested map/sub-flow nodes not supported inside map subgraphs`,
+      );
+    }
+
+    // StepNode
+    const skillBody = composedBodies.get(subNode.skill);
+    if (!skillBody) {
+      throw new RunError(
+        `Step ${parentStep}.${subStepNumber} "${subNode.skill}" (item ${itemIndex}): no composed skill body found`,
+      );
+    }
+
+    // Build scoped state for this spawn: parent state + item fields under node.as
+    const scopedState: Record<string, unknown> = { ...parentState, [node.as]: currentItem };
+
+    const stepStart = Date.now();
+    let stepSucceeded = false;
+    let lastError: string | undefined;
+    let attempts = 0;
+    const attemptsAllowed = onError === "retry" ? maxRetries : 1;
+
+    for (let attempt = 1; attempt <= attemptsAllowed; attempt++) {
+      attempts = attempt;
+      try {
+        const updates = await spawner.spawn(subNode.skill, skillBody, scopedState);
+
+        // Apply updates to item scope (node.as prefix) and parent state scope
+        for (const writePath of subNode.writes) {
+          if (writePath.startsWith(node.as + ".")) {
+            const field = writePath.slice(node.as.length + 1);
+            if (field in updates) {
+              currentItem[field] = updates[field];
+            }
+          } else {
+            const field = stripStatePrefix(writePath);
+            if (field in updates) {
+              parentState[field] = updates[field];
+            }
+          }
+        }
+
+        stepSucceeded = true;
+        break;
+      } catch (err) {
+        lastError = err instanceof Error ? err.message : String(err);
+      }
+    }
+
+    const stepDuration = Date.now() - stepStart;
+
+    if (stepSucceeded) {
+      subSteps.push({
+        step: subStepNumber,
+        agent: subNode.skill,
+        status: "ok",
+        attempts: attempts > 1 ? attempts : undefined,
+        durationMs: stepDuration,
+      });
+    } else if (onError === "skip") {
+      subSteps.push({
+        step: subStepNumber,
+        agent: subNode.skill,
+        status: "skipped",
+        error: lastError,
+        attempts,
+        durationMs: stepDuration,
+      });
+    } else {
+      subSteps.push({
+        step: subStepNumber,
+        agent: subNode.skill,
+        status: "error",
+        error: lastError,
+        attempts: onError === "retry" ? attempts : undefined,
+        durationMs: stepDuration,
+      });
+      const itemDuration = Date.now() - itemStart;
+      return {
+        itemResult: {
+          index: itemIndex,
+          status: "error",
+          steps: subSteps,
+          error: lastError,
+          durationMs: itemDuration,
+        },
+        updatedItem: currentItem,
+      };
+    }
+
+    // Resolve next subgraph node
+    const nextIdx = resolveSubgraphNext(subNode, subIndex, subNodeLookup, parentState, currentItem, node.as);
+    if (nextIdx === -1) break;
+    subIndex = nextIdx;
+  }
+
+  const itemDuration = Date.now() - itemStart;
+  return {
+    itemResult: {
+      index: itemIndex,
+      status: "ok",
+      steps: subSteps,
+      durationMs: itemDuration,
+    },
+    updatedItem: currentItem,
+  };
+}
+
+/**
+ * Resolve the next node index within a map subgraph.
+ * When-clauses can reference both parent state and item-scoped fields.
+ */
+function resolveSubgraphNext(
+  node: GraphNode,
+  currentIndex: number,
+  nodeLookup: Map<string, number>,
+  parentState: Record<string, unknown>,
+  currentItem: Record<string, unknown>,
+  asName: string,
+): number {
+  if (node.then === undefined) {
+    return currentIndex + 1;
+  }
+
+  if (isConditionalThen(node.then)) {
+    // Build a merged state view for when-clause evaluation
+    const mergedState: Record<string, unknown> = { ...parentState, [asName]: currentItem };
+    const target = resolveConditionalTarget(node.then, mergedState);
+    if (target === undefined) {
+      throw new RunError(
+        `Map subgraph step "${nodeLabel(node)}": no conditional branch matched current state`,
+      );
+    }
+    if (target === "end") return -1;
+    const idx = nodeLookup.get(target);
+    if (idx === undefined) {
+      throw new RunError(
+        `Map subgraph step "${nodeLabel(node)}": conditional target "${target}" not found`,
+      );
+    }
+    return idx;
+  }
+
+  if (node.then === "end") return -1;
+
+  const idx = nodeLookup.get(node.then);
+  if (idx === undefined) {
+    throw new RunError(
+      `Map subgraph step "${nodeLabel(node)}": target "${node.then}" not found`,
+    );
+  }
+  return idx;
+}
+
 export async function run(
   options: RunOptions,
   spawner?: Spawner,
@@ -336,9 +689,47 @@ export async function run(
     }
 
     if (isMapNode(node)) {
-      throw new RunError(
-        `Step ${stepNumber} "map": map nodes not supported in skillfold run - use the orchestrator`,
+      const mapResult = await executeMapNode(
+        node,
+        stepNumber,
+        state,
+        composedBodies,
+        activeSpawner,
+        dryRun,
+        onError,
+        maxRetries,
+        maxIterations,
+        completedSteps,
+        options.configHash ?? "",
+        startedAt,
+        currentIndex,
       );
+      steps.push(mapResult.stepResult);
+
+      if (!dryRun) {
+        // Merge map results back into the list in state
+        const overField = stripStatePrefix(node.over);
+        state[overField] = mapResult.updatedItems;
+        writeFileSync(statePath, JSON.stringify(state, null, 2) + "\n", "utf-8");
+
+        completedSteps.push("map");
+        const nextIdx = resolveNextIndex(node, currentIndex, nodeLookup, state, dryRun);
+        saveCheckpoint({
+          configHash: options.configHash ?? "",
+          completedSteps,
+          currentStepIndex: nextIdx === -1 ? currentIndex + 1 : nextIdx,
+          state,
+          startedAt,
+        });
+      }
+
+      // If any item errored and we're in abort mode, stop
+      if (mapResult.stepResult.status === "error") break;
+
+      const nextIndex = resolveNextIndex(node, currentIndex, nodeLookup, state, dryRun);
+      if (nextIndex === -1) break;
+      currentIndex = nextIndex;
+      continue;
     }
 
     if (isSubFlowNode(node)) {

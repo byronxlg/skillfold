@@ -91,7 +91,7 @@ export type { AdoptedAgent, AdoptResult } from "./adopt.js";
 
 // Pipeline execution
 export { ClaudeSpawner, run } from "./run.js";
-export type { RunOptions, RunResult, Spawner, StepResult } from "./run.js";
+export type { MapItemResult, RunOptions, RunResult, Spawner, StepResult } from "./run.js";
 
 // Errors
 export {
