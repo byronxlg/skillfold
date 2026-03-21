@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useData } from 'vitepress'
 import { parse as parseYaml } from 'yaml'
 
@@ -201,7 +201,12 @@ const selectedNode = ref<NodeMeta | null>(null)
 const graphContainer = ref<HTMLDivElement | null>(null)
 const { isDark } = useData()
 
-let mermaidMod: any = null
+interface MermaidAPI {
+  initialize: (opts: object) => void
+  render: (id: string, code: string) => Promise<{ svg: string }>
+}
+
+let mermaidMod: MermaidAPI | null = null
 let renderCounter = 0
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -516,12 +521,12 @@ function collectNodeMeta(nodes: GraphNode[], skills: Record<string, SkillEntry>)
 // --- Render logic ---
 
 onMounted(async () => {
-  const m = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs')
+  const m = await import('https://cdn.jsdelivr.net/npm/mermaid@11.4.1/dist/mermaid.esm.min.mjs')
   mermaidMod = m.default
   mermaidMod.initialize({
     startOnLoad: false,
     theme: isDark.value ? 'dark' : 'default',
-    securityLevel: 'loose',
+    securityLevel: 'strict',
     flowchart: { curve: 'basis', padding: 16 },
   })
   yamlInput.value = examples[selectedExample.value]
@@ -533,10 +538,14 @@ watch(isDark, () => {
   mermaidMod.initialize({
     startOnLoad: false,
     theme: isDark.value ? 'dark' : 'default',
-    securityLevel: 'loose',
+    securityLevel: 'strict',
     flowchart: { curve: 'basis', padding: 16 },
   })
   renderGraph()
+})
+
+onUnmounted(() => {
+  if (debounceTimer) clearTimeout(debounceTimer)
 })
 
 function onInput() {
