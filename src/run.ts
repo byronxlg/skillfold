@@ -41,6 +41,7 @@ export interface RunOptions {
   maxRetries?: number;
   resume?: boolean;
   configHash?: string;
+  spawnerType?: SpawnerType;
 }
 
 export interface Checkpoint {
@@ -85,6 +86,8 @@ export interface Spawner {
   ): Promise<Record<string, unknown>>;
 }
 
+export type SpawnerType = "cli" | "sdk";
+
 export class ClaudeSpawner implements Spawner {
   constructor() {
     try {
@@ -118,6 +121,85 @@ export class ClaudeSpawner implements Spawner {
 
     return parseStateUpdates(stdout);
   }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import of optional peer dep
+type SdkQueryFn = (args: { prompt: string; options?: Record<string, unknown> }) => AsyncIterable<Record<string, unknown>>;
+
+export class SdkSpawner implements Spawner {
+  private queryFn: SdkQueryFn | undefined;
+
+  async spawn(
+    agentName: string,
+    skillContent: string,
+    state: Record<string, unknown>,
+  ): Promise<Record<string, unknown>> {
+    if (!this.queryFn) {
+      try {
+        // Dynamic import - SDK is an optional peer dependency
+        // Module name constructed to prevent tsc from resolving it at compile time
+        const modName = ["@anthropic-ai", "claude-agent-sdk"].join("/");
+        const sdk: { query: SdkQueryFn } = await import(modName);
+        this.queryFn = sdk.query;
+      } catch {
+        throw new RunError(
+          "Agent SDK not found. Install it with: npm install @anthropic-ai/claude-agent-sdk",
+        );
+      }
+    }
+
+    const prompt = [
+      skillContent,
+      "",
+      "Current state:",
+      "```json",
+      JSON.stringify(state, null, 2),
+      "```",
+      "",
+      "Complete your task. When done, output your state updates as a JSON block in a fenced code block tagged `json` with the key `stateUpdates`. Only include fields you want to update.",
+    ].join("\n");
+
+    const q = this.queryFn({
+      prompt,
+      options: {
+        systemPrompt: { type: "preset", preset: "claude_code" },
+        tools: { type: "preset", preset: "claude_code" },
+        settingSources: ["user", "project"],
+        permissionMode: "bypassPermissions",
+        allowDangerouslySkipPermissions: true,
+      },
+    });
+
+    let resultText = "";
+    for await (const message of q) {
+      if (
+        message.type === "result" &&
+        (message as Record<string, unknown>).subtype === "success"
+      ) {
+        resultText = (message as Record<string, unknown>).result as string;
+      } else if (
+        message.type === "result" &&
+        (message as Record<string, unknown>).subtype !== "success"
+      ) {
+        throw new RunError(
+          `Agent "${agentName}" failed: ${(message as Record<string, unknown>).subtype}`,
+        );
+      }
+    }
+
+    return parseStateUpdates(resultText);
+  }
+}
+
+/**
+ * Create a spawner based on the type string.
+ * Falls back to ClaudeSpawner if SDK is not available.
+ */
+export function createSpawner(type: SpawnerType): Spawner {
+  if (type === "sdk") {
+    return new SdkSpawner();
+  }
+  return new ClaudeSpawner();
 }
 
 /**
@@ -684,7 +766,7 @@ export async function run(
     writeFileSync(statePath, JSON.stringify(state, null, 2) + "\n", "utf-8");
   }
 
-  const activeSpawner = dryRun ? undefined : (spawner ?? new ClaudeSpawner());
+  const activeSpawner = dryRun ? undefined : (spawner ?? createSpawner(options.spawnerType ?? "cli"));
   const steps: StepResult[] = [];
   const pipelineStart = Date.now();
 

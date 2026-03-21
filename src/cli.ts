@@ -5,7 +5,7 @@ import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { type CompileTarget, check, compile, computeStats } from "./compiler.js";
-import type { OnErrorMode } from "./run.js";
+import type { OnErrorMode, SpawnerType } from "./run.js";
 import { isAtomic, isComposed, loadConfig } from "./config.js";
 import { ConfigError, CompileError, GraphError, ResolveError, RunError } from "./errors.js";
 import { initFromTemplate, initProject, TEMPLATES } from "./init.js";
@@ -47,6 +47,7 @@ Options:
   --max-iterations <n> Max loop iterations before aborting (default: 10, run only)
   --on-error <mode>    Error handling: retry, skip, or abort (default: abort, run only)
   --max-retries <n>    Max retry attempts per step (default: 3, run only)
+  --spawner <type>     Agent spawner: cli or sdk (default: cli, run only)
   --html               Output interactive HTML instead of Mermaid (graph only)
   --help               Show this help
   --version            Show version
@@ -72,6 +73,7 @@ interface Args {
   maxIterations: number;
   onError: OnErrorMode;
   maxRetries: number;
+  spawner: SpawnerType;
   html: boolean;
   help: boolean;
   version: boolean;
@@ -93,6 +95,7 @@ function parseArgs(argv: string[]): Args {
   let maxIterations = 10;
   let onError: OnErrorMode = "abort";
   let maxRetries = 3;
+  let spawner: SpawnerType = "cli";
   let html = false;
   let help = false;
   let version = false;
@@ -189,6 +192,13 @@ function parseArgs(argv: string[]): Args {
         process.exit(1);
       }
       maxRetries = val;
+    } else if (argv[i] === "--spawner" && argv[i + 1]) {
+      const val = argv[++i];
+      if (val !== "cli" && val !== "sdk") {
+        console.error(`skillfold error: --spawner must be cli or sdk`);
+        process.exit(1);
+      }
+      spawner = val;
     } else if (argv[i] === "--html") {
       html = true;
     } else if (argv[i] === "--help") {
@@ -232,6 +242,7 @@ function parseArgs(argv: string[]): Args {
     maxIterations,
     onError,
     maxRetries,
+    spawner,
     html,
     help,
     version,
@@ -455,6 +466,7 @@ async function main(): Promise<void> {
         maxIterations: args.maxIterations,
         onError: args.onError,
         maxRetries: args.maxRetries,
+        spawnerType: args.spawner,
       });
 
       if (!args.dryRun) {
