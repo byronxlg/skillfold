@@ -44,7 +44,7 @@ Two prior violations pushed the earliest submission date back:
 
 **Description:**
 
-Configuration language and compiler for multi-agent AI pipelines. Compiles YAML skill definitions into standard SKILL.md files and Claude Code agent layouts at build time - no runtime, no SDK, no daemon. Ships with a shared skills library, a slash command plugin, and an adopt command that converts existing Claude Code agents into managed pipelines.
+Configuration language and compiler for multi-agent AI pipelines. The only compile-time tool in the Orchestrators category - every other entry is a runtime coordinator. Compiles YAML skill definitions into standard SKILL.md files and Claude Code agent layouts at build time, complementing runtime tools like Agent Teams (skillfold owns the config, Agent Teams owns the execution). No runtime, no SDK, no daemon. Ships with a shared skills library, a slash command plugin, and an adopt command that converts existing Claude Code agents into managed pipelines.
 
 **Validate Claims:**
 
@@ -64,11 +64,13 @@ Install skillfold (`npm install skillfold`), then run: `npx skillfold init demo 
 
 **Additional Comments:**
 
-Every other orchestrator in the awesome-claude-code list is a runtime tool - it launches agents, manages sessions, and coordinates execution while agents run. Skillfold is the only compile-time entry in the Orchestrators category. It validates skill references, state types, write conflicts, and cycle exit conditions at build time, then produces plain Markdown files that Claude Code reads natively. When a pipeline has a team flow, the compiler also generates an executable `/run-pipeline` command that orchestrates the agents with a step-by-step execution plan, state table, and Agent tool invocations. There is no process to run, no server to start, and no SDK to integrate.
+Every other orchestrator in the awesome-claude-code list is a runtime tool - it launches agents, manages sessions, and coordinates execution while agents run. Skillfold is the only compile-time entry in the Orchestrators category. It validates skill references, state types, write conflicts, and cycle exit conditions at build time, then produces plain Markdown files that Claude Code reads natively. The README's "Works with Agent Teams" section explains the complementary relationship: skillfold defines what each agent knows and how agents connect at build time, while Agent Teams coordinates live sessions at execution time. When a pipeline has a team flow, the compiler also generates an executable `/run-pipeline` command that orchestrates the agents with a step-by-step execution plan, state table, and Agent tool invocations. There is no process to run, no server to start, and no SDK to integrate.
 
 Self-hosting: skillfold's own dev team pipeline is compiled by skillfold itself (`skillfold.yaml` in the repo root). The 7-agent pipeline (strategist, architect, designer, marketer, engineer, reviewer, orchestrator) produces the project's own discussions, issues, and pull requests.
 
 CI integration: ships a reusable GitHub Action (`action.yml`) that verifies compiled output is up-to-date via `--check`, so stale agent files fail the build.
+
+11 library skills (planning, research, code-writing, testing, etc.) are discoverable via `npx skills add byronxlg/skillfold`.
 
 Single dependency (`yaml`), 396 tests across 76 suites, Node 20+.
 
