@@ -18,7 +18,7 @@ hero:
 
 features:
   - title: Skill Composition
-    details: Define atomic skills once, compose them into agents. No copy-paste, no drift. The compiler handles deduplication.
+    details: Define atomic skills once, compose them into agents. No copy-paste, no drift. 11 library skills included, installable standalone via npx skills add.
   - title: Typed State and Flows
     details: Declare state schemas, wire agents into execution flows with conditional routing and parallel map. Validated at compile time.
   - title: Built-in Integrations
