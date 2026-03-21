@@ -14,8 +14,8 @@ interface NpmSearchResult {
   total: number;
 }
 
-export async function searchSkills(query?: string): Promise<void> {
-  const searchTerms = ["keywords:skillfold-skill", query]
+export async function searchPipelines(query?: string): Promise<void> {
+  const searchTerms = ["keywords:skillfold-pipeline", query]
     .filter(Boolean)
     .join("+");
   const url = `https://registry.npmjs.org/-/v1/search?text=${encodeURIComponent(searchTerms)}&size=25`;
@@ -38,14 +38,14 @@ export async function searchSkills(query?: string): Promise<void> {
   if (data.total === 0 || data.objects.length === 0) {
     console.log(
       query
-        ? `No skillfold skills found matching "${query}"`
-        : "No skillfold skills found",
+        ? `No pipeline configs found matching "${query}"`
+        : "No pipeline configs found",
     );
     return;
   }
 
   console.log(
-    `\n  Found ${data.objects.length} skill${data.objects.length === 1 ? "" : "s"}:\n`,
+    `\n  Found ${data.objects.length} pipeline config${data.objects.length === 1 ? "" : "s"}:\n`,
   );
 
   for (const { package: pkg } of data.objects) {

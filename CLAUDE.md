@@ -17,7 +17,7 @@ Configuration language and compiler for multi-agent AI pipelines. Compiles YAML 
 - **Check output is current**: `npx tsx src/cli.ts --check`
 - **List pipeline**: `npx tsx src/cli.ts list`
 - **Interactive graph**: `npx tsx src/cli.ts graph --html > pipeline.html`
-- **Search npm skills**: `npx tsx src/cli.ts search [query]`
+- **Search npm pipelines**: `npx tsx src/cli.ts search [query]`
 - **Run with custom config**: `npx tsx src/cli.ts --config path.yaml --out-dir out/`
 - **Build**: `npm run build`
 - **Build plugin**: `npm run build:plugin`
@@ -39,7 +39,7 @@ src/
   plugin.ts       - Claude Code plugin packaging (skillfold plugin)
   list.ts         - Pipeline introspection (skillfold list)
   npm.ts          - npm package resolution (npm: prefix in skill refs and imports)
-  search.ts       - npm registry search for skillfold-skill packages (skillfold search)
+  search.ts       - npm registry search for skillfold pipeline configs (skillfold search)
   watch.ts        - File watching and auto-recompile (skillfold watch)
   init.ts         - skillfold init scaffolding
   errors.ts       - ConfigError, ResolveError, CompileError, GraphError
@@ -165,7 +165,7 @@ Located in `library/examples/`:
 - Resolved location URLs in orchestrator state table output (base URL templates from skill resources)
 - Compiler warnings for implicit state locations (skills without resource declarations)
 - Sub-flow imports: flow nodes can reference external pipeline configs via `flow:` field, with recursive resolution, skill/state merging, circular reference detection, orchestrator rendering with hierarchical steps, and Mermaid visualization as subgraphs
-- `skillfold search [query]` command for discovering skill packages on npm (searches for `skillfold-skill` keyword)
+- `skillfold search [query]` command for discovering pipeline configs on npm (searches for `skillfold-pipeline` keyword)
 - npm skill discovery: `agentskills` field in package.json uses flat key-value format for ecosystem compatibility
 - `npm:` prefix support for skill references and imports (resolves to node_modules paths)
 - Publishing guide (`docs/publishing.md`) for sharing skills via npm
