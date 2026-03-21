@@ -384,7 +384,7 @@ Reference skills by GitHub URL, npm package, or import them from other configs. 
 skills:
   atomic:
     shared: https://github.com/org/repo/tree/main/skills/shared
-    planning: npm:skillfold-skill-planning    # resolve from npm package
+    planning: npm:skillfold-pipeline-planning  # resolve from npm package
 imports:
   - npm:skillfold/library/skillfold.yaml      # npm: prefix (preferred)
   - node_modules/skillfold/library/skillfold.yaml  # direct path (also works)
@@ -510,7 +510,7 @@ Commands:
   graph             Output Mermaid flowchart of the team flow
   watch             Compile and watch for changes
   plugin            Package compiled output as a Claude Code plugin
-  search [query]    Discover skill packages on npm
+  search [query]    Discover pipeline configs on npm
   (default)         Compile the pipeline config
 
 Options:

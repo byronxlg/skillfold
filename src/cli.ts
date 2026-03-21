@@ -29,7 +29,7 @@ Commands:
   graph             Output Mermaid flowchart of the team flow
   watch             Compile and watch for changes
   plugin            Package compiled output as a Claude Code plugin
-  search [query]    Search npm for skillfold skill packages
+  search [query]    Search npm for pipeline configs
   (default)         Compile the pipeline config
 
 Options:
@@ -239,8 +239,8 @@ async function main(): Promise<void> {
   }
 
   if (args.command === "search") {
-    const { searchSkills } = await import("./search.js");
-    await searchSkills(args.query);
+    const { searchPipelines } = await import("./search.js");
+    await searchPipelines(args.query);
     return;
   }
 

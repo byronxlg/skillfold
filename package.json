@@ -33,7 +33,7 @@
     "codex",
     "gemini-cli",
     "agentskills",
-    "skillfold-skill",
+    "skillfold-pipeline",
     "skill-md"
   ],
   "agentskills": {
