@@ -4,6 +4,7 @@ import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { type CompileTarget, check, compile, computeStats } from "./compiler.js";
+import type { OnErrorMode } from "./run.js";
 import { isAtomic, isComposed, loadConfig } from "./config.js";
 import { ConfigError, CompileError, GraphError, ResolveError, RunError } from "./errors.js";
 import { initFromTemplate, initProject, TEMPLATES } from "./init.js";
@@ -42,6 +43,8 @@ Options:
   --check              Verify compiled output is up-to-date (exit 1 if stale)
   --dry-run            Show execution plan without running (run only)
   --max-iterations <n> Max loop iterations before aborting (default: 10, run only)
+  --on-error <mode>    Error handling: retry, skip, or abort (default: abort, run only)
+  --max-retries <n>    Max retry attempts per step (default: 3, run only)
   --html               Output interactive HTML instead of Mermaid (graph only)
   --help               Show this help
   --version            Show version
@@ -64,6 +67,8 @@ interface Args {
   check: boolean;
   dryRun: boolean;
   maxIterations: number;
+  onError: OnErrorMode;
+  maxRetries: number;
   html: boolean;
   help: boolean;
   version: boolean;
@@ -82,6 +87,8 @@ function parseArgs(argv: string[]): Args {
   let checkMode = false;
   let dryRun = false;
   let maxIterations = 10;
+  let onError: OnErrorMode = "abort";
+  let maxRetries = 3;
   let html = false;
   let help = false;
   let version = false;
@@ -162,6 +169,20 @@ function parseArgs(argv: string[]): Args {
         process.exit(1);
       }
       maxIterations = val;
+    } else if (argv[i] === "--on-error" && argv[i + 1]) {
+      const val = argv[++i];
+      if (val !== "retry" && val !== "skip" && val !== "abort") {
+        console.error(`skillfold error: --on-error must be retry, skip, or abort`);
+        process.exit(1);
+      }
+      onError = val;
+    } else if (argv[i] === "--max-retries" && argv[i + 1]) {
+      const val = Number(argv[++i]);
+      if (!Number.isInteger(val) || val < 1) {
+        console.error(`skillfold error: --max-retries must be a positive integer`);
+        process.exit(1);
+      }
+      maxRetries = val;
     } else if (argv[i] === "--html") {
       html = true;
     } else if (argv[i] === "--help") {
@@ -202,6 +223,8 @@ function parseArgs(argv: string[]): Args {
     check: checkMode,
     dryRun,
     maxIterations,
+    onError,
+    maxRetries,
     html,
     help,
     version,
@@ -388,7 +411,7 @@ async function main(): Promise<void> {
   }
 
   if (args.command === "run") {
-    const { run } = await import("./run.js");
+    const { run, formatDuration } = await import("./run.js");
     try {
       if (args.target === "skill") {
         console.error("skillfold error: --target is required for run (e.g. --target claude-code)");
@@ -418,22 +441,39 @@ async function main(): Promise<void> {
         outDir: args.outDir,
         dryRun: args.dryRun,
         maxIterations: args.maxIterations,
+        onError: args.onError,
+        maxRetries: args.maxRetries,
       });
 
       if (!args.dryRun) {
+        // Print execution summary
+        process.stderr.write("\n");
         for (const step of result.steps) {
-          const statusLabel = step.status === "ok" ? "done" :
-            step.status === "skipped" ? "skipped (async)" :
-            `error: ${step.error}`;
-          process.stderr.write(`  [${step.step}/${nodeCount}] ${step.agent}... ${statusLabel}\n`);
+          const duration = step.durationMs !== undefined ? ` (${formatDuration(step.durationMs)})` : "";
+          const retries = step.attempts && step.attempts > 1 ? ` [${step.attempts} attempts]` : "";
+          const statusLabel = step.status === "ok" ? "pass" :
+            step.status === "skipped" ? (step.error ? "skip" : "skip (async)") :
+            "FAIL";
+          const errorSuffix = step.status === "error" && step.error ? `: ${step.error}` : "";
+          process.stderr.write(
+            `  ${statusLabel.padEnd(12)} ${step.agent}${retries}${duration}${errorSuffix}\n`,
+          );
         }
 
-        const failed = result.steps.find(s => s.status === "error");
-        if (failed) {
-          process.stderr.write(`skillfold: pipeline failed at step ${failed.step}\n`);
+        const okCount = result.steps.filter(s => s.status === "ok").length;
+        const failCount = result.steps.filter(s => s.status === "error").length;
+        const skipCount = result.steps.filter(s => s.status === "skipped").length;
+        const parts: string[] = [];
+        if (okCount > 0) parts.push(`${okCount} passed`);
+        if (failCount > 0) parts.push(`${failCount} failed`);
+        if (skipCount > 0) parts.push(`${skipCount} skipped`);
+
+        process.stderr.write(
+          `\nskillfold: ${parts.join(", ")} in ${formatDuration(result.durationMs)}\n`,
+        );
+
+        if (failCount > 0) {
           process.exit(1);
-        } else {
-          process.stderr.write(`skillfold: pipeline complete\n`);
         }
       }
     } catch (err) {

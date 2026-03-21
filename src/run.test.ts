@@ -7,8 +7,8 @@ import { tmpdir } from "node:os";
 import type { Config } from "./config.js";
 import { RunError } from "./errors.js";
 import type { Graph } from "./graph.js";
-import type { Spawner, StepResult } from "./run.js";
-import { evaluateWhenClause, getStateValue, run } from "./run.js";
+import type { OnErrorMode, Spawner, StepResult } from "./run.js";
+import { evaluateWhenClause, formatDuration, getStateValue, run } from "./run.js";
 
 function makeTmpDir(): string {
   const dir = join(tmpdir(), `skillfold-run-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -73,6 +73,35 @@ function errorSpawner(failOn: string): Spawner {
         throw new Error(`Agent ${agentName} failed`);
       }
       return {};
+    },
+  };
+}
+
+/**
+ * Mock spawner that fails N times then succeeds for a specific agent.
+ * Records all spawn attempts.
+ */
+function retrySpawner(
+  failOn: string,
+  failCount: number,
+  successUpdate: Record<string, unknown>,
+): { spawner: Spawner; attempts: number[] } {
+  const state = { count: 0 };
+  const attempts: number[] = [];
+  return {
+    attempts,
+    spawner: {
+      async spawn(agentName: string, _skillContent: string, _state: Record<string, unknown>) {
+        if (agentName === failOn) {
+          state.count++;
+          attempts.push(state.count);
+          if (state.count <= failCount) {
+            throw new Error(`Agent ${agentName} failed (attempt ${state.count})`);
+          }
+          return successUpdate;
+        }
+        return {};
+      },
     },
   };
 }
@@ -839,7 +868,7 @@ describe("run", () => {
   });
 
   describe("error handling", () => {
-    it("spawner error is captured in step result", async () => {
+    it("spawner error is captured in step result (abort mode)", async () => {
       tmpDir = makeTmpDir();
       origCwd = process.cwd();
       process.chdir(tmpDir);
@@ -851,7 +880,7 @@ describe("run", () => {
       });
 
       const result = await run(
-        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false, onError: "abort" },
         errorSpawner("planner"),
       );
 
@@ -859,7 +888,28 @@ describe("run", () => {
       assert.ok(result.steps[0].error?.includes("Agent planner failed"));
     });
 
-    it("execution halts on spawner error", async () => {
+    it("execution halts on spawner error in abort mode", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          { skill: "planner", reads: [], writes: ["state.plan"], then: "engineer" },
+          { skill: "engineer", reads: ["state.plan"], writes: ["state.code"] },
+        ],
+      });
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false, onError: "abort" },
+        errorSpawner("planner"),
+      );
+
+      assert.equal(result.steps.length, 1);
+      assert.equal(result.steps[0].status, "error");
+    });
+
+    it("default onError mode is abort", async () => {
       tmpDir = makeTmpDir();
       origCwd = process.cwd();
       process.chdir(tmpDir);
@@ -876,6 +926,7 @@ describe("run", () => {
         errorSpawner("planner"),
       );
 
+      // Default abort: stops at first error
       assert.equal(result.steps.length, 1);
       assert.equal(result.steps[0].status, "error");
     });
@@ -897,6 +948,270 @@ describe("run", () => {
           return true;
         },
       );
+    });
+  });
+
+  describe("onError: retry", () => {
+    it("retries a failed step and succeeds", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          { skill: "planner", reads: [], writes: ["state.plan"] },
+        ],
+      });
+
+      // Fails once, then succeeds
+      const { spawner, attempts } = retrySpawner("planner", 1, { plan: "recovered" });
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false, onError: "retry", maxRetries: 3 },
+        spawner,
+      );
+
+      assert.equal(result.steps[0].status, "ok");
+      assert.equal(result.steps[0].attempts, 2);
+      assert.equal(result.state.plan, "recovered");
+      assert.equal(attempts.length, 2);
+    });
+
+    it("exhausts retries and fails", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          { skill: "planner", reads: [], writes: ["state.plan"], then: "engineer" },
+          { skill: "engineer", reads: ["state.plan"], writes: ["state.code"] },
+        ],
+      });
+
+      // Fails 5 times, maxRetries is 3 so never succeeds
+      const { spawner, attempts } = retrySpawner("planner", 5, { plan: "never" });
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false, onError: "retry", maxRetries: 3 },
+        spawner,
+      );
+
+      assert.equal(result.steps.length, 1);
+      assert.equal(result.steps[0].status, "error");
+      assert.equal(result.steps[0].attempts, 3);
+      assert.equal(attempts.length, 3);
+    });
+
+    it("records errors in state._errors on retry exhaustion", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          { skill: "planner", reads: [], writes: ["state.plan"] },
+        ],
+      });
+
+      const { spawner } = retrySpawner("planner", 5, {});
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false, onError: "retry", maxRetries: 2 },
+        spawner,
+      );
+
+      assert.ok(Array.isArray(result.state._errors));
+      const errors = result.state._errors as Array<{ step: number; agent: string; attempts: number }>;
+      assert.equal(errors.length, 1);
+      assert.equal(errors[0].step, 1);
+      assert.equal(errors[0].agent, "planner");
+      assert.equal(errors[0].attempts, 2);
+    });
+
+    it("successful step on first attempt does not record attempts count", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          { skill: "planner", reads: [], writes: ["state.plan"] },
+        ],
+      });
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false, onError: "retry" },
+        mockSpawner({ planner: { plan: "done" } }),
+      );
+
+      assert.equal(result.steps[0].status, "ok");
+      assert.equal(result.steps[0].attempts, undefined);
+    });
+  });
+
+  describe("onError: skip", () => {
+    it("skips failed step and continues pipeline", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          { skill: "planner", reads: [], writes: ["state.plan"], then: "engineer" },
+          { skill: "engineer", reads: ["state.plan"], writes: ["state.code"] },
+        ],
+      });
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false, onError: "skip" },
+        errorSpawner("planner"),
+      );
+
+      assert.equal(result.steps.length, 2);
+      assert.equal(result.steps[0].status, "skipped");
+      assert.ok(result.steps[0].error?.includes("Agent planner failed"));
+      assert.equal(result.steps[1].status, "ok");
+    });
+
+    it("records skipped errors in state._errors", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          { skill: "planner", reads: [], writes: ["state.plan"] },
+        ],
+      });
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false, onError: "skip" },
+        errorSpawner("planner"),
+      );
+
+      assert.ok(Array.isArray(result.state._errors));
+      const errors = result.state._errors as Array<{ agent: string }>;
+      assert.equal(errors[0].agent, "planner");
+    });
+
+    it("multiple errors are accumulated in state._errors", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          { skill: "planner", reads: [], writes: ["state.plan"], then: "engineer" },
+          { skill: "engineer", reads: ["state.plan"], writes: ["state.code"] },
+        ],
+      });
+
+      // Both agents fail
+      const spawner: Spawner = {
+        async spawn(agentName: string) {
+          throw new Error(`${agentName} broke`);
+        },
+      };
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false, onError: "skip" },
+        spawner,
+      );
+
+      assert.equal(result.steps.length, 2);
+      assert.equal(result.steps[0].status, "skipped");
+      assert.equal(result.steps[1].status, "skipped");
+      const errors = result.state._errors as Array<{ agent: string }>;
+      assert.equal(errors.length, 2);
+    });
+  });
+
+  describe("step timing", () => {
+    it("records durationMs for each step", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          { skill: "planner", reads: [], writes: ["state.plan"], then: "engineer" },
+          { skill: "engineer", reads: ["state.plan"], writes: ["state.code"] },
+        ],
+      });
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        mockSpawner({
+          planner: { plan: "done" },
+          engineer: { code: "done" },
+        }),
+      );
+
+      assert.equal(result.steps.length, 2);
+      for (const step of result.steps) {
+        assert.equal(typeof step.durationMs, "number");
+        assert.ok(step.durationMs! >= 0);
+      }
+    });
+
+    it("records total pipeline durationMs", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          { skill: "planner", reads: [], writes: ["state.plan"] },
+        ],
+      });
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        mockSpawner({ planner: { plan: "done" } }),
+      );
+
+      assert.equal(typeof result.durationMs, "number");
+      assert.ok(result.durationMs >= 0);
+    });
+
+    it("records durationMs for failed steps", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      const config = makeConfig({
+        nodes: [
+          { skill: "planner", reads: [], writes: ["state.plan"] },
+        ],
+      });
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        errorSpawner("planner"),
+      );
+
+      assert.equal(result.steps[0].status, "error");
+      assert.equal(typeof result.steps[0].durationMs, "number");
+    });
+  });
+
+  describe("formatDuration", () => {
+    it("formats milliseconds", () => {
+      assert.equal(formatDuration(50), "50ms");
+      assert.equal(formatDuration(999), "999ms");
+    });
+
+    it("formats seconds", () => {
+      assert.equal(formatDuration(1000), "1s");
+      assert.equal(formatDuration(5000), "5s");
+      assert.equal(formatDuration(59000), "59s");
+    });
+
+    it("formats minutes and seconds", () => {
+      assert.equal(formatDuration(60000), "1m");
+      assert.equal(formatDuration(90000), "1m 30s");
+      assert.equal(formatDuration(151000), "2m 31s");
     });
   });
 
