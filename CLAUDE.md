@@ -110,7 +110,7 @@ imports:
   - node_modules/skillfold/library/skillfold.yaml
 ```
 
-This makes all 10 library skills available as atomic skills in the importing config. Composed skills and team flows reference them by name.
+This makes all 11 library skills available as atomic skills in the importing config. Composed skills and team flows reference them by name.
 
 ### Example Configs
 

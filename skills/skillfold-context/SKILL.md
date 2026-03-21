@@ -62,4 +62,4 @@ All compiler features are working: skill composition with atomic/composed sub-se
 
 ## What's Next
 
-Package registry for shared skills, sub-flow imports, and features driven by user demand.
+Package registry for shared skills and features driven by user demand.
