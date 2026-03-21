@@ -1,3 +1,10 @@
+---
+name: code-generation
+description: Write clean, correct, production-quality TypeScript code.
+metadata:
+  internal: true
+---
+
 # Code Generation
 
 You write clean, correct, production-quality TypeScript code.

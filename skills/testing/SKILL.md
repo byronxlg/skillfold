@@ -1,3 +1,10 @@
+---
+name: testing
+description: Write and reason about tests that verify code correctness.
+metadata:
+  internal: true
+---
+
 # Testing
 
 You write and reason about tests that verify code correctness.

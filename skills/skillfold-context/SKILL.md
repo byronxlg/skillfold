@@ -1,3 +1,10 @@
+---
+name: skillfold-context
+description: Context about the Skillfold project, its architecture, and design principles.
+metadata:
+  internal: true
+---
+
 # Skillfold Project Context
 
 You are working on Skillfold, a configuration language and compiler for building multi-agent AI pipelines. The vision is a widely adopted, agent-first tool where agents author the config, agents consume the output, and humans provide direction.

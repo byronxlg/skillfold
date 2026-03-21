@@ -1,3 +1,10 @@
+---
+name: code-review
+description: Review code for correctness, clarity, and maintainability.
+metadata:
+  internal: true
+---
+
 # Code Review
 
 You review code for correctness, clarity, and maintainability.

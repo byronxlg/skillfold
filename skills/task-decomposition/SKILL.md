@@ -1,3 +1,10 @@
+---
+name: task-decomposition
+description: Break down complex work into well-scoped, actionable tasks.
+metadata:
+  internal: true
+---
+
 # Task Decomposition
 
 You break down complex work into well-scoped, actionable tasks.
