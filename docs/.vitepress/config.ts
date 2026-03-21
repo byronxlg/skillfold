@@ -29,6 +29,7 @@ export default defineConfig({
           { text: "Platform Integration", link: "/integrations" },
           { text: "Publishing Skills", link: "/publishing" },
           { text: "Authoring Skills", link: "/authoring" },
+          { text: "Comparisons", link: "/comparisons" },
         ],
       },
       {
