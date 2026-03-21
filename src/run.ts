@@ -1,5 +1,5 @@
 import { execFile, execFileSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { promisify } from "node:util";
 
@@ -32,6 +32,16 @@ export interface RunOptions {
   maxIterations?: number;
   onError?: OnErrorMode;
   maxRetries?: number;
+  resume?: boolean;
+  configHash?: string;
+}
+
+export interface Checkpoint {
+  configHash: string;
+  completedSteps: string[];
+  currentStepIndex: number;
+  state: Record<string, unknown>;
+  startedAt: string;
 }
 
 export interface StepResult {
@@ -204,6 +214,33 @@ export function formatDuration(ms: number): string {
   return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
 }
 
+const CHECKPOINT_DIR = ".skillfold/run";
+const CHECKPOINT_FILE = "checkpoint.json";
+
+function checkpointPath(): string {
+  return join(process.cwd(), CHECKPOINT_DIR, CHECKPOINT_FILE);
+}
+
+function loadCheckpoint(): Checkpoint | undefined {
+  const path = checkpointPath();
+  if (!existsSync(path)) return undefined;
+  const raw = readFileSync(path, "utf-8");
+  return JSON.parse(raw) as Checkpoint;
+}
+
+function saveCheckpoint(checkpoint: Checkpoint): void {
+  const dir = join(process.cwd(), CHECKPOINT_DIR);
+  mkdirSync(dir, { recursive: true });
+  writeFileSync(checkpointPath(), JSON.stringify(checkpoint, null, 2) + "\n", "utf-8");
+}
+
+function clearCheckpointDir(): void {
+  const dir = join(process.cwd(), CHECKPOINT_DIR);
+  if (existsSync(dir)) {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 export async function run(
   options: RunOptions,
   spawner?: Spawner,
@@ -229,6 +266,28 @@ export async function run(
     }
   }
 
+  // Handle resume / clean start
+  let completedSteps: string[] = [];
+  let resumeFromIndex = 0;
+  let startedAt = new Date().toISOString();
+
+  if (options.resume) {
+    const checkpoint = loadCheckpoint();
+    if (!checkpoint) {
+      throw new RunError("No checkpoint found - cannot resume. Run without --resume first.");
+    }
+    if (options.configHash && checkpoint.configHash !== options.configHash) {
+      throw new RunError(
+        "Config has changed since the last run - cannot resume. Run without --resume to start fresh.",
+      );
+    }
+    completedSteps = checkpoint.completedSteps;
+    resumeFromIndex = checkpoint.currentStepIndex;
+    startedAt = checkpoint.startedAt;
+  } else if (!dryRun) {
+    clearCheckpointDir();
+  }
+
   // Load initial state from state.json if it exists
   const statePath = join(process.cwd(), "state.json");
   let state: Record<string, unknown> = {};
@@ -244,6 +303,14 @@ export async function run(
     }
   }
 
+  // If resuming, restore state from checkpoint
+  if (options.resume) {
+    const checkpoint = loadCheckpoint();
+    if (checkpoint) {
+      state = checkpoint.state;
+    }
+  }
+
   const activeSpawner = dryRun ? undefined : (spawner ?? new ClaudeSpawner());
   const steps: StepResult[] = [];
   const pipelineStart = Date.now();
@@ -251,7 +318,7 @@ export async function run(
   // Track visit counts per node for loop detection
   const visitCounts = new Map<number, number>();
 
-  let currentIndex = 0;
+  let currentIndex = options.resume ? resumeFromIndex : 0;
   let stepNumber = 0;
 
   while (currentIndex >= 0 && currentIndex < nodes.length) {
@@ -359,6 +426,17 @@ export async function run(
         status: "ok",
         attempts: attempts > 1 ? attempts : undefined,
         durationMs: stepDuration,
+      });
+
+      // Save checkpoint after each successful step
+      completedSteps.push(node.skill);
+      const nextIdx = resolveNextIndex(node, currentIndex, nodeLookup, state, dryRun);
+      saveCheckpoint({
+        configHash: options.configHash ?? "",
+        completedSteps,
+        currentStepIndex: nextIdx === -1 ? currentIndex + 1 : nextIdx,
+        state,
+        startedAt,
       });
     } else {
       // Record error in state for debugging
