@@ -11,6 +11,7 @@ export default defineConfig({
     nav: [
       { text: "Guide", link: "/getting-started" },
       { text: "Reference", link: "/reference/config" },
+      { text: "Builder", link: "/builder" },
       { text: "Demo", link: "/demo" },
       { text: "GitHub", link: "https://github.com/byronxlg/skillfold" },
       { text: "npm", link: "https://www.npmjs.com/package/skillfold" },
@@ -22,6 +23,7 @@ export default defineConfig({
         items: [
           { text: "Getting Started", link: "/getting-started" },
           { text: "Live Demo", link: "/demo" },
+          { text: "Pipeline Builder", link: "/builder" },
           { text: "Examples", link: "/examples" },
           { text: "Platform Integration", link: "/integrations" },
           { text: "Publishing Skills", link: "/publishing" },
