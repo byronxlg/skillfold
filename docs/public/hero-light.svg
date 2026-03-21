@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" fill="none">
+  <!-- Pipeline flow visualization -->
+  <defs>
+    <linearGradient id="grad-light" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.8"/>
+    </linearGradient>
+    <linearGradient id="line-light" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.5"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Node: YAML Config (top) -->
+  <rect x="100" y="30" width="120" height="44" rx="10" fill="url(#grad-light)"/>
+  <text x="160" y="57" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="white">YAML</text>
+
+  <!-- Arrow down -->
+  <line x1="160" y1="74" x2="160" y2="110" stroke="url(#line-light)" stroke-width="2.5" stroke-dasharray="6 4"/>
+  <polygon points="154,106 160,116 166,106" fill="#10b981" opacity="0.6"/>
+
+  <!-- Node: Compiler (center) -->
+  <rect x="85" y="116" width="150" height="44" rx="10" fill="url(#grad-light)"/>
+  <text x="160" y="143" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="white">Compiler</text>
+
+  <!-- Arrow fan-out: three lines going to three output nodes -->
+  <!-- Left -->
+  <line x1="120" y1="160" x2="65" y2="210" stroke="url(#line-light)" stroke-width="2.5" stroke-dasharray="6 4"/>
+  <polygon points="60,205 62,216 72,210" fill="#06b6d4" opacity="0.6"/>
+  <!-- Center -->
+  <line x1="160" y1="160" x2="160" y2="210" stroke="url(#line-light)" stroke-width="2.5" stroke-dasharray="6 4"/>
+  <polygon points="154,206 160,216 166,206" fill="#10b981" opacity="0.6"/>
+  <!-- Right -->
+  <line x1="200" y1="160" x2="255" y2="210" stroke="url(#line-light)" stroke-width="2.5" stroke-dasharray="6 4"/>
+  <polygon points="248,210 258,216 260,205" fill="#06b6d4" opacity="0.6"/>
+
+  <!-- Output nodes -->
+  <rect x="15" y="216" width="100" height="38" rx="8" fill="#10b981" opacity="0.15" stroke="#10b981" stroke-opacity="0.4" stroke-width="1.5"/>
+  <text x="65" y="240" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="500" fill="#047857">Claude Code</text>
+
+  <rect x="110" y="216" width="100" height="38" rx="8" fill="#10b981" opacity="0.15" stroke="#10b981" stroke-opacity="0.4" stroke-width="1.5"/>
+  <text x="160" y="240" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="500" fill="#047857">Cursor</text>
+
+  <rect x="205" y="216" width="100" height="38" rx="8" fill="#06b6d4" opacity="0.15" stroke="#06b6d4" stroke-opacity="0.4" stroke-width="1.5"/>
+  <text x="255" y="240" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="500" fill="#0e7490">Codex</text>
+
+  <!-- Bottom label -->
+  <text x="160" y="285" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#6b7280">+ 9 more targets</text>
+</svg>
