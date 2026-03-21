@@ -71,6 +71,11 @@
                 "description": "Human-readable description of the composed skill.",
                 "minLength": 1,
                 "maxLength": 1024
+              },
+              "frontmatter": {
+                "type": "object",
+                "description": "Extra YAML frontmatter fields emitted in --target claude-code output. Passthrough key-value pairs such as tools, permissionMode, isolation, maxTurns, etc.",
+                "additionalProperties": true
               }
             }
           }

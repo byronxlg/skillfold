@@ -191,4 +191,128 @@ describe("generateAgents", () => {
     assert.ok(!planner.content.includes("## Reads"));
     assert.ok(!planner.content.includes("## Writes"));
   });
+
+  it("emits extra frontmatter fields from composed skill config", () => {
+    const config = makeConfig({
+      skills: {
+        planning: { path: "./skills/planning" },
+        coding: { path: "./skills/coding" },
+        engineer: {
+          compose: ["planning", "coding"],
+          description: "Writes code.",
+          frontmatter: {
+            tools: ["Edit", "Write", "Bash"],
+            permissionMode: "bypassPermissions",
+            isolation: "worktree",
+          },
+        },
+      },
+      team: undefined,
+    });
+    const bodies = new Map<string, string>();
+    bodies.set("engineer", "Write code.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml");
+    const engineer = results.find((r) => r.name === "engineer");
+    assert.ok(engineer);
+
+    // Core fields still present
+    assert.ok(engineer.content.includes("name: engineer"));
+    assert.ok(engineer.content.includes("model: inherit"));
+
+    // Extra frontmatter fields emitted
+    assert.ok(engineer.content.includes("permissionMode: bypassPermissions"));
+    assert.ok(engineer.content.includes("isolation: worktree"));
+    // Tools array rendered in YAML
+    assert.ok(engineer.content.includes("tools:"));
+    assert.ok(engineer.content.includes("- Edit"));
+    assert.ok(engineer.content.includes("- Write"));
+    assert.ok(engineer.content.includes("- Bash"));
+  });
+
+  it("emits boolean and number frontmatter fields", () => {
+    const config = makeConfig({
+      skills: {
+        planning: { path: "./skills/planning" },
+        planner: {
+          compose: ["planning"],
+          description: "Plans.",
+          frontmatter: {
+            memory: true,
+            maxTurns: 50,
+            background: false,
+          },
+        },
+      },
+      team: undefined,
+    });
+    const bodies = new Map<string, string>();
+    bodies.set("planner", "Plan.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml");
+    const planner = results.find((r) => r.name === "planner");
+    assert.ok(planner);
+
+    assert.ok(planner.content.includes("memory: true"));
+    assert.ok(planner.content.includes("maxTurns: 50"));
+    assert.ok(planner.content.includes("background: false"));
+  });
+
+  it("does not emit extra frontmatter when none is configured", () => {
+    const config = makeConfig({
+      skills: {
+        planning: { path: "./skills/planning" },
+        planner: {
+          compose: ["planning"],
+          description: "Plans.",
+        },
+      },
+      team: undefined,
+    });
+    const bodies = new Map<string, string>();
+    bodies.set("planner", "Plan.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml");
+    const planner = results.find((r) => r.name === "planner");
+    assert.ok(planner);
+
+    // Extract frontmatter between --- delimiters
+    const fmMatch = planner.content.match(/---\n([\s\S]*?)\n---/);
+    assert.ok(fmMatch);
+    const fmLines = fmMatch[1].split("\n").map((l) => l.split(":")[0].trim());
+    // Only the four core fields
+    assert.deepEqual(fmLines, ["name", "description", "model", "color"]);
+  });
+
+  it("extra frontmatter appears after core fields and before closing ---", () => {
+    const config = makeConfig({
+      skills: {
+        planning: { path: "./skills/planning" },
+        planner: {
+          compose: ["planning"],
+          description: "Plans.",
+          frontmatter: {
+            effort: "high",
+          },
+        },
+      },
+      team: undefined,
+    });
+    const bodies = new Map<string, string>();
+    bodies.set("planner", "Plan.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml");
+    const planner = results.find((r) => r.name === "planner");
+    assert.ok(planner);
+
+    // effort appears between color and closing ---
+    const fmMatch = planner.content.match(/---\n([\s\S]*?)\n---/);
+    assert.ok(fmMatch);
+    const lines = fmMatch[1].split("\n");
+    const colorIdx = lines.findIndex((l) => l.startsWith("color:"));
+    const effortIdx = lines.findIndex((l) => l.startsWith("effort:"));
+    assert.ok(colorIdx >= 0);
+    assert.ok(effortIdx >= 0);
+    assert.ok(effortIdx > colorIdx, "extra frontmatter should follow core fields");
+  });
 });

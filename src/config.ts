@@ -19,6 +19,7 @@ export interface AtomicSkill {
 export interface ComposedSkill {
   compose: string[];
   description: string;
+  frontmatter?: Record<string, unknown>;
 }
 
 export type SkillEntry = AtomicSkill | ComposedSkill;
@@ -109,7 +110,19 @@ function normalizeComposedSkills(
         `Skill "${name}": composed skills must have a "description" field (non-empty string, max 1024 chars). Add a description explaining what this composed skill does`
       );
     }
-    skills[name] = { compose, description };
+    const entry: ComposedSkill = { compose, description };
+
+    const frontmatter = (value as { frontmatter?: unknown }).frontmatter;
+    if (frontmatter !== undefined) {
+      if (typeof frontmatter !== "object" || frontmatter === null || Array.isArray(frontmatter)) {
+        throw new ConfigError(
+          `Skill "${name}": frontmatter must be a YAML map of key-value pairs`
+        );
+      }
+      entry.frontmatter = frontmatter as Record<string, unknown>;
+    }
+
+    skills[name] = entry;
   }
 
   return skills;

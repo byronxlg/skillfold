@@ -86,6 +86,98 @@ skills:
     assert.equal(skill.description, "Runs lint and format checks.");
   });
 
+  it("composed skill with frontmatter preserves extra fields", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      frontmatter:
+        tools:
+          - Edit
+          - Bash
+        permissionMode: bypassPermissions
+        maxTurns: 25
+`);
+    const config = readConfig(configPath);
+    const skill = config.skills["quality"];
+    assert.ok(isComposed(skill));
+    assert.deepEqual(skill.frontmatter, {
+      tools: ["Edit", "Bash"],
+      permissionMode: "bypassPermissions",
+      maxTurns: 25,
+    });
+  });
+
+  it("composed skill without frontmatter has undefined frontmatter", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+`);
+    const config = readConfig(configPath);
+    const skill = config.skills["quality"];
+    assert.ok(isComposed(skill));
+    assert.equal(skill.frontmatter, undefined);
+  });
+
+  it("rejects frontmatter that is not a map", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      frontmatter: "not a map"
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /frontmatter must be a YAML map/);
+      return true;
+    });
+  });
+
+  it("rejects frontmatter that is an array", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      frontmatter:
+        - not
+        - a map
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /frontmatter must be a YAML map/);
+      return true;
+    });
+  });
+
   it("rejects compose with non-string elements", () => {
     tmpDir = makeTmpDir();
     const configPath = writeYaml(tmpDir, `
