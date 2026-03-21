@@ -2,8 +2,8 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 import type { Config } from "./config.js";
-import type { AsyncNode, GraphNode, MapNode, StepNode } from "./graph.js";
-import { generateMermaid } from "./visualize.js";
+import type { AsyncNode, GraphNode, MapNode, StepNode, SubFlowNode } from "./graph.js";
+import { generateHtml, generateMermaid } from "./visualize.js";
 
 // Helper: build a StepNode
 function step(
@@ -517,5 +517,137 @@ describe("generateMermaid", () => {
     assert.ok(output.includes("external([external])"));
     assert.ok(output.includes("external -->"));
     assert.ok(output.includes("processor"));
+  });
+});
+
+describe("generateHtml", () => {
+  it("produces valid HTML document with mermaid graph", () => {
+    const config = atomicConfig([
+      step("alpha", { then: "bravo" }),
+      step("bravo", { then: "end" }),
+    ]);
+    const html = generateHtml(config);
+    assert.ok(html.includes("<!DOCTYPE html>"));
+    assert.ok(html.includes("<title>test - Pipeline Graph</title>"));
+    assert.ok(html.includes("class=\"mermaid\""));
+    assert.ok(html.includes("graph TD"));
+    assert.ok(html.includes("alpha --&gt; bravo"));
+    assert.ok(html.includes("</html>"));
+  });
+
+  it("embeds node metadata as JSON", () => {
+    const config = atomicConfig([
+      step("alpha", { reads: ["state.input"], writes: ["state.output"], then: "end" }),
+    ]);
+    const html = generateHtml(config);
+    assert.ok(html.includes("const nodeMeta ="));
+    assert.ok(html.includes('"id":"alpha"'));
+    assert.ok(html.includes('"type":"step"'));
+    assert.ok(html.includes('"reads":["state.input"]'));
+    assert.ok(html.includes('"writes":["state.output"]'));
+  });
+
+  it("includes composition lineage for composed skills", () => {
+    const config: Config = {
+      name: "test",
+      skills: {
+        planning: { path: "./skills/planning" },
+        coding: { path: "./skills/coding" },
+        engineer: {
+          compose: ["planning", "coding"],
+          description: "Writes code.",
+        },
+      },
+      team: {
+        flow: {
+          nodes: [step("engineer", { then: "end" })],
+        },
+      },
+    };
+    const html = generateHtml(config);
+    assert.ok(html.includes('"composition":["planning","coding"]'));
+    assert.ok(html.includes('"description":"Writes code."'));
+  });
+
+  it("includes metadata for async nodes", () => {
+    const asyncNode: AsyncNode = {
+      name: "owner",
+      async: true,
+      reads: [],
+      writes: ["state.direction"],
+      policy: "block",
+      then: "end",
+    };
+    const config = atomicConfig([asyncNode], []);
+    const html = generateHtml(config);
+    assert.ok(html.includes('"id":"owner"'));
+    assert.ok(html.includes('"type":"async"'));
+    assert.ok(html.includes('"writes":["state.direction"]'));
+  });
+
+  it("includes metadata for subflow nodes", () => {
+    const subflowNode: SubFlowNode = {
+      name: "deploy-flow",
+      flow: "deploy.yaml",
+      reads: ["state.artifact"],
+      writes: ["state.deployed"],
+      then: "end",
+    };
+    const config: Config = {
+      name: "test",
+      skills: {},
+      team: {
+        flow: {
+          nodes: [subflowNode],
+        },
+      },
+    };
+    const html = generateHtml(config);
+    assert.ok(html.includes('"type":"subflow"'));
+    assert.ok(html.includes('"reads":["state.artifact"]'));
+    assert.ok(html.includes('"writes":["state.deployed"]'));
+  });
+
+  it("includes Export SVG button and toggle", () => {
+    const config = atomicConfig([step("alpha", { then: "end" })]);
+    const html = generateHtml(config);
+    assert.ok(html.includes("exportSvg()"));
+    assert.ok(html.includes("toggleSidebar()"));
+    assert.ok(html.includes("Export SVG"));
+  });
+
+  it("includes Mermaid CDN import", () => {
+    const config = atomicConfig([step("alpha", { then: "end" })]);
+    const html = generateHtml(config);
+    assert.ok(html.includes("cdn.jsdelivr.net/npm/mermaid"));
+  });
+
+  it("escapes HTML entities in mermaid definition", () => {
+    // Mermaid output with angle brackets in conditionals
+    const config = atomicConfig([
+      step("checker", {
+        then: [
+          { when: "count > 0", to: "end" },
+        ],
+      }),
+    ]);
+    const html = generateHtml(config);
+    // The > should be escaped as &gt; in the pre block
+    assert.ok(html.includes("&gt;"));
+    assert.ok(!html.match(/<pre[^>]*>.*[^&]>/s) || html.includes("&gt;"));
+  });
+
+  it("includes metadata for map nodes", () => {
+    const config = atomicConfig(
+      [
+        map("state.tasks", "task", [
+          step("worker", { then: "end" }),
+        ]),
+      ],
+      ["worker"],
+    );
+    const html = generateHtml(config);
+    assert.ok(html.includes('"type":"map"'));
+    assert.ok(html.includes('"label":"map over state.tasks"'));
   });
 });

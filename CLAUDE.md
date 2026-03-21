@@ -16,6 +16,7 @@ Configuration language and compiler for multi-agent AI pipelines. Compiles YAML 
 - **Validate config**: `npx tsx src/cli.ts validate`
 - **Check output is current**: `npx tsx src/cli.ts --check`
 - **List pipeline**: `npx tsx src/cli.ts list`
+- **Interactive graph**: `npx tsx src/cli.ts graph --html > pipeline.html`
 - **Search npm skills**: `npx tsx src/cli.ts search [query]`
 - **Run with custom config**: `npx tsx src/cli.ts --config path.yaml --out-dir out/`
 - **Build**: `npm run build`
@@ -142,7 +143,7 @@ Located in `library/examples/`:
 - Pipeline imports (import skills and state from other configs, team is local-only)
 - End-to-end test with the brief's full example config
 - CI via GitHub Actions (Node 20 + 22)
-- Graph visualization with full composition lineage and state writes (`skillfold graph`)
+- Graph visualization with full composition lineage and state writes (`skillfold graph`), with `--html` flag for interactive HTML output (clickable nodes, composition details sidebar, SVG export)
 - Shared skills library with 11 generic atomic skills and 3 example pipeline configs
 - `skillfold init` shows library import hint in generated config and CLI output
 - `skillfold validate` command for config validation without compiling output
@@ -168,7 +169,7 @@ Located in `library/examples/`:
 - npm skill discovery: `agentskills` field in package.json uses flat key-value format for ecosystem compatibility
 - `npm:` prefix support for skill references and imports (resolves to node_modules paths)
 - Publishing guide (`docs/publishing.md`) for sharing skills via npm
-- Test suite with 550 tests across 103 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, adopt, library, validate, list, search, npm, watch, errors, subflow, and e2e modules
+- Test suite with 559 tests across 104 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, adopt, library, validate, list, search, npm, watch, errors, subflow, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next

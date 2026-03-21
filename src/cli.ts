@@ -9,7 +9,7 @@ import { ConfigError, CompileError, GraphError, ResolveError } from "./errors.js
 import { initFromTemplate, initProject, TEMPLATES } from "./init.js";
 import { listPipeline } from "./list.js";
 import { resolveSkills } from "./resolver.js";
-import { generateMermaid } from "./visualize.js";
+import { generateHtml, generateMermaid } from "./visualize.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pkg = JSON.parse(
@@ -39,6 +39,7 @@ Options:
   --target <mode>      Output mode: skill (default) or claude-code
   --template <name>    Start from a library template (init only)
   --check              Verify compiled output is up-to-date (exit 1 if stale)
+  --html               Output interactive HTML instead of Mermaid (graph only)
   --help               Show this help
   --version            Show version
 
@@ -57,6 +58,7 @@ interface Args {
   template: string | undefined;
   query: string | undefined;
   check: boolean;
+  html: boolean;
   help: boolean;
   version: boolean;
 }
@@ -71,6 +73,7 @@ function parseArgs(argv: string[]): Args {
   let template: string | undefined;
   let query: string | undefined;
   let checkMode = false;
+  let html = false;
   let help = false;
   let version = false;
 
@@ -136,6 +139,8 @@ function parseArgs(argv: string[]): Args {
       template = argv[++i];
     } else if (argv[i] === "--check") {
       checkMode = true;
+    } else if (argv[i] === "--html") {
+      html = true;
     } else if (argv[i] === "--help") {
       help = true;
     } else if (argv[i] === "--version") {
@@ -162,6 +167,7 @@ function parseArgs(argv: string[]): Args {
     template,
     query,
     check: checkMode,
+    html,
     help,
     version,
   };
@@ -245,8 +251,13 @@ async function main(): Promise<void> {
         console.error("skillfold error: No team defined in config");
         process.exit(1);
       }
-      const output = generateMermaid(config);
-      process.stdout.write(output);
+      if (args.html) {
+        const output = generateHtml(config);
+        process.stdout.write(output);
+      } else {
+        const output = generateMermaid(config);
+        process.stdout.write(output);
+      }
     } catch (err) {
       if (err instanceof ConfigError || err instanceof GraphError) {
         console.error(`skillfold error: ${err.message}`);
