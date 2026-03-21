@@ -10,7 +10,10 @@ hero:
       text: Get Started
       link: /getting-started
     - theme: alt
-      text: View on GitHub
+      text: Live Demo
+      link: /demo
+    - theme: alt
+      text: GitHub
       link: https://github.com/byronxlg/skillfold
 
 features:
