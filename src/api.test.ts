@@ -86,9 +86,9 @@ describe("API round-trip", () => {
 
   it("type guards work on loaded config", () => {
     const config = skillfold.readConfig("skillfold.yaml");
-    const architecture = config.skills["architecture"];
-    assert.ok(skillfold.isAtomic(architecture));
-    assert.ok(!skillfold.isComposed(architecture));
+    const testing = config.skills["testing"];
+    assert.ok(skillfold.isAtomic(testing));
+    assert.ok(!skillfold.isComposed(testing));
 
     const strategist = config.skills["strategist"];
     assert.ok(skillfold.isComposed(strategist));

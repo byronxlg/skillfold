@@ -2,55 +2,59 @@ name: skillfold-team
 
 skills:
   atomic:
-    architecture: ./skills/architecture
+    # Remote public skills
+    coding-guidelines: https://github.com/tech-leads-club/agent-skills/tree/main/packages/skills-catalog/skills/(development)/coding-guidelines
+    conventional-commit: https://github.com/github/awesome-copilot/tree/main/skills/conventional-commit
+    create-implementation-plan: https://github.com/github/awesome-copilot/tree/main/skills/create-implementation-plan
     create-readme: https://github.com/github/awesome-copilot/tree/main/skills/create-readme
-    design: ./skills/design
-    task-decomposition: ./skills/task-decomposition
-    code-generation: ./skills/code-generation
-    code-review: ./skills/code-review
-    testing: ./skills/testing
-    product-strategy: ./skills/product-strategy
+    docs-writer: https://github.com/tech-leads-club/agent-skills/tree/main/packages/skills-catalog/skills/(development)/docs-writer
+    pr-review-expert: https://github.com/alirezarezvani/claude-skills/tree/main/engineering/pr-review-expert
+    security-best-practices: https://github.com/openai/skills/tree/main/skills/.curated/security-best-practices
+
+    # Project-specific skills
     github: ./skills/github
-    skillfold-context: ./skills/skillfold-context
     moltbook: ./skills/moltbook
+    product-strategy: ./skills/product-strategy
+    skillfold-context: ./skills/skillfold-context
+    testing: ./skills/testing
 
   composed:
     strategist:
-      compose: [skillfold-context, product-strategy, design, task-decomposition]
-      description: "Assesses what the project needs and sets direction for the next increment."
+      compose: [skillfold-context, product-strategy]
+      description: "Reads the project board and open issues, assesses priorities, and sets direction for the next increment."
 
     architect:
-      compose: [skillfold-context, architecture, task-decomposition, github]
-      description: "Designs systems and decomposes work into GitHub issues."
-
-    designer:
-      compose: [skillfold-context, create-readme, design, github]
-      description: "Designs project-facing content like READMEs, docs, and landing pages for visual impact and clarity."
-
-    marketer:
-      compose: [skillfold-context, product-strategy, design, moltbook, github]
-      description: "Engages with the agent community on Moltbook and positions the project for adoption."
+      compose: [skillfold-context, create-implementation-plan, github]
+      description: "Designs implementation plans, decomposes work into issues, and manages the project board."
 
     engineer:
-      compose: [skillfold-context, code-generation, testing, github]
+      compose: [skillfold-context, coding-guidelines, testing, conventional-commit, github]
       description: "Writes production-quality TypeScript code and tests, works on feature branches and opens PRs."
 
     reviewer:
-      compose: [skillfold-context, code-review, design, testing, github]
-      description: "Reviews pull requests on GitHub for correctness, design quality, and maintainability."
+      compose: [skillfold-context, pr-review-expert, security-best-practices, github]
+      description: "Reviews pull requests for correctness, security, and design quality."
+
+    marketer:
+      compose: [skillfold-context, product-strategy, moltbook, github]
+      description: "Engages with the agent community on Moltbook and positions the project for adoption."
+
+    designer:
+      compose: [skillfold-context, create-readme, docs-writer, github]
+      description: "Designs project-facing content like READMEs, docs, and landing pages."
 
     orchestrator:
       compose: [skillfold-context, github]
-      description: "Coordinates the skillfold-team pipeline execution and merges approved PRs."
+      description: "Coordinates the pipeline execution, manages the project board, and merges approved PRs."
 
 state:
-  Review:
-    approved: bool
-    feedback: string
-
   Task:
     title: string
     description: string
+
+  Review:
+    approved: bool
+    feedback: string
 
   direction:
     type: string
