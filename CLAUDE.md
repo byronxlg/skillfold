@@ -10,6 +10,8 @@ Configuration language and compiler for multi-agent AI pipelines. Compiles YAML 
 ## Quick Reference
 
 - **Run compiler**: `npx tsx src/cli.ts`
+- **Run pipeline**: `npx tsx src/cli.ts run --target claude-code`
+- **Dry run**: `npx tsx src/cli.ts run --target claude-code --dry-run`
 - **Compile to Claude Code agents**: `npx tsx src/cli.ts --target claude-code`
 - **Package as plugin**: `npx tsx src/cli.ts plugin`
 - **Watch mode**: `npx tsx src/cli.ts watch`
@@ -40,6 +42,7 @@ src/
   list.ts         - Pipeline introspection (skillfold list)
   npm.ts          - npm package resolution (npm: prefix in skill refs and imports)
   search.ts       - npm registry search for skillfold-skill packages (skillfold search)
+  run.ts          - Linear flow runner for pipeline execution (skillfold run)
   watch.ts        - File watching and auto-recompile (skillfold watch)
   init.ts         - skillfold init scaffolding
   integrations.ts - Built-in state integrations (GitHub issues, discussions, pull requests)
@@ -179,8 +182,9 @@ Located in `library/examples/`:
 - Publishing guide (`docs/publishing.md`) for sharing skills via npm
 - `skillfold.local.yaml` support for local config overrides (gitignored), with merge semantics for skills/state/team
 - Built-in state integrations for GitHub services (github-issues, github-discussions, github-pull-requests) with auto-generated URLs, filter options, and orchestrator instructions
+- `skillfold run` command for linear pipeline execution with `ClaudeSpawner`, state management via `state.json`, dry-run mode, and async node skipping (MVP: linear flows only)
 - VitePress documentation site (`docs/`) with GitHub Pages deployment, config reference, CLI reference, live demo with interactive pipeline visualizer, interactive pipeline builder (YAML editor with live Mermaid graph), examples gallery, skill authoring guide, comparison table, detailed comparisons page (vs Agent Teams, CrewAI, manual SKILL.md), and existing guides
-- Test suite with 667 tests across 125 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, integrations, visualize, remote, init, adopt, library, validate, list, search, npm, watch, errors, subflow, api, and e2e modules
+- Test suite with 691 tests across 133 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, integrations, visualize, remote, init, adopt, library, validate, list, search, npm, watch, errors, subflow, api, run, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next
