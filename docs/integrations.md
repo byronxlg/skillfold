@@ -115,6 +115,65 @@ Add `skillfold --check` to your CI pipeline to verify compiled output stays in s
 
 This exits with code 1 if the compiled output is stale, catching cases where someone edits the config but forgets to recompile.
 
+## Working with the Skills CLI
+
+If you already manage individual skills with the [skills CLI](https://skills.sh) (`npx skills add`), skillfold sits one layer above it. The skills CLI installs and updates individual SKILL.md files. Skillfold composes multiple skills into agents, adds typed state schemas, and validates execution flows at compile time. They're complementary.
+
+### Before: individual skills, managed separately
+
+```
+~/.agents/skills/
+  code-review/SKILL.md
+  planning/SKILL.md
+  testing/SKILL.md
+  code-writing/SKILL.md
+```
+
+Each agent references skills independently. No shared schema, no flow validation.
+
+### After: composed agents with typed coordination
+
+```yaml
+# skillfold.yaml
+skills:
+  atomic:
+    code-review: https://github.com/your-org/agent-skills/tree/main/skills/code-review
+    planning: ./skills/planning
+    testing: ./skills/testing
+    code-writing: ./skills/code-writing
+  composed:
+    engineer:
+      compose: [planning, code-writing, testing]
+    reviewer:
+      compose: [code-review, testing]
+
+state:
+  review: { type: Review }
+  Review: { approved: bool, feedback: string }
+
+team:
+  flow:
+    - engineer:
+        writes: [state.code]
+      then: reviewer
+    - reviewer:
+        reads: [state.code]
+        writes: [state.review]
+      then:
+        - when: review.approved == true
+          to: end
+        - when: review.approved == false
+          to: engineer
+```
+
+Compile to your existing skills directory:
+
+```bash
+npx skillfold --out-dir ~/.agents/skills
+```
+
+The compiled output is standard SKILL.md files, so it slots directly into your `~/.agents/` structure. Existing skills you reference by GitHub URL are fetched and composed at build time.
+
 ## Multiple Platforms
 
 If your team uses different platforms, compile to each target:
