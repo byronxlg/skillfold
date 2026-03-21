@@ -1,0 +1,46 @@
+name: subflow-test
+
+skills:
+  atomic:
+    planning: ./skills/planning
+    coding: ./skills/coding
+    review: ./skills/review
+
+  composed:
+    planner:
+      compose: [planning]
+      description: "Creates the plan."
+
+    reviewer:
+      compose: [review]
+      description: "Reviews the result."
+
+    orchestrator:
+      compose: [planning]
+      description: "Coordinates the pipeline."
+
+state:
+  plan:
+    type: string
+  output:
+    type: string
+  verified:
+    type: bool
+
+team:
+  orchestrator: orchestrator
+
+  flow:
+    - planner:
+        writes: [state.plan]
+      then: build-cycle
+
+    - build-cycle:
+        flow: ./child/skillfold.yaml
+        reads: [state.plan]
+        writes: [state.output, state.verified]
+      then: reviewer
+
+    - reviewer:
+        reads: [state.output]
+      then: end

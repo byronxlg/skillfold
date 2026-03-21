@@ -1,0 +1,32 @@
+name: child-flow
+
+skills:
+  atomic:
+    worker: ./skills/worker
+    checker: ./skills/checker
+
+  composed:
+    builder:
+      compose: [worker]
+      description: "Builds the implementation."
+
+    verifier:
+      compose: [checker]
+      description: "Verifies the implementation."
+
+state:
+  output:
+    type: string
+  verified:
+    type: bool
+
+team:
+  flow:
+    - builder:
+        writes: [state.output]
+      then: verifier
+
+    - verifier:
+        reads: [state.output]
+        writes: [state.verified]
+      then: end

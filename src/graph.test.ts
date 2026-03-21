@@ -9,9 +9,11 @@ import {
   isAsyncNode,
   isConditionalThen,
   isMapNode,
+  isSubFlowNode,
   parseGraph,
   parseWhenClause,
   StepNode,
+  SubFlowNode,
   validateGraph,
   WhenClause,
 } from "./graph.js";
@@ -1865,5 +1867,150 @@ describe("validateGraph: async nodes", () => {
     const skills = makeSkills("engineer");
     const state = makeState({ ok: { kind: "primitive", value: "bool" } });
     assert.doesNotThrow(() => validateGraph(graph, skills, state));
+  });
+});
+
+describe("parseGraph: sub-flow nodes", () => {
+  it("parses a sub-flow node with flow, reads, writes, and then", () => {
+    const raw = [
+      {
+        "build-cycle": { flow: "./child/skillfold.yaml", reads: ["state.plan"], writes: ["state.output"] },
+        then: "reviewer",
+      },
+    ];
+    const graph = parseGraph(raw);
+    assert.equal(graph.nodes.length, 1);
+    const node = graph.nodes[0] as SubFlowNode;
+    assert.ok(isSubFlowNode(node));
+    assert.equal(node.name, "build-cycle");
+    assert.equal(node.flow, "./child/skillfold.yaml");
+    assert.deepEqual(node.reads, ["state.plan"]);
+    assert.deepEqual(node.writes, ["state.output"]);
+    assert.deepEqual(node.graph, []);
+    assert.equal(node.then, "reviewer");
+  });
+
+  it("parses a sub-flow node with no reads/writes", () => {
+    const raw = [
+      { "sub": { flow: "other.yaml" }, then: "end" },
+    ];
+    const graph = parseGraph(raw);
+    const node = graph.nodes[0] as SubFlowNode;
+    assert.ok(isSubFlowNode(node));
+    assert.equal(node.flow, "other.yaml");
+    assert.deepEqual(node.reads, []);
+    assert.deepEqual(node.writes, []);
+  });
+
+  it("rejects sub-flow node with empty flow path", () => {
+    const raw = [
+      { "sub": { flow: "" }, then: "end" },
+    ];
+    assert.throws(
+      () => parseGraph(raw),
+      (err: unknown) => err instanceof GraphError && err.message.includes("flow must be a non-empty string"),
+    );
+  });
+
+  it("rejects sub-flow node with non-string flow", () => {
+    const raw = [
+      { "sub": { flow: 123 }, then: "end" },
+    ];
+    assert.throws(
+      () => parseGraph(raw),
+      (err: unknown) => err instanceof GraphError && err.message.includes("flow must be a non-empty string"),
+    );
+  });
+
+  it("rejects sub-flow node inside map subgraph", () => {
+    const raw = [
+      {
+        map: {
+          over: "state.items",
+          as: "item",
+          graph: [
+            { "nested-flow": { flow: "child.yaml" }, then: "end" },
+          ],
+        },
+      },
+    ];
+    assert.throws(
+      () => parseGraph(raw),
+      (err: unknown) => err instanceof GraphError && err.message.includes("sub-flow nodes are not allowed inside map subgraphs"),
+    );
+  });
+
+  it("parses sub-flow node in a chain with step nodes", () => {
+    const raw = [
+      { planner: { writes: ["state.plan"] }, then: "build" },
+      { build: { flow: "./child.yaml", reads: ["state.plan"] }, then: "reviewer" },
+      { reviewer: { reads: ["state.output"] }, then: "end" },
+    ];
+    const graph = parseGraph(raw);
+    assert.equal(graph.nodes.length, 3);
+    assert.ok(!isSubFlowNode(graph.nodes[0]));
+    assert.ok(isSubFlowNode(graph.nodes[1]));
+    assert.ok(!isSubFlowNode(graph.nodes[2]));
+  });
+});
+
+describe("validateGraph: sub-flow nodes", () => {
+  it("validates a sub-flow node with populated graph", () => {
+    const innerNodes = [
+      { skill: "builder", reads: [], writes: ["state.output"], then: "end" as const },
+    ];
+    const graph: Graph = {
+      nodes: [
+        { skill: "planner", reads: [], writes: ["state.plan"], then: "build-cycle" },
+        { name: "build-cycle", flow: "./child.yaml", reads: ["state.plan"], writes: ["state.output"], graph: innerNodes, then: "end" },
+      ],
+    };
+    const skills = makeSkills("planner", "builder");
+    const state = makeState({
+      plan: { kind: "primitive", value: "string" },
+      output: { kind: "primitive", value: "string" },
+    });
+    assert.doesNotThrow(() => validateGraph(graph, skills, state));
+  });
+
+  it("validates sub-flow state paths against merged state", () => {
+    const graph: Graph = {
+      nodes: [
+        { name: "sub", flow: "./child.yaml", reads: ["state.missing"], writes: [], graph: [], then: "end" },
+      ],
+    };
+    const skills = makeSkills();
+    const state = makeState({ plan: { kind: "primitive", value: "string" } });
+    assert.throws(
+      () => validateGraph(graph, skills, state),
+      (err: unknown) => err instanceof GraphError && err.message.includes("state.missing"),
+    );
+  });
+
+  it("validates skill references inside sub-flow inner graph", () => {
+    const innerNodes = [
+      { skill: "nonexistent", reads: [], writes: [] },
+    ];
+    const graph: Graph = {
+      nodes: [
+        { name: "sub", flow: "./child.yaml", reads: [], writes: [], graph: innerNodes, then: "end" },
+      ],
+    };
+    const skills = makeSkills();
+    const state = makeState({});
+    assert.throws(
+      () => validateGraph(graph, skills, state),
+      (err: unknown) => err instanceof GraphError && err.message.includes("nonexistent"),
+    );
+  });
+
+  it("does not require sub-flow node name to be a declared skill", () => {
+    const graph: Graph = {
+      nodes: [
+        { name: "my-subflow", flow: "./child.yaml", reads: [], writes: [], graph: [], then: "end" },
+      ],
+    };
+    const skills = makeSkills();
+    assert.doesNotThrow(() => validateGraph(graph, skills, undefined));
   });
 });

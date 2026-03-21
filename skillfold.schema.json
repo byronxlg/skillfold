@@ -255,7 +255,7 @@
     },
     "stepBody": {
       "type": ["object", "null"],
-      "description": "Step node body with optional reads, writes, async flag, and policy.",
+      "description": "Step node body with optional reads, writes, async flag, policy, or sub-flow reference.",
       "additionalProperties": false,
       "properties": {
         "reads": {
@@ -276,6 +276,10 @@
           "type": "string",
           "description": "How to handle unavailable async data. Only valid when async is true.",
           "enum": ["block", "skip", "use-latest"]
+        },
+        "flow": {
+          "type": "string",
+          "description": "Path to a skillfold config whose team flow is imported as a sub-flow. The referenced config's skills and state are merged into the parent."
         }
       }
     },
@@ -305,7 +309,7 @@
     },
     "flowElement": {
       "type": "object",
-      "description": "A flow element: either a step node (skill-name: {reads, writes}) or a map node (map: {over, as, graph}). Has an optional 'then' for transitions.",
+      "description": "A flow element: a step node (skill-name: {reads, writes}), a sub-flow node (name: {flow, reads, writes}), or a map node (map: {over, as, graph}). Has an optional 'then' for transitions.",
       "properties": {
         "then": {
           "$ref": "#/$defs/then"

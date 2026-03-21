@@ -4,7 +4,7 @@ import { stringify } from "yaml";
 
 import { type Config, isComposed } from "./config.js";
 import type { GraphNode, StepNode } from "./graph.js";
-import { isAsyncNode, isMapNode } from "./graph.js";
+import { isAsyncNode, isMapNode, isSubFlowNode } from "./graph.js";
 import {
   buildStepMap,
   formatLocation,
@@ -32,11 +32,13 @@ export interface AgentResult {
   content: string;
 }
 
-/** Collect all step nodes from a graph, recursing into map subgraphs. Skips async nodes. */
+/** Collect all step nodes from a graph, recursing into map and sub-flow subgraphs. Skips async nodes. */
 function collectStepNodes(nodes: GraphNode[]): StepNode[] {
   const steps: StepNode[] = [];
   for (const node of nodes) {
     if (isMapNode(node)) {
+      steps.push(...collectStepNodes(node.graph));
+    } else if (isSubFlowNode(node)) {
       steps.push(...collectStepNodes(node.graph));
     } else if (!isAsyncNode(node)) {
       steps.push(node);

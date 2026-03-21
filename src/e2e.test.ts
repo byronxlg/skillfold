@@ -5,7 +5,7 @@ import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
-import { parseRawConfig, readConfig, validateAndBuild } from "./config.js";
+import { loadConfig, parseRawConfig, readConfig, validateAndBuild } from "./config.js";
 import { compile } from "./compiler.js";
 import { listPipeline } from "./list.js";
 import { generateOrchestrator } from "./orchestrator.js";
@@ -433,5 +433,159 @@ team:
     assert.ok(content.includes("### Step 2: engineer"));
     assert.ok(content.includes("Invoke **engineer**."));
     assert.ok(content.includes("### Step 3: reviewer"));
+  });
+});
+
+describe("e2e: sub-flow imports", () => {
+  const subflowFixtureDir = join(__dirname, "..", "test", "fixtures", "subflow-pipeline");
+  const subflowConfigPath = join(subflowFixtureDir, "skillfold.yaml");
+
+  let outDir: string;
+  afterEach(() => {
+    if (outDir) {
+      rmSync(outDir, { recursive: true, force: true });
+    }
+  });
+
+  it("loads config with sub-flow and merges child skills", async () => {
+    const config = await loadConfig(subflowConfigPath);
+
+    // Parent skills should be present
+    assert.ok("planner" in config.skills);
+    assert.ok("reviewer" in config.skills);
+    assert.ok("orchestrator" in config.skills);
+
+    // Child skills should be merged in
+    assert.ok("builder" in config.skills);
+    assert.ok("verifier" in config.skills);
+    assert.ok("worker" in config.skills);
+    assert.ok("checker" in config.skills);
+  });
+
+  it("loads config with sub-flow and merges child state", async () => {
+    const config = await loadConfig(subflowConfigPath);
+    assert.ok(config.state);
+
+    // Parent state fields
+    assert.ok("plan" in config.state.fields);
+
+    // Child state fields (merged)
+    assert.ok("output" in config.state.fields);
+    assert.ok("verified" in config.state.fields);
+  });
+
+  it("populates sub-flow node graph from child config flow", async () => {
+    const config = await loadConfig(subflowConfigPath);
+    assert.ok(config.team);
+
+    const subFlowNode = config.team.flow.nodes[1];
+    assert.ok("flow" in subFlowNode, "second node should be a sub-flow node");
+    const sfNode = subFlowNode as import("./graph.js").SubFlowNode;
+    assert.equal(sfNode.name, "build-cycle");
+    assert.equal(sfNode.graph.length, 2);
+    assert.equal((sfNode.graph[0] as import("./graph.js").StepNode).skill, "builder");
+    assert.equal((sfNode.graph[1] as import("./graph.js").StepNode).skill, "verifier");
+  });
+
+  it("compiles sub-flow pipeline and generates orchestrator with grouped steps", async () => {
+    outDir = makeTmpDir();
+    const config = await loadConfig(subflowConfigPath);
+    const bodies = await resolveSkills(config, subflowFixtureDir);
+    compile(config, bodies, outDir, "0.0.0", "skillfold.yaml");
+
+    // Should compile all agents (parent + child)
+    assert.ok(existsSync(join(outDir, "planner", "SKILL.md")));
+    assert.ok(existsSync(join(outDir, "reviewer", "SKILL.md")));
+    assert.ok(existsSync(join(outDir, "orchestrator", "SKILL.md")));
+    assert.ok(existsSync(join(outDir, "builder", "SKILL.md")));
+    assert.ok(existsSync(join(outDir, "verifier", "SKILL.md")));
+
+    const content = readFileSync(join(outDir, "orchestrator", "SKILL.md"), "utf-8");
+
+    // Orchestrator should show sub-flow as grouped section
+    assert.ok(content.includes("### Step 1: planner"));
+    assert.ok(content.includes("### Step 2: build-cycle (sub-flow)"));
+    assert.ok(content.includes("./child/skillfold.yaml"));
+    assert.ok(content.includes("#### Step 2.1: builder"));
+    assert.ok(content.includes("#### Step 2.2: verifier"));
+    assert.ok(content.includes("### Step 3: reviewer"));
+  });
+
+  it("rejects circular sub-flow references", async () => {
+    // Create a config that references itself as a sub-flow
+    const { writeFileSync } = await import("node:fs");
+    const selfRefDir = makeTmpDir();
+    const selfRefConfig = join(selfRefDir, "skillfold.yaml");
+
+    // Need a minimal skill for validation
+    mkdirSync(join(selfRefDir, "skills", "a"), { recursive: true });
+    writeFileSync(join(selfRefDir, "skills", "a", "SKILL.md"), "---\nname: a\ndescription: a\n---\na\n");
+
+    writeFileSync(selfRefConfig, [
+      "name: self-ref",
+      "skills:",
+      "  atomic:",
+      "    a: ./skills/a",
+      "  composed:",
+      "    agent:",
+      "      compose: [a]",
+      '      description: "Test agent."',
+      "state:",
+      "  x:",
+      "    type: string",
+      "team:",
+      "  flow:",
+      "    - cycle:",
+      "        flow: ./skillfold.yaml",
+      "      then: end",
+    ].join("\n"));
+
+    await assert.rejects(
+      () => loadConfig(selfRefConfig),
+      (err: unknown) => err instanceof Error && err.message.includes("Circular sub-flow reference"),
+    );
+
+    rmSync(selfRefDir, { recursive: true, force: true });
+  });
+
+  it("rejects sub-flow referencing config with no team.flow", async () => {
+    const { writeFileSync } = await import("node:fs");
+    const tmpDir = makeTmpDir();
+
+    // Child with no team section
+    mkdirSync(join(tmpDir, "child", "skills", "b"), { recursive: true });
+    writeFileSync(join(tmpDir, "child", "skills", "b", "SKILL.md"), "---\nname: b\ndescription: b\n---\nb\n");
+    writeFileSync(join(tmpDir, "child", "skillfold.yaml"), [
+      "name: no-flow",
+      "skills:",
+      "  atomic:",
+      "    b: ./skills/b",
+    ].join("\n"));
+
+    // Parent referencing it
+    mkdirSync(join(tmpDir, "skills", "a"), { recursive: true });
+    writeFileSync(join(tmpDir, "skills", "a", "SKILL.md"), "---\nname: a\ndescription: a\n---\na\n");
+    writeFileSync(join(tmpDir, "skillfold.yaml"), [
+      "name: bad-ref",
+      "skills:",
+      "  atomic:",
+      "    a: ./skills/a",
+      "  composed:",
+      "    agent:",
+      "      compose: [a]",
+      '      description: "Test."',
+      "team:",
+      "  flow:",
+      "    - sub:",
+      "        flow: ./child/skillfold.yaml",
+      "      then: end",
+    ].join("\n"));
+
+    await assert.rejects(
+      () => loadConfig(join(tmpDir, "skillfold.yaml")),
+      (err: unknown) => err instanceof Error && err.message.includes("has no team.flow"),
+    );
+
+    rmSync(tmpDir, { recursive: true, force: true });
   });
 });

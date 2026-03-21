@@ -58,8 +58,8 @@ The codebase is TypeScript (strict, ESM modules). Key modules:
 
 ## What's Implemented
 
-All compiler features are working: skill composition with atomic/composed sub-sections, state schema, flow validation, map subgraph validation, when-clause parsing, orchestrator generation, spec-compliant output, URL-based skill references (with private repo auth via GITHUB_TOKEN), pipeline imports, graph visualization with full composition lineage, `skillfold init`, `skillfold adopt`, `skillfold validate`, `skillfold list`, `--check` for CI integration, async flow nodes for external agents, and resource namespace declarations with compile-time location path validation. Published on npm as `skillfold`. 489 tests across 89 suites, CI on GitHub Actions. The project self-hosts its own dev team via `skillfold.yaml`.
+All compiler features are working: skill composition with atomic/composed sub-sections, state schema, flow validation, map subgraph validation, when-clause parsing, orchestrator generation, spec-compliant output, URL-based skill references (with private repo auth via GITHUB_TOKEN), pipeline imports, graph visualization with full composition lineage, `skillfold init`, `skillfold adopt`, `skillfold validate`, `skillfold list`, `--check` for CI integration, async flow nodes for external agents, resource namespace declarations with compile-time location path validation, and sub-flow imports for hierarchical flow composition. Published on npm as `skillfold`. 507 tests across 92 suites, CI on GitHub Actions. The project self-hosts its own dev team via `skillfold.yaml`.
 
 ## What's Next
 
-Package registry for shared skills, sub-flow imports, and features driven by user demand.
+Package registry for shared skills and features driven by user demand.

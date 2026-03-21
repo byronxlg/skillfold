@@ -1,5 +1,5 @@
 import { type Config, type SkillEntry, isAtomic, isComposed } from "./config.js";
-import { type GraphNode, isAsyncNode, isConditionalThen, isMapNode } from "./graph.js";
+import { type GraphNode, isAsyncNode, isConditionalThen, isMapNode, isSubFlowNode } from "./graph.js";
 import { type StateField, type StateSchema } from "./state.js";
 
 function formatStateType(field: StateField): string {
@@ -76,6 +76,7 @@ function renderState(state: StateSchema): string[] {
 function nodeLabel(node: GraphNode): string {
   if (isMapNode(node)) return "map";
   if (isAsyncNode(node)) return `${node.name} (async)`;
+  if (isSubFlowNode(node)) return `${node.name} (sub-flow)`;
   return node.skill;
 }
 

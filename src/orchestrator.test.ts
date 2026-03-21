@@ -854,4 +854,84 @@ describe("generateOrchestrator with resolved URLs", () => {
     assert.ok(output.includes("https://github.com/org/repo/discussions/general"));
     assert.ok(output.includes("https://github.com/org/repo/issues"));
   });
+
+  it("sub-flow node renders as grouped section with hierarchical steps", () => {
+    const config: Config = {
+      name: "subflow-pipeline",
+      skills: {
+        planner: { compose: ["planning"], description: "Plans." },
+        planning: { path: "./skills/planning" },
+        builder: { compose: ["coding"], description: "Builds." },
+        coding: { path: "./skills/coding" },
+        verifier: { compose: ["review"], description: "Verifies." },
+        review: { path: "./skills/review" },
+        reviewer: { compose: ["review"], description: "Reviews." },
+      },
+      state: {
+        types: {},
+        fields: {
+          plan: { type: { kind: "primitive", value: "string" } },
+          output: { type: { kind: "primitive", value: "string" } },
+        },
+      },
+      team: {
+        flow: {
+          nodes: [
+            { skill: "planner", reads: [], writes: ["state.plan"], then: "build-cycle" },
+            {
+              name: "build-cycle",
+              flow: "./child/skillfold.yaml",
+              reads: ["state.plan"],
+              writes: ["state.output"],
+              graph: [
+                { skill: "builder", reads: [], writes: ["state.output"], then: "verifier" },
+                { skill: "verifier", reads: ["state.output"], writes: [] },
+              ],
+              then: "reviewer",
+            },
+            { skill: "reviewer", reads: ["state.output"], writes: [] },
+          ],
+        },
+      },
+    };
+
+    const output = generateOrchestrator(config);
+    assert.ok(output.includes("### Step 1: planner"));
+    assert.ok(output.includes("### Step 2: build-cycle (sub-flow)"));
+    assert.ok(output.includes("sub-flow from `./child/skillfold.yaml`"));
+    assert.ok(output.includes("#### Step 2.1: builder"));
+    assert.ok(output.includes("#### Step 2.2: verifier"));
+    assert.ok(output.includes("### Step 3: reviewer"));
+    assert.ok(output.includes("Reads: `state.plan`"));
+    assert.ok(output.includes("Writes: `state.output`"));
+  });
+
+  it("sub-flow node with Agent tool renders correctly", () => {
+    const config: Config = {
+      name: "subflow-agent",
+      skills: {
+        worker: { path: "./skills/worker" },
+        agent: { compose: ["worker"], description: "Works." },
+      },
+      team: {
+        flow: {
+          nodes: [
+            {
+              name: "sub",
+              flow: "./child.yaml",
+              reads: [],
+              writes: [],
+              graph: [
+                { skill: "agent", reads: [], writes: [] },
+              ],
+            },
+          ],
+        },
+      },
+    };
+
+    const output = generateOrchestrator(config, true);
+    assert.ok(output.includes("(sub-flow)"));
+    assert.ok(output.includes("Agent tool"));
+  });
 });

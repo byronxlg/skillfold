@@ -1,6 +1,6 @@
 import type { Config } from "./config.js";
 import { isAtomic } from "./config.js";
-import { isAsyncNode, isConditionalThen, isMapNode } from "./graph.js";
+import { isAsyncNode, isConditionalThen, isMapNode, isSubFlowNode } from "./graph.js";
 import type { AsyncNode, GraphNode, Then } from "./graph.js";
 import type { StateField, StateType } from "./state.js";
 
@@ -60,6 +60,8 @@ export function buildStepMap(
     if (isMapNode(node)) {
       label = "map";
     } else if (isAsyncNode(node)) {
+      label = node.name;
+    } else if (isSubFlowNode(node)) {
       label = node.name;
     } else {
       label = node.skill;
@@ -163,6 +165,58 @@ export function renderNodes(
       if (node.then !== undefined) {
         lines.push("");
         lines.push(renderThen(node.then, stepMap, isLast));
+      }
+
+      sections.push(lines.join("\n"));
+    } else if (isSubFlowNode(node)) {
+      const lines: string[] = [];
+      lines.push(
+        `${headingLevel} Step ${stepNum}: ${node.name} (sub-flow)`
+      );
+      lines.push("");
+      lines.push(
+        `This step runs the **${node.name}** sub-flow from \`${node.flow}\`.`
+      );
+
+      if (node.reads.length > 0) {
+        lines.push("");
+        lines.push(`Reads: ${node.reads.map((r) => `\`${r}\``).join(", ")}`);
+      }
+
+      if (node.writes.length > 0) {
+        lines.push("");
+        lines.push(
+          `Writes: ${node.writes.map((w) => `\`${w}\``).join(", ")}`
+        );
+      }
+
+      if (node.graph.length > 0) {
+        const subMap = buildStepMap(node.graph, stepNum);
+        const subHeading = headingLevel + "#";
+        const subSections = renderNodes(
+          node.graph,
+          subMap,
+          stepNum,
+          subHeading,
+          useAgentTool,
+        );
+        lines.push(...subSections);
+      }
+
+      if (node.then !== undefined) {
+        lines.push("");
+        lines.push(renderThen(node.then, stepMap, isLast));
+      } else if (isLast) {
+        lines.push("");
+        lines.push(renderThen(undefined, stepMap, true));
+      } else {
+        lines.push("");
+        const nextStep = stepMap[i + 1];
+        if (nextStep) {
+          lines.push(`Then: proceed to step ${nextStep.number}.`);
+        } else {
+          lines.push("Then: end");
+        }
       }
 
       sections.push(lines.join("\n"));

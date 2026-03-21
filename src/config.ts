@@ -8,7 +8,7 @@ const __pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const SELF_IMPORT_PREFIX = "node_modules/skillfold/";
 
 import { ConfigError, didYouMean } from "./errors.js";
-import { Graph, parseGraph, validateGraph } from "./graph.js";
+import { Graph, GraphNode, isSubFlowNode, parseGraph, validateGraph } from "./graph.js";
 import { fetchRemoteConfig } from "./remote.js";
 import { parseState, StateSchema } from "./state.js";
 
@@ -471,6 +471,38 @@ export function parseRawConfig(content: string): RawConfig {
   return result;
 }
 
+// Variant of validateAndBuild that uses a pre-parsed/resolved graph (for sub-flow support)
+function validateAndBuildWithGraph(raw: RawConfig, graph: Graph): Config {
+  validateReferences(raw.skills);
+  detectCycles(raw.skills);
+
+  const config: Config = { name: raw.name, skills: raw.skills };
+
+  if (raw.rawState !== undefined) {
+    const skillsForState: Record<string, { resources?: Record<string, string> }> = {};
+    for (const [name, skill] of Object.entries(raw.skills)) {
+      skillsForState[name] = isAtomic(skill) ? { resources: skill.resources } : {};
+    }
+    config.state = parseState(raw.rawState, skillsForState);
+  }
+
+  validateGraph(graph, raw.skills, config.state);
+  const team: TeamConfig = { flow: graph };
+
+  if (raw.rawTeam?.orchestrator !== undefined) {
+    if (!(raw.rawTeam.orchestrator in raw.skills)) {
+      const hint = didYouMean(raw.rawTeam.orchestrator, Object.keys(raw.skills));
+      throw new ConfigError(
+        `Orchestrator references unknown skill "${raw.rawTeam.orchestrator}"${hint}`
+      );
+    }
+    team.orchestrator = raw.rawTeam.orchestrator;
+  }
+
+  config.team = team;
+  return config;
+}
+
 // Phase 2: Run full validation on a (possibly merged) RawConfig
 export function validateAndBuild(raw: RawConfig): Config {
   validateReferences(raw.skills);
@@ -607,6 +639,84 @@ async function resolveImports(
   };
 }
 
+// Resolve sub-flow nodes in a parsed graph: load referenced configs, merge skills/state, populate inner graphs
+async function resolveSubFlowsInGraph(
+  nodes: GraphNode[],
+  raw: RawConfig,
+  baseDir: string,
+  loadChain: string[] = [],
+): Promise<void> {
+  for (const node of nodes) {
+    if (!isSubFlowNode(node)) continue;
+
+    const flowPath = node.flow;
+
+    // Resolve the config path
+    let resolvedPath: string;
+    if (flowPath.startsWith("https://")) {
+      resolvedPath = flowPath;
+    } else {
+      resolvedPath = resolve(baseDir, flowPath);
+      if (!existsSync(resolvedPath) && flowPath.startsWith(SELF_IMPORT_PREFIX)) {
+        const tail = flowPath.slice(SELF_IMPORT_PREFIX.length);
+        resolvedPath = resolve(__pkgRoot, tail);
+      }
+    }
+
+    // Cycle detection
+    const normalizedPath = flowPath.startsWith("https://") ? flowPath : resolvedPath;
+    if (loadChain.includes(normalizedPath)) {
+      const cycle = [...loadChain, normalizedPath].join(" -> ");
+      throw new ConfigError(`Circular sub-flow reference: ${cycle}`);
+    }
+
+    // Load the referenced config
+    let content: string;
+    if (flowPath.startsWith("https://")) {
+      content = await fetchRemoteConfig(flowPath);
+    } else {
+      try {
+        content = readFileSync(resolvedPath, "utf-8");
+      } catch {
+        throw new ConfigError(
+          `Sub-flow "${node.name}": cannot read config: ${resolvedPath}`
+        );
+      }
+    }
+
+    const imported = parseRawConfig(content);
+    const importDir = flowPath.startsWith("https://") ? undefined : dirname(resolvedPath);
+
+    // The imported config must have a team.flow
+    if (!imported.rawTeam?.rawFlow || !Array.isArray(imported.rawTeam.rawFlow) || imported.rawTeam.rawFlow.length === 0) {
+      throw new ConfigError(
+        `Sub-flow "${node.name}": referenced config "${flowPath}" has no team.flow`
+      );
+    }
+
+    // Merge skills (rebase paths if local)
+    const skills = importDir
+      ? rebaseSkillPaths(imported.skills, importDir, baseDir)
+      : imported.skills;
+    raw.skills = mergeSkills(raw.skills, skills);
+
+    // Merge state
+    raw.rawState = mergeRawState(raw.rawState, imported.rawState);
+
+    // Parse the imported flow and populate the sub-flow node's graph
+    const subGraph = parseGraph(imported.rawTeam.rawFlow);
+    node.graph = subGraph.nodes;
+
+    // Recursively resolve any sub-flows within the imported flow
+    await resolveSubFlowsInGraph(
+      node.graph,
+      raw,
+      importDir ?? baseDir,
+      [...loadChain, normalizedPath],
+    );
+  }
+}
+
 // Original synchronous entry point (unchanged API)
 export function readConfig(configPath: string): Config {
   let content: string;
@@ -639,6 +749,14 @@ export async function loadConfig(configPath: string): Promise<Config> {
   try {
     const raw = parseRawConfig(content);
     const merged = await resolveImports(raw, dirname(configPath));
+
+    // If the config has a team flow, parse it, resolve sub-flows, then validate with the resolved graph
+    if (merged.rawTeam?.rawFlow) {
+      const graph = parseGraph(merged.rawTeam.rawFlow);
+      await resolveSubFlowsInGraph(graph.nodes, merged, dirname(configPath));
+      return validateAndBuildWithGraph(merged, graph);
+    }
+
     return validateAndBuild(merged);
   } catch (err) {
     if (err instanceof ConfigError && !err.message.includes(configPath)) {

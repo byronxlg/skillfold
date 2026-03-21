@@ -34,6 +34,7 @@ export { buildPlugin } from "./plugin.js";
 export {
   isConditionalThen,
   isMapNode,
+  isSubFlowNode,
   parseGraph,
   validateGraph,
 } from "./graph.js";
@@ -43,6 +44,7 @@ export type {
   GraphNode,
   MapNode,
   StepNode,
+  SubFlowNode,
   Then,
   WhenClause,
 } from "./graph.js";
