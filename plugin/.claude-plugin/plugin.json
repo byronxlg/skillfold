@@ -1,7 +1,7 @@
 {
   "name": "skillfold",
-  "version": "1.22.0",
-  "description": "Configuration language and compiler for multi-agent AI pipelines. Compiles YAML into agent skills for Claude Code, Cursor, Windsurf, Codex, Copilot, and Gemini.",
+  "version": "1.23.0",
+  "description": "Configuration language and compiler for multi-agent AI pipelines. Compiles YAML into agent skills for Claude Code, Cursor, Windsurf, Codex, Copilot, Gemini, Goose, Roo Code, Kiro, and Junie.",
   "author": {
     "name": "Byron Smith",
     "url": "https://github.com/byronxlg"

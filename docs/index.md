@@ -24,7 +24,7 @@ features:
   - title: Built-in Integrations
     details: GitHub Issues, Discussions, and PRs as first-class state locations. The compiler resolves URLs and validates paths.
   - title: Multi-Platform
-    details: "Compile to 8 targets: Claude Code, Agent Teams, Cursor, Windsurf, VS Code Copilot, OpenAI Codex, Gemini CLI, or standard SKILL.md files."
+    details: "Compile to 12 targets: Claude Code, Agent Teams, Cursor, Windsurf, VS Code Copilot, OpenAI Codex, Gemini CLI, Goose, Roo Code, Kiro, Junie, or standard SKILL.md files."
 ---
 
 ## What It Looks Like

@@ -236,7 +236,7 @@ The two tools work together. Skillfold compiles agent definitions, state schemas
 | Definition | Natural language, ad-hoc | YAML config, version-controlled |
 | Validation | Runtime | Compile-time |
 | Reproducibility | Each run is unique | Same config, same pipeline |
-| Platforms | Claude Code | 8 targets (Claude Code, Agent Teams, Cursor, Windsurf, Codex, Copilot, Gemini, generic) |
+| Platforms | Claude Code | 12 targets (Claude Code, Agent Teams, Cursor, Windsurf, Codex, Copilot, Gemini, Goose, Roo Code, Kiro, Junie, generic) |
 | Best for | Interactive exploration | Repeatable team workflows |
 
 ---

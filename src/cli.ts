@@ -157,7 +157,7 @@ function parseArgs(argv: string[]): Args {
       dir = argv[++i];
     } else if (argv[i] === "--target" && argv[i + 1]) {
       const val = argv[++i];
-      const validTargets: CompileTarget[] = ["skill", "claude-code", "agent-teams", "cursor", "windsurf", "codex", "copilot", "gemini"];
+      const validTargets: CompileTarget[] = ["skill", "claude-code", "agent-teams", "cursor", "windsurf", "codex", "copilot", "gemini", "goose", "roo-code", "kiro", "junie"];
       if (!validTargets.includes(val as CompileTarget)) {
         console.error(`skillfold error: unknown target "${val}" (expected: ${validTargets.join(", ")})`);
         process.exit(1);
@@ -220,6 +220,14 @@ function parseArgs(argv: string[]): Args {
       outDir = ".github";
     } else if (target === "gemini") {
       outDir = ".gemini";
+    } else if (target === "goose") {
+      outDir = ".goose";
+    } else if (target === "roo-code") {
+      outDir = ".roo";
+    } else if (target === "kiro") {
+      outDir = ".kiro";
+    } else if (target === "junie") {
+      outDir = ".junie";
     } else if (command === "plugin") {
       outDir = "plugin";
     }

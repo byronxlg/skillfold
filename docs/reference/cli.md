@@ -33,7 +33,7 @@ Commands:
   --config <path>      Config file (default: skillfold.yaml)
   --out-dir <path>     Output directory (default varies by target)
   --dir <path>         Target directory for init (default: .)
-  --target <mode>      Output mode: skill, claude-code, agent-teams, cursor, windsurf, codex, copilot, gemini
+  --target <mode>      Output mode: skill, claude-code, agent-teams, cursor, windsurf, codex, copilot, gemini, goose, roo-code, kiro, junie
   --template <name>    Start from a library template (init only)
   --html               Output interactive HTML instead of Mermaid (graph only)
   --check              Verify compiled output is up-to-date (exit 1 if stale)
@@ -62,6 +62,10 @@ npx skillfold --target windsurf            # compile to .windsurf/rules/*.md
 npx skillfold --target codex               # compile to build/AGENTS.md
 npx skillfold --target copilot             # compile to .github/ structure
 npx skillfold --target gemini              # compile to .gemini/ structure
+npx skillfold --target goose              # compile to .goose/skills/
+npx skillfold --target roo-code           # compile to .roo/ with .roomodes
+npx skillfold --target kiro               # compile to .kiro/ with steering files
+npx skillfold --target junie              # compile to .junie/ with guidelines
 npx skillfold --check                      # verify output is current (CI mode)
 ```
 

@@ -216,6 +216,93 @@ npx skillfold --out-dir .gemini/skills
 
 Verify loaded skills with `gemini skills list`.
 
+## Goose
+
+The `--target goose` flag generates standard `SKILL.md` files in the `.goose/skills/` directory that [Goose](https://github.com/block/goose) reads natively.
+
+```bash
+npx skillfold --target goose
+```
+
+This outputs to `.goose/` by default:
+
+```
+.goose/
+  skills/
+    engineer/SKILL.md
+    reviewer/SKILL.md
+    orchestrator/SKILL.md
+```
+
+## Roo Code
+
+The `--target roo-code` flag generates skills, rules, and a `.roomodes` file mapping composed skills to [Roo Code](https://github.com/RooVetGit/Roo-Code) custom modes.
+
+```bash
+npx skillfold --target roo-code
+```
+
+This outputs to `.roo/` by default:
+
+```
+.roo/
+  skills/
+    engineer/SKILL.md
+    reviewer/SKILL.md
+  rules/
+    engineer.md
+    reviewer.md
+    orchestrator.md
+.roomodes                    # Custom mode definitions
+```
+
+Each composed skill becomes a custom mode with `slug`, `name`, `roleDefinition`, and `whenToUse` fields.
+
+## Kiro
+
+The `--target kiro` flag generates skills and steering files for Amazon's [Kiro](https://kiro.dev) IDE.
+
+```bash
+npx skillfold --target kiro
+```
+
+This outputs to `.kiro/` by default:
+
+```
+.kiro/
+  skills/
+    engineer/SKILL.md
+    reviewer/SKILL.md
+  steering/
+    engineer.md
+    reviewer.md
+    orchestrator.md
+```
+
+Steering files use `inclusion: always` frontmatter so they are loaded into every interaction.
+
+## Junie
+
+The `--target junie` flag generates skills and plain markdown guidelines for JetBrains [Junie](https://junie.jetbrains.com).
+
+```bash
+npx skillfold --target junie
+```
+
+This outputs to `.junie/` by default:
+
+```
+.junie/
+  skills/
+    engineer/SKILL.md
+    reviewer/SKILL.md
+  engineer_guidelines.md
+  reviewer_guidelines.md
+  orchestrator_guidelines.md
+```
+
+Guideline files are plain markdown (no frontmatter) and are applied to every prompt.
+
 ## CI Integration
 
 Add `skillfold --check` to your CI pipeline to verify compiled output stays in sync with your config:
@@ -306,6 +393,10 @@ npx skillfold --target cursor
 npx skillfold --target windsurf
 npx skillfold --target codex
 npx skillfold --target copilot
+npx skillfold --target goose
+npx skillfold --target roo-code
+npx skillfold --target kiro
+npx skillfold --target junie
 ```
 
 Or use the cross-client `.agents/skills/` path, which most platforms scan alongside their native directory:

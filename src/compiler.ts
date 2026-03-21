@@ -6,7 +6,7 @@ import { type Config, isComposed } from "./config.js";
 import { CompileError } from "./errors.js";
 import { generateOrchestrator } from "./orchestrator.js";
 
-export type CompileTarget = "skill" | "claude-code" | "agent-teams" | "cursor" | "windsurf" | "codex" | "copilot" | "gemini";
+export type CompileTarget = "skill" | "claude-code" | "agent-teams" | "cursor" | "windsurf" | "codex" | "copilot" | "gemini" | "goose" | "roo-code" | "kiro" | "junie";
 
 function expand(
   name: string,
@@ -558,6 +558,225 @@ export function generateGemini(
   return results;
 }
 
+/**
+ * Generate output for goose target: .goose/skills/{name}/SKILL.md files.
+ */
+export function generateGoose(
+  config: Config,
+  bodies: Map<string, string>,
+  outDir: string,
+  version: string,
+  configFile: string,
+): GenerateResult[] {
+  const results: GenerateResult[] = [];
+  const provenance = formatProvenance(config.name, version, configFile);
+
+  // Generate skills under skills/ subdirectory
+  const skillResults = generate(config, bodies, outDir, version, configFile);
+  for (const result of skillResults) {
+    result.path = join(outDir, "skills", result.name, "SKILL.md");
+    results.push(result);
+  }
+
+  return results;
+}
+
+/**
+ * Generate output for roo-code target: .roo/skills/, .roo/rules/, and .roomodes.
+ */
+export function generateRooCode(
+  config: Config,
+  bodies: Map<string, string>,
+  outDir: string,
+  version: string,
+  configFile: string,
+): GenerateResult[] {
+  const results: GenerateResult[] = [];
+  const composedBodies = expandComposedBodies(config, bodies);
+  const provenance = formatProvenance(config.name, version, configFile);
+
+  // Generate skills under skills/ subdirectory
+  const skillResults = generate(config, bodies, outDir, version, configFile);
+  for (const result of skillResults) {
+    result.path = join(outDir, "skills", result.name, "SKILL.md");
+    results.push(result);
+  }
+
+  // Generate rules files (always-on instructions per agent)
+  for (const [name, skill] of Object.entries(config.skills)) {
+    if (!isComposed(skill)) continue;
+
+    let body = composedBodies.get(name) ?? "";
+
+    if (config.team && name === config.team.orchestrator) {
+      const orchestratorPlan = generateOrchestrator(config, true);
+      body = body ? body + "\n\n" + orchestratorPlan : orchestratorPlan;
+    }
+
+    const content = provenance + body + "\n";
+    results.push({
+      name: `rule-${name}`,
+      path: join(outDir, "rules", `${name}.md`),
+      content,
+    });
+  }
+
+  // Generate standalone orchestrator rule if no orchestrator skill
+  if (config.team && !config.team.orchestrator) {
+    const orchestratorMd = generateOrchestrator(config);
+    const content = provenance + orchestratorMd + "\n";
+    results.push({
+      name: "rule-orchestrator",
+      path: join(outDir, "rules", "orchestrator.md"),
+      content,
+    });
+  }
+
+  // Generate .roomodes file mapping composed skills to custom modes
+  const customModes = Object.entries(config.skills)
+    .filter(([, skill]) => isComposed(skill))
+    .map(([name, skill]) => {
+      const composed = skill as { compose: string[]; description: string };
+      return {
+        slug: name,
+        name: name.charAt(0).toUpperCase() + name.slice(1),
+        roleDefinition: composed.description,
+        whenToUse: composed.description,
+        groups: ["read", "edit", "command", "mcp"],
+      };
+    });
+
+  const roomodesContent = provenance + JSON.stringify({ customModes }, null, 2) + "\n";
+  // .roomodes goes to the parent of outDir (project root), since outDir is .roo
+  results.push({
+    name: "roomodes",
+    path: join(dirname(outDir), ".roomodes"),
+    content: roomodesContent,
+  });
+
+  return results;
+}
+
+/**
+ * Generate output for kiro target: .kiro/skills/ and .kiro/steering/.
+ */
+export function generateKiro(
+  config: Config,
+  bodies: Map<string, string>,
+  outDir: string,
+  version: string,
+  configFile: string,
+): GenerateResult[] {
+  const results: GenerateResult[] = [];
+  const composedBodies = expandComposedBodies(config, bodies);
+  const provenance = formatProvenance(config.name, version, configFile);
+
+  // Generate skills under skills/ subdirectory
+  const skillResults = generate(config, bodies, outDir, version, configFile);
+  for (const result of skillResults) {
+    result.path = join(outDir, "skills", result.name, "SKILL.md");
+    results.push(result);
+  }
+
+  // Generate steering files (agent instructions with frontmatter)
+  for (const [name, skill] of Object.entries(config.skills)) {
+    if (!isComposed(skill)) continue;
+
+    let body = composedBodies.get(name) ?? "";
+
+    if (config.team && name === config.team.orchestrator) {
+      const orchestratorPlan = generateOrchestrator(config, true);
+      body = body ? body + "\n\n" + orchestratorPlan : orchestratorPlan;
+    }
+
+    const frontmatter = [
+      "---",
+      "inclusion: always",
+      "---",
+    ].join("\n");
+
+    const content = provenance + frontmatter + "\n\n" + body + "\n";
+    results.push({
+      name: `steering-${name}`,
+      path: join(outDir, "steering", `${name}.md`),
+      content,
+    });
+  }
+
+  // Generate standalone orchestrator steering if no orchestrator skill
+  if (config.team && !config.team.orchestrator) {
+    const orchestratorMd = generateOrchestrator(config);
+    const frontmatter = [
+      "---",
+      "inclusion: always",
+      "---",
+    ].join("\n");
+
+    const content = provenance + frontmatter + "\n\n" + orchestratorMd + "\n";
+    results.push({
+      name: "steering-orchestrator",
+      path: join(outDir, "steering", "orchestrator.md"),
+      content,
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Generate output for junie target: .junie/skills/ and .junie/guidelines.
+ */
+export function generateJunie(
+  config: Config,
+  bodies: Map<string, string>,
+  outDir: string,
+  version: string,
+  configFile: string,
+): GenerateResult[] {
+  const results: GenerateResult[] = [];
+  const composedBodies = expandComposedBodies(config, bodies);
+  const provenance = formatProvenance(config.name, version, configFile);
+
+  // Generate skills under skills/ subdirectory
+  const skillResults = generate(config, bodies, outDir, version, configFile);
+  for (const result of skillResults) {
+    result.path = join(outDir, "skills", result.name, "SKILL.md");
+    results.push(result);
+  }
+
+  // Generate guideline files per agent (plain markdown, no frontmatter)
+  for (const [name, skill] of Object.entries(config.skills)) {
+    if (!isComposed(skill)) continue;
+
+    let body = composedBodies.get(name) ?? "";
+
+    if (config.team && name === config.team.orchestrator) {
+      const orchestratorPlan = generateOrchestrator(config, true);
+      body = body ? body + "\n\n" + orchestratorPlan : orchestratorPlan;
+    }
+
+    const content = provenance + body + "\n";
+    results.push({
+      name: `guideline-${name}`,
+      path: join(outDir, `${name}_guidelines.md`),
+      content,
+    });
+  }
+
+  // Generate standalone orchestrator guideline if no orchestrator skill
+  if (config.team && !config.team.orchestrator) {
+    const orchestratorMd = generateOrchestrator(config);
+    const content = provenance + orchestratorMd + "\n";
+    results.push({
+      name: "guideline-orchestrator",
+      path: join(outDir, "orchestrator_guidelines.md"),
+      content,
+    });
+  }
+
+  return results;
+}
+
 function writeResults(results: GenerateResult[]): void {
   for (const result of results) {
     mkdirSync(dirname(result.path), { recursive: true });
@@ -598,6 +817,18 @@ export function compile(
     case "gemini":
       generated = generateGemini(config, bodies, outDir, version, configFile);
       break;
+    case "goose":
+      generated = generateGoose(config, bodies, outDir, version, configFile);
+      break;
+    case "roo-code":
+      generated = generateRooCode(config, bodies, outDir, version, configFile);
+      break;
+    case "kiro":
+      generated = generateKiro(config, bodies, outDir, version, configFile);
+      break;
+    case "junie":
+      generated = generateJunie(config, bodies, outDir, version, configFile);
+      break;
     default:
       generated = generate(config, bodies, outDir, version, configFile);
   }
@@ -637,6 +868,18 @@ export function check(
       break;
     case "gemini":
       generated = generateGemini(config, bodies, outDir, version, configFile);
+      break;
+    case "goose":
+      generated = generateGoose(config, bodies, outDir, version, configFile);
+      break;
+    case "roo-code":
+      generated = generateRooCode(config, bodies, outDir, version, configFile);
+      break;
+    case "kiro":
+      generated = generateKiro(config, bodies, outDir, version, configFile);
+      break;
+    case "junie":
+      generated = generateJunie(config, bodies, outDir, version, configFile);
       break;
     default:
       generated = generate(config, bodies, outDir, version, configFile);
