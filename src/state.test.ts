@@ -411,4 +411,63 @@ describe("parseState", () => {
       assert.deepEqual(schema.fields, {});
     });
   });
+
+  describe("list of primitives", () => {
+    it("rejects list<string> since element must be a custom type", () => {
+      const raw = {
+        names: { type: "list<string>" },
+      };
+      assert.throws(
+        () => parseState(raw, NO_SKILLS),
+        (err: unknown) => {
+          assert.ok(err instanceof ConfigError);
+          assert.match(err.message, /unknown type "string"/);
+          return true;
+        }
+      );
+    });
+  });
+
+  describe("field missing type key", () => {
+    it("entry with object but no type key is treated as custom type definition", () => {
+      const raw = {
+        MyType: { name: "string", age: "number" },
+      };
+      const schema = parseState(raw, NO_SKILLS);
+      assert.ok("MyType" in schema.types);
+      assert.deepEqual(schema.types["MyType"].fields, { name: "string", age: "number" });
+    });
+  });
+
+  describe("non-string field values in custom type", () => {
+    it("rejects custom type field with non-string type value", () => {
+      const raw = {
+        BadType: { name: 42 },
+      };
+      assert.throws(
+        () => parseState(raw, NO_SKILLS),
+        (err: unknown) => {
+          assert.ok(err instanceof ConfigError);
+          return true;
+        }
+      );
+    });
+  });
+
+  describe("location with unknown extra keys", () => {
+    it("parses location even with extra keys (only skill, path, kind used)", () => {
+      const raw = {
+        output: {
+          type: "string",
+          location: { skill: "review", path: "out.md", kind: "artifact", extra: "ignored" },
+        },
+      };
+      const schema = parseState(raw, SOME_SKILLS);
+      assert.deepEqual(schema.fields["output"]!.location, {
+        skill: "review",
+        path: "out.md",
+        kind: "artifact",
+      });
+    });
+  });
 });

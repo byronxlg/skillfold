@@ -1180,6 +1180,246 @@ describe("validateGraph when-clause validation", () => {
   });
 });
 
+describe("parseGraph edge cases", () => {
+  it("rejects empty conditional then array", () => {
+    assert.throws(
+      () => parseGraph([{ strategy: {}, then: [] }]),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /conditional then must not be empty/);
+        return true;
+      },
+    );
+  });
+
+  it("rejects map node with non-object value", () => {
+    assert.throws(
+      () => parseGraph([{ map: "not-an-object" }]),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /value must be an object/);
+        return true;
+      },
+    );
+  });
+
+  it("rejects step node with non-object non-null value", () => {
+    assert.throws(
+      () => parseGraph([{ strategy: "bad-value" }]),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /value must be an object or omitted/);
+        return true;
+      },
+    );
+  });
+
+  it("rejects array element that is itself an array", () => {
+    assert.throws(
+      () => parseGraph([["nested"]]),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /must be an object/);
+        return true;
+      },
+    );
+  });
+});
+
+describe("validateGraph: map over state without state declared", () => {
+  it("map over state.* with no state schema errors", () => {
+    const graph: Graph = {
+      nodes: [
+        {
+          over: "state.items",
+          as: "item",
+          graph: [
+            { skill: "worker", reads: [], writes: [] },
+          ],
+        },
+      ],
+    };
+    const skills = makeSkills("worker");
+    assert.throws(
+      () => validateGraph(graph, skills, undefined),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /references state but no state is declared/);
+        return true;
+      },
+    );
+  });
+});
+
+describe("validateGraph: writes without state declared", () => {
+  it("writing state path without state schema errors", () => {
+    const graph: Graph = {
+      nodes: [
+        { skill: "strategy", reads: [], writes: ["state.goal"] },
+      ],
+    };
+    const skills = makeSkills("strategy");
+    assert.throws(
+      () => validateGraph(graph, skills, undefined),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /writes state field "state.goal" but no state is declared/);
+        return true;
+      },
+    );
+  });
+});
+
+describe("validateGraph: when-clause with no state and non-state path", () => {
+  it("when-clause with dotted path and no state errors", () => {
+    const graph: Graph = {
+      nodes: [
+        {
+          skill: "checker",
+          reads: [],
+          writes: [],
+          then: [
+            { when: "some.field == true", to: "end" },
+          ],
+        },
+      ],
+    };
+    const skills = makeSkills("checker");
+    assert.throws(
+      () => validateGraph(graph, skills, undefined),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /not a state or map variable path/);
+        return true;
+      },
+    );
+  });
+});
+
+describe("parseWhenClause edge cases", () => {
+  it("parses != with boolean value", () => {
+    const clause = parseWhenClause("state.active != false", 'Graph node "a"');
+    assert.deepEqual(clause, { path: "state.active", operator: "!=", value: false });
+  });
+
+  it("parses == with unquoted string value", () => {
+    const clause = parseWhenClause("state.mode == draft", 'Graph node "a"');
+    assert.deepEqual(clause, { path: "state.mode", operator: "==", value: "draft" });
+  });
+
+  it("parses == with negative numeric value", () => {
+    const clause = parseWhenClause("state.count == -1", 'Graph node "a"');
+    assert.deepEqual(clause, { path: "state.count", operator: "==", value: -1 });
+  });
+
+  it("parses == with zero value", () => {
+    const clause = parseWhenClause("state.count == 0", 'Graph node "a"');
+    assert.deepEqual(clause, { path: "state.count", operator: "==", value: 0 });
+  });
+
+  it("throws on when clause with empty path (== at start)", () => {
+    assert.throws(
+      () => parseWhenClause(" == true", 'Graph node "a"'),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /invalid when clause/);
+        return true;
+      },
+    );
+  });
+});
+
+describe("validateGraph: when-clause with custom type sub-field", () => {
+  it("valid custom type sub-field in when-clause passes", () => {
+    const graph: Graph = {
+      nodes: [
+        { skill: "engineer", reads: [], writes: ["state.code"], then: "reviewer" },
+        {
+          skill: "reviewer",
+          reads: ["state.code"],
+          writes: ["state.review"],
+          then: [
+            { when: "review.approved == true", to: "end" },
+            { when: "review.approved == false", to: "engineer" },
+          ],
+        },
+      ],
+    };
+    const skills = makeSkills("engineer", "reviewer");
+    const state: StateSchema = {
+      types: {
+        Review: {
+          fields: { approved: "bool", feedback: "string" },
+        },
+      },
+      fields: {
+        code: { type: { kind: "primitive", value: "string" } },
+        review: { type: { kind: "custom", name: "Review" } },
+      },
+    };
+    assert.doesNotThrow(() => validateGraph(graph, skills, state));
+  });
+
+  it("invalid custom type sub-field in when-clause errors", () => {
+    const graph: Graph = {
+      nodes: [
+        {
+          skill: "reviewer",
+          reads: [],
+          writes: [],
+          then: [
+            { when: "review.nonexistent == true", to: "end" },
+          ],
+        },
+      ],
+    };
+    const skills = makeSkills("reviewer");
+    const state: StateSchema = {
+      types: {
+        Review: {
+          fields: { approved: "bool" },
+        },
+      },
+      fields: {
+        review: { type: { kind: "custom", name: "Review" } },
+      },
+    };
+    assert.throws(
+      () => validateGraph(graph, skills, state),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /type "Review" has no field "nonexistent"/);
+        return true;
+      },
+    );
+  });
+
+  it("when-clause with path that has no dot and state present errors", () => {
+    const graph: Graph = {
+      nodes: [
+        {
+          skill: "checker",
+          reads: [],
+          writes: [],
+          then: [
+            { when: "nodots == true", to: "end" },
+          ],
+        },
+      ],
+    };
+    const skills = makeSkills("checker");
+    const state = makeState({ status: { kind: "primitive", value: "string" } });
+    assert.throws(
+      () => validateGraph(graph, skills, state),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /not a valid state path/);
+        return true;
+      },
+    );
+  });
+});
+
 describe("type guards", () => {
   it("isMapNode returns true for MapNode", () => {
     assert.equal(isMapNode({ over: "state.tasks", as: "task", graph: [] }), true);
