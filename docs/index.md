@@ -21,19 +21,74 @@ hero:
       link: https://github.com/byronxlg/skillfold
 
 features:
-  - title: Skill Composition
+  - icon:
+      src: /icons/compose.svg
+    title: Skill Composition
     details: Define atomic skills once, compose them into agents. No copy-paste, no drift. 11 library skills included, installable standalone via npx skills add.
-  - title: Typed State and Flows
+  - icon:
+      src: /icons/validate.svg
+    title: Typed State and Flows
     details: Declare state schemas, wire agents into execution flows with conditional routing and parallel map. Validated at compile time.
-  - title: Built-in Integrations
+  - icon:
+      src: /icons/integrate.svg
+    title: Built-in Integrations
     details: GitHub Issues, Discussions, and PRs as first-class state locations. The compiler resolves URLs and validates paths.
-  - title: Multi-Platform
+  - icon:
+      src: /icons/platform.svg
+    title: Multi-Platform
     details: "Compile to 12 targets: Claude Code, Agent Teams, Cursor, Windsurf, VS Code Copilot, OpenAI Codex, Gemini CLI, Goose, Roo Code, Kiro, Junie, or standard SKILL.md files."
 ---
 
+<div class="install-banner">
+<div class="install-inner">
+
+::: code-group
+
+```sh [npm]
+npm install skillfold
+```
+
+```sh [yarn]
+yarn add skillfold
+```
+
+```sh [pnpm]
+pnpm add skillfold
+```
+
+```sh [bun]
+bun add skillfold
+```
+
+:::
+
+</div>
+</div>
+
+<div class="stats-bar">
+  <div class="stat">
+    <span class="stat-value">12</span>
+    <span class="stat-label">Platform Targets</span>
+  </div>
+  <div class="stat">
+    <span class="stat-value">11</span>
+    <span class="stat-label">Library Skills</span>
+  </div>
+  <div class="stat">
+    <span class="stat-value">859</span>
+    <span class="stat-label">Tests</span>
+  </div>
+  <div class="stat">
+    <span class="stat-value">168</span>
+    <span class="stat-label">Test Suites</span>
+  </div>
+</div>
+
+<div class="home-content">
+
 ## What It Looks Like
 
-Define your agent pipeline in YAML:
+Define your agent pipeline in YAML. The compiler validates everything - skill references, state types, flow transitions, cycle exit conditions - before anything runs.
 
 ```yaml
 skills:
@@ -68,33 +123,81 @@ team:
 
 Compile to any platform:
 
-```bash
-npx skillfold --target claude-code   # .claude/agents/*.md
-npx skillfold --target cursor        # .cursor/rules/*.mdc
-npx skillfold --target codex         # AGENTS.md
-npx skillfold --target gemini        # .gemini/agents/*.md
+::: code-group
+
+```sh [Claude Code]
+npx skillfold --target claude-code
+# Output: .claude/agents/*.md, .claude/skills/*/SKILL.md
 ```
+
+```sh [Cursor]
+npx skillfold --target cursor
+# Output: .cursor/rules/*.mdc
+```
+
+```sh [Codex]
+npx skillfold --target codex
+# Output: AGENTS.md
+```
+
+```sh [Gemini]
+npx skillfold --target gemini
+# Output: .gemini/agents/*.md
+```
+
+```sh [More targets]
+npx skillfold --target windsurf   # .windsurf/rules/*.md
+npx skillfold --target copilot    # .github/instructions/*.md
+npx skillfold --target goose      # .goosehints
+npx skillfold --target roo-code   # .roo/skills/
+npx skillfold --target kiro       # .kiro/skills/
+npx skillfold --target junie      # .junie/skills/
+```
+
+:::
 
 Or run the pipeline directly:
 
-```bash
+```sh
 npx skillfold run --target claude-code --spawner sdk
 ```
 
-## How Skillfold Compares to Runtime Orchestration
+</div>
 
-Skillfold is a compiler, not a runtime framework. It validates your pipeline at compile time and emits plain files that agents read directly. Runtime orchestration tools like CrewAI, AutoGen, and LangGraph take a different approach - they coordinate agents at execution time through a framework process. Both are valid; which one fits depends on your pipeline.
+<div class="comparison-section">
+<div class="comparison-inner">
 
-| | Skillfold (compile-time) | Runtime orchestration (CrewAI, AutoGen, LangGraph) |
-| --- | --- | --- |
-| **When coordination happens** | At compile time, before agents run | At runtime, while agents execute |
-| **Output format** | Standard files (SKILL.md, .claude/agents/, Cursor rules) | Proprietary runtime objects and APIs |
-| **Platform lock-in** | None - output is plain files any tool can read | Tied to the framework's runtime and SDK |
-| **Validation** | Compile-time type checking for state, flows, and references | Runtime errors surface during execution |
-| **Runtime overhead** | Zero - agents read files directly, no middleware | Framework process runs alongside agents |
-| **Best for** | Known pipelines with static topology and typed state | Dynamic workflows where topology changes based on intermediate results |
+## Compiler vs. Runtime Orchestration
 
-Runtime tools are the better choice when your pipeline needs to make structural decisions mid-execution - spawning new agents, rewiring flows, or adapting the graph based on intermediate output. Skillfold is the better choice when you know the shape of your pipeline ahead of time and want the compiler to catch errors before anything runs.
+Skillfold validates your pipeline at compile time and emits plain files that agents read directly. Runtime tools like CrewAI, AutoGen, and LangGraph coordinate agents at execution time through a framework process. Both are valid - which one fits depends on your pipeline.
+
+<div class="comparison-grid">
+  <div class="comparison-card">
+    <h3>Skillfold (compile-time)</h3>
+    <ul>
+      <li><strong>Output:</strong> Standard files (SKILL.md, .claude/agents/, Cursor rules)</li>
+      <li><strong>Lock-in:</strong> None - plain files any tool can read</li>
+      <li><strong>Validation:</strong> Compile-time type checking</li>
+      <li><strong>Overhead:</strong> Zero - no middleware at runtime</li>
+      <li><strong>Best for:</strong> Known pipeline topology with typed state</li>
+    </ul>
+  </div>
+  <div class="comparison-card">
+    <h3>Runtime orchestration</h3>
+    <ul>
+      <li><strong>Output:</strong> Proprietary runtime objects and APIs</li>
+      <li><strong>Lock-in:</strong> Tied to the framework's SDK</li>
+      <li><strong>Validation:</strong> Runtime errors during execution</li>
+      <li><strong>Overhead:</strong> Framework process alongside agents</li>
+      <li><strong>Best for:</strong> Dynamic workflows that adapt mid-execution</li>
+    </ul>
+  </div>
+</div>
+
+[Detailed comparisons ->](/comparisons)
+
+</div>
+</div>
 
 <div class="targets-section">
 
@@ -103,20 +206,45 @@ Runtime tools are the better choice when your pipeline needs to make structural 
 One config, 12 platform targets. Write your pipeline in YAML and compile to whichever agent platform your team uses.
 
 <div class="targets-grid">
-  <div class="target">Claude Code</div>
-  <div class="target">Agent Teams</div>
-  <div class="target">Cursor</div>
-  <div class="target">Windsurf</div>
-  <div class="target">VS Code Copilot</div>
-  <div class="target">OpenAI Codex</div>
-  <div class="target">Gemini CLI</div>
-  <div class="target">Goose</div>
-  <div class="target">Roo Code</div>
-  <div class="target">Kiro</div>
-  <div class="target">Junie</div>
-  <div class="target">SKILL.md</div>
+  <div class="target"><span class="target-icon claude">C</span>Claude Code</div>
+  <div class="target"><span class="target-icon agent-teams">A</span>Agent Teams</div>
+  <div class="target"><span class="target-icon cursor">C</span>Cursor</div>
+  <div class="target"><span class="target-icon windsurf">W</span>Windsurf</div>
+  <div class="target"><span class="target-icon copilot">C</span>VS Code Copilot</div>
+  <div class="target"><span class="target-icon codex">O</span>OpenAI Codex</div>
+  <div class="target"><span class="target-icon gemini">G</span>Gemini CLI</div>
+  <div class="target"><span class="target-icon goose">G</span>Goose</div>
+  <div class="target"><span class="target-icon roo">R</span>Roo Code</div>
+  <div class="target"><span class="target-icon kiro">K</span>Kiro</div>
+  <div class="target"><span class="target-icon junie">J</span>Junie</div>
+  <div class="target"><span class="target-icon skill">S</span>SKILL.md</div>
 </div>
 
 [See platform integration details ->](/integrations)
+
+</div>
+
+<div class="cta-section">
+
+## Ready to get started?
+
+<div class="cta-grid">
+  <a class="cta-card" href="/skillfold/getting-started">
+    <strong>Getting Started Guide</strong>
+    <span>Build your first pipeline in 5 minutes</span>
+  </a>
+  <a class="cta-card" href="/skillfold/demo">
+    <strong>Live Demo</strong>
+    <span>Try the interactive pipeline visualizer</span>
+  </a>
+  <a class="cta-card" href="/skillfold/builder">
+    <strong>Pipeline Builder</strong>
+    <span>Edit YAML and see the graph update live</span>
+  </a>
+  <a class="cta-card" href="/skillfold/library">
+    <strong>Library Skills</strong>
+    <span>11 ready-to-use skills, no config needed</span>
+  </a>
+</div>
 
 </div>

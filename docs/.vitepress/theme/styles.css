@@ -42,30 +42,269 @@
   }
 }
 
-/* Custom homepage sections below the VitePress features grid */
-.vp-doc .targets-section {
-  max-width: 688px;
+/* ============================================
+   Hero shimmer animation on gradient text
+   ============================================ */
+.VPHero .name .clip {
+  background-size: 200% 100%;
+  animation: hero-shimmer 6s ease-in-out infinite;
+}
+
+@keyframes hero-shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .VPHero .name .clip {
+    animation: none;
+  }
+}
+
+/* Subtle dot grid background on hero */
+.VPHero {
+  background-image: radial-gradient(circle, var(--vp-c-brand-soft) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* ============================================
+   Stats bar below install banner
+   ============================================ */
+.vp-doc .stats-bar {
+  display: flex;
+  justify-content: center;
+  gap: 48px;
+  padding: 32px 24px 0;
+  max-width: 960px;
   margin: 0 auto;
-  padding: 48px 24px;
+}
+
+.vp-doc .stats-bar .stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.vp-doc .stats-bar .stat-value {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(120deg, #10b981 30%, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.dark .vp-doc .stats-bar .stat-value {
+  background: linear-gradient(120deg, #34d399 30%, #22d3ee);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.vp-doc .stats-bar .stat-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--vp-c-text-2);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+@media (max-width: 639px) {
+  .vp-doc .stats-bar {
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .vp-doc .stats-bar .stat-value {
+    font-size: 22px;
+  }
+}
+
+/* ============================================
+   Install banner below hero
+   ============================================ */
+.vp-doc .install-banner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+.vp-doc .install-banner .install-inner {
+  display: flex;
+  justify-content: center;
+}
+
+.vp-doc .install-banner div[class*="language-"] {
+  margin: 0;
+  border-radius: 8px;
+  display: inline-block;
+  min-width: 300px;
+}
+
+.vp-doc .install-banner .vp-code-group {
+  min-width: 340px;
+  max-width: 440px;
+}
+
+.vp-doc .install-banner .vp-code-group div[class*="language-"] {
+  min-width: 0;
+}
+
+/* ============================================
+   Home content section
+   ============================================ */
+.vp-doc .home-content {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 48px 24px 0;
+}
+
+.vp-doc .home-content h2 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  letter-spacing: -0.02em;
+}
+
+.vp-doc .home-content p {
+  color: var(--vp-c-text-2);
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+
+/* ============================================
+   Comparison section - full bleed background
+   ============================================ */
+.vp-doc .comparison-section {
+  background: var(--vp-c-bg-soft);
+  padding: 64px 24px;
+  margin: 48px 0 0;
+}
+
+.vp-doc .comparison-section .comparison-inner {
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.vp-doc .comparison-section h2 {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  letter-spacing: -0.02em;
+}
+
+.vp-doc .comparison-section > p,
+.vp-doc .comparison-section .comparison-inner > p {
+  text-align: center;
+  color: var(--vp-c-text-2);
+  margin-bottom: 32px;
+  line-height: 1.7;
+}
+
+.vp-doc .comparison-section > p:last-child,
+.vp-doc .comparison-section .comparison-inner > p:last-child {
+  text-align: center;
+  margin-top: 24px;
+}
+
+.vp-doc .comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+@media (min-width: 640px) {
+  .vp-doc .comparison-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.vp-doc .comparison-card {
+  padding: 24px;
+  border-radius: 12px;
+  background: var(--vp-c-bg);
+  border: 1px solid var(--vp-c-divider);
+  transition: border-color 0.25s;
+}
+
+.vp-doc .comparison-card:first-child {
+  border-color: var(--vp-c-brand-1);
+}
+
+.vp-doc .comparison-card h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--vp-c-text-1);
+}
+
+.vp-doc .comparison-card:first-child h3 {
+  color: var(--vp-c-brand-1);
+}
+
+.vp-doc .comparison-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.vp-doc .comparison-card li {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--vp-c-text-2);
+  padding: 4px 0;
+}
+
+.vp-doc .comparison-card li + li {
+  border-top: 1px solid var(--vp-c-divider);
+  margin-top: 4px;
+  padding-top: 8px;
+}
+
+.vp-doc .comparison-card li strong {
+  color: var(--vp-c-text-1);
+}
+
+/* ============================================
+   Targets grid section - full bleed
+   ============================================ */
+.vp-doc .targets-section {
+  padding: 64px 24px;
 }
 
 .vp-doc .targets-section h2 {
   text-align: center;
-  font-size: 24px;
-  font-weight: 600;
+  font-size: 28px;
+  font-weight: 700;
   margin-bottom: 8px;
+  letter-spacing: -0.02em;
 }
 
-.vp-doc .targets-section p {
+.vp-doc .targets-section > p {
   text-align: center;
   color: var(--vp-c-text-2);
   margin-bottom: 32px;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.vp-doc .targets-section > p:last-child {
+  text-align: center;
+  margin-top: 24px;
 }
 
 .vp-doc .targets-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 12px;
+  max-width: 960px;
+  margin: 0 auto;
 }
 
 @media (min-width: 640px) {
@@ -74,22 +313,177 @@
   }
 }
 
+@media (min-width: 960px) {
+  .vp-doc .targets-grid {
+    grid-template-columns: repeat(6, 1fr);
+  }
+}
+
 .vp-doc .targets-grid .target {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 12px 16px;
-  border-radius: 8px;
+  gap: 8px;
+  padding: 16px 12px;
+  border-radius: 12px;
   background: var(--vp-c-bg-soft);
   border: 1px solid var(--vp-c-divider);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--vp-c-text-1);
   text-align: center;
-  transition: border-color 0.25s, background-color 0.25s;
+  transition: border-color 0.25s, background-color 0.25s, transform 0.15s;
 }
 
 .vp-doc .targets-grid .target:hover {
   border-color: var(--vp-c-brand-1);
   background: var(--vp-c-brand-soft);
+  transform: translateY(-2px);
+}
+
+.vp-doc .targets-grid .target .target-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: white;
+}
+
+/* Platform-specific accent colors */
+.vp-doc .target .target-icon.claude { background: #d97706; }
+.vp-doc .target .target-icon.agent-teams { background: #7c3aed; }
+.vp-doc .target .target-icon.cursor { background: #2563eb; }
+.vp-doc .target .target-icon.windsurf { background: #0ea5e9; }
+.vp-doc .target .target-icon.copilot { background: #6366f1; }
+.vp-doc .target .target-icon.codex { background: #1e293b; }
+.dark .vp-doc .target .target-icon.codex { background: #e2e8f0; color: #1e293b; }
+.vp-doc .target .target-icon.gemini { background: #3b82f6; }
+.vp-doc .target .target-icon.goose { background: #f97316; }
+.vp-doc .target .target-icon.roo { background: #8b5cf6; }
+.vp-doc .target .target-icon.kiro { background: #ec4899; }
+.vp-doc .target .target-icon.junie { background: #14b8a6; }
+.vp-doc .target .target-icon.skill { background: linear-gradient(135deg, #10b981, #06b6d4); }
+
+/* ============================================
+   CTA section - full bleed soft background
+   ============================================ */
+.vp-doc .cta-section {
+  background: var(--vp-c-bg-soft);
+  padding: 64px 24px;
+}
+
+.vp-doc .cta-section h2 {
+  text-align: center;
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 32px;
+  letter-spacing: -0.02em;
+}
+
+.vp-doc .cta-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+@media (min-width: 640px) {
+  .vp-doc .cta-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.vp-doc .cta-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 20px 24px;
+  border-radius: 12px;
+  background: var(--vp-c-bg);
+  border: 1px solid var(--vp-c-divider);
+  text-decoration: none;
+  transition: border-color 0.25s, background-color 0.25s, transform 0.15s;
+}
+
+.vp-doc .cta-card:hover {
+  border-color: var(--vp-c-brand-1);
+  background: var(--vp-c-brand-soft);
+  transform: translateY(-2px);
+}
+
+.vp-doc .cta-card strong {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+}
+
+.vp-doc .cta-card span {
+  font-size: 13px;
+  color: var(--vp-c-text-2);
+}
+
+/* ============================================
+   Feature card icon sizing (VitePress home)
+   ============================================ */
+.VPFeature .VPImage {
+  width: 48px;
+  height: 48px;
+}
+
+/* ============================================
+   Blog list
+   ============================================ */
+.vp-doc .blog-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.vp-doc .blog-card {
+  display: block;
+  padding: 24px;
+  border-radius: 12px;
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  text-decoration: none;
+  transition: border-color 0.25s, transform 0.15s;
+}
+
+.vp-doc .blog-card:hover {
+  border-color: var(--vp-c-brand-1);
+  transform: translateY(-2px);
+}
+
+.vp-doc .blog-card .blog-meta {
+  font-size: 13px;
+  color: var(--vp-c-text-3);
+  margin-bottom: 8px;
+}
+
+.vp-doc .blog-card h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+  margin: 0 0 8px 0;
+  border-top: none;
+  padding-top: 0;
+}
+
+.vp-doc .blog-card p {
+  font-size: 14px;
+  color: var(--vp-c-text-2);
+  line-height: 1.6;
+  margin: 0 0 12px 0;
+}
+
+.vp-doc .blog-card .blog-read-more {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--vp-c-brand-1);
 }
