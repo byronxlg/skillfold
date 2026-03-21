@@ -128,16 +128,23 @@ function serializeExtraFrontmatter(extra: Record<string, unknown>): string[] {
 
 /** Format agent markdown with frontmatter. */
 function formatAgentMarkdown(agent: AgentDefinition): string {
+  // Use model from extra frontmatter if provided, otherwise default to inherit
+  const model = agent.frontmatter?.model ?? "inherit";
+
   const frontmatter: string[] = [
     "---",
     `name: ${agent.name}`,
     `description: ${agent.description}`,
-    "model: inherit",
+    `model: ${model}`,
     `color: ${agent.color}`,
   ];
 
   if (agent.frontmatter) {
-    frontmatter.push(...serializeExtraFrontmatter(agent.frontmatter));
+    // Filter out model since it's already emitted as a core field
+    const { model: _model, ...rest } = agent.frontmatter;
+    if (Object.keys(rest).length > 0) {
+      frontmatter.push(...serializeExtraFrontmatter(rest));
+    }
   }
 
   frontmatter.push("---");
@@ -229,19 +236,31 @@ export function generateAgents(
     const isOrchestrator = name === orchestratorName;
     const color = assignColor(name, writes, isOrchestrator, config);
 
-    // Build frontmatter, starting with any user-specified fields
+    // Build frontmatter, starting with any legacy passthrough fields
     const frontmatter: Record<string, unknown> = skill.frontmatter
       ? { ...skill.frontmatter }
       : {};
 
+    // Layer named agentConfig fields on top (overrides legacy frontmatter)
+    if (isClaudeCode && skill.agentConfig) {
+      for (const [key, val] of Object.entries(skill.agentConfig)) {
+        if (val !== undefined) {
+          frontmatter[key] = val;
+        }
+      }
+    }
+
     // In claude-code mode, orchestrator gets Agent tool in frontmatter and
     // the execution plan appended to its body
     if (isClaudeCode && isOrchestrator && config.team) {
-      const workerNames = collectWorkerNames(config);
-      const agentList = workerNames.length > 0
-        ? `Agent(${workerNames.join(", ")})`
-        : "Agent";
-      frontmatter.tools = [agentList, "Read", "Write", "Bash", "Grep", "Glob"];
+      // Only set tools if the user hasn't explicitly configured them
+      if (!frontmatter.tools) {
+        const workerNames = collectWorkerNames(config);
+        const agentList = workerNames.length > 0
+          ? `Agent(${workerNames.join(", ")})`
+          : "Agent";
+        frontmatter.tools = [agentList, "Read", "Write", "Bash", "Grep", "Glob"];
+      }
 
       // Append the execution plan with Agent tool language
       const orchestratorPlan = generateOrchestrator(config, true);

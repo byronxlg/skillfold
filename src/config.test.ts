@@ -1231,6 +1231,352 @@ skills:
   });
 });
 
+describe("readConfig agent frontmatter overrides", () => {
+  let tmpDir: string | undefined;
+
+  afterEach(() => {
+    if (tmpDir) {
+      rmSync(tmpDir, { recursive: true, force: true });
+      tmpDir = undefined;
+    }
+  });
+
+  it("parses named agent frontmatter fields on composed skills", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      tools:
+        - Read
+        - Edit
+        - Bash
+      permissionMode: acceptEdits
+      isolation: worktree
+      model: sonnet
+      effort: high
+      maxTurns: 30
+      memory: true
+      background: false
+`);
+    const config = readConfig(configPath);
+    const skill = config.skills["quality"];
+    assert.ok(isComposed(skill));
+    assert.ok(skill.agentConfig);
+    assert.deepEqual(skill.agentConfig.tools, ["Read", "Edit", "Bash"]);
+    assert.equal(skill.agentConfig.permissionMode, "acceptEdits");
+    assert.equal(skill.agentConfig.isolation, "worktree");
+    assert.equal(skill.agentConfig.model, "sonnet");
+    assert.equal(skill.agentConfig.effort, "high");
+    assert.equal(skill.agentConfig.maxTurns, 30);
+    assert.equal(skill.agentConfig.memory, true);
+    assert.equal(skill.agentConfig.background, false);
+  });
+
+  it("composed skill without agent config fields has undefined agentConfig", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+`);
+    const config = readConfig(configPath);
+    const skill = config.skills["quality"];
+    assert.ok(isComposed(skill));
+    assert.equal(skill.agentConfig, undefined);
+  });
+
+  it("parses disallowedTools field", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      disallowedTools:
+        - Bash
+        - Write
+`);
+    const config = readConfig(configPath);
+    const skill = config.skills["quality"];
+    assert.ok(isComposed(skill));
+    assert.deepEqual(skill.agentConfig?.disallowedTools, ["Bash", "Write"]);
+  });
+
+  it("parses hooks field", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      hooks:
+        preToolCall:
+          command: "echo hook"
+`);
+    const config = readConfig(configPath);
+    const skill = config.skills["quality"];
+    assert.ok(isComposed(skill));
+    assert.deepEqual(skill.agentConfig?.hooks, { preToolCall: { command: "echo hook" } });
+  });
+
+  it("rejects invalid permissionMode value", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      permissionMode: invalid
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /permissionMode must be one of/);
+      return true;
+    });
+  });
+
+  it("rejects invalid isolation value", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      isolation: sandbox
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /isolation must be one of/);
+      return true;
+    });
+  });
+
+  it("rejects invalid effort value", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      effort: extreme
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /effort must be one of/);
+      return true;
+    });
+  });
+
+  it("rejects non-integer maxTurns", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      maxTurns: 3.5
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /maxTurns must be a positive integer/);
+      return true;
+    });
+  });
+
+  it("rejects zero maxTurns", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      maxTurns: 0
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /maxTurns must be a positive integer/);
+      return true;
+    });
+  });
+
+  it("rejects non-boolean memory", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      memory: "yes"
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /memory must be a boolean/);
+      return true;
+    });
+  });
+
+  it("rejects non-boolean background", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      background: 1
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /background must be a boolean/);
+      return true;
+    });
+  });
+
+  it("rejects non-string model", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      model: 42
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /model must be a string/);
+      return true;
+    });
+  });
+
+  it("rejects non-array tools", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      tools: "Read"
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /tools must be an array of strings/);
+      return true;
+    });
+  });
+
+  it("rejects non-object hooks", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      hooks: "not a map"
+`);
+    assert.throws(() => readConfig(configPath), (err: unknown) => {
+      assert.ok(err instanceof ConfigError);
+      assert.match(err.message, /hooks must be a YAML map/);
+      return true;
+    });
+  });
+
+  it("accepts all four permissionMode values", () => {
+    for (const mode of ["default", "acceptEdits", "bypassPermissions", "plan"]) {
+      tmpDir = makeTmpDir();
+      const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    lint: ./skills/lint
+  composed:
+    quality:
+      compose:
+        - lint
+      description: "Runs lint checks."
+      permissionMode: ${mode}
+`);
+      const config = readConfig(configPath);
+      const skill = config.skills["quality"];
+      assert.ok(isComposed(skill));
+      assert.equal(skill.agentConfig?.permissionMode, mode);
+      rmSync(tmpDir, { recursive: true, force: true });
+      tmpDir = undefined;
+    }
+  });
+});
+
 describe("type guards", () => {
   it("isAtomic returns true for AtomicSkill", () => {
     assert.equal(isAtomic({ path: "./skills/review" }), true);

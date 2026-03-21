@@ -443,6 +443,176 @@ describe("generateAgents with claude-code target", () => {
   });
 });
 
+describe("generateAgents with agentConfig overrides", () => {
+  it("emits named agentConfig fields in claude-code target", () => {
+    const config = makeConfig({
+      skills: {
+        planning: { path: "./skills/planning" },
+        coding: { path: "./skills/coding" },
+        engineer: {
+          compose: ["planning", "coding"],
+          description: "Writes code.",
+          agentConfig: {
+            tools: ["Read", "Edit", "Write", "Bash"],
+            permissionMode: "acceptEdits",
+            isolation: "worktree",
+            effort: "high",
+          },
+        },
+      },
+      team: undefined,
+    });
+    const bodies = new Map<string, string>();
+    bodies.set("engineer", "Write code.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml", "claude-code");
+    const engineer = results.find((r) => r.name === "engineer");
+    assert.ok(engineer);
+
+    assert.ok(engineer.content.includes("permissionMode: acceptEdits"));
+    assert.ok(engineer.content.includes("isolation: worktree"));
+    assert.ok(engineer.content.includes("effort: high"));
+    assert.ok(engineer.content.includes("tools:"));
+    assert.ok(engineer.content.includes("- Read"));
+    assert.ok(engineer.content.includes("- Edit"));
+  });
+
+  it("agentConfig fields are ignored in skill target", () => {
+    const config = makeConfig({
+      skills: {
+        planning: { path: "./skills/planning" },
+        coding: { path: "./skills/coding" },
+        engineer: {
+          compose: ["planning", "coding"],
+          description: "Writes code.",
+          agentConfig: {
+            tools: ["Read", "Edit"],
+            permissionMode: "acceptEdits",
+            isolation: "worktree",
+          },
+        },
+      },
+      team: undefined,
+    });
+    const bodies = new Map<string, string>();
+    bodies.set("engineer", "Write code.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml", "skill");
+    const engineer = results.find((r) => r.name === "engineer");
+    assert.ok(engineer);
+
+    // Named fields should not appear in skill target output
+    assert.ok(!engineer.content.includes("permissionMode:"));
+    assert.ok(!engineer.content.includes("isolation:"));
+    assert.ok(!engineer.content.includes("tools:"));
+  });
+
+  it("agentConfig model overrides default inherit", () => {
+    const config = makeConfig({
+      skills: {
+        planning: { path: "./skills/planning" },
+        planner: {
+          compose: ["planning"],
+          description: "Plans.",
+          agentConfig: { model: "sonnet" },
+        },
+      },
+      team: undefined,
+    });
+    const bodies = new Map<string, string>();
+    bodies.set("planner", "Plan.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml", "claude-code");
+    const planner = results.find((r) => r.name === "planner");
+    assert.ok(planner);
+
+    assert.ok(planner.content.includes("model: sonnet"));
+    assert.ok(!planner.content.includes("model: inherit"));
+  });
+
+  it("agentConfig tools on orchestrator override auto-generated tools", () => {
+    const config = makeConfig({
+      skills: {
+        ...makeConfig().skills,
+        orchestrator: {
+          compose: ["planning"],
+          description: "Coordinates.",
+          agentConfig: {
+            tools: ["Agent", "Read", "Bash"],
+          },
+        },
+      },
+    });
+    const bodies = new Map<string, string>();
+    bodies.set("orchestrator", "Orchestrate.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml", "claude-code");
+    const orch = results.find((r) => r.name === "orchestrator");
+    assert.ok(orch);
+
+    // User-specified tools should be used, not the auto-generated ones
+    assert.ok(orch.content.includes("- Agent"));
+    assert.ok(orch.content.includes("- Read"));
+    assert.ok(orch.content.includes("- Bash"));
+    // Should NOT have auto-generated Agent(worker, ...) format
+    assert.ok(!orch.content.includes("Agent(planner"));
+  });
+
+  it("agentConfig boolean and number fields emit correctly", () => {
+    const config = makeConfig({
+      skills: {
+        planning: { path: "./skills/planning" },
+        planner: {
+          compose: ["planning"],
+          description: "Plans.",
+          agentConfig: {
+            memory: true,
+            maxTurns: 50,
+            background: false,
+          },
+        },
+      },
+      team: undefined,
+    });
+    const bodies = new Map<string, string>();
+    bodies.set("planner", "Plan.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml", "claude-code");
+    const planner = results.find((r) => r.name === "planner");
+    assert.ok(planner);
+
+    assert.ok(planner.content.includes("memory: true"));
+    assert.ok(planner.content.includes("maxTurns: 50"));
+    assert.ok(planner.content.includes("background: false"));
+  });
+
+  it("agentConfig overrides legacy frontmatter when both present", () => {
+    const config = makeConfig({
+      skills: {
+        planning: { path: "./skills/planning" },
+        planner: {
+          compose: ["planning"],
+          description: "Plans.",
+          frontmatter: { permissionMode: "default", customField: "value" },
+          agentConfig: { permissionMode: "plan" },
+        },
+      },
+      team: undefined,
+    });
+    const bodies = new Map<string, string>();
+    bodies.set("planner", "Plan.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml", "claude-code");
+    const planner = results.find((r) => r.name === "planner");
+    assert.ok(planner);
+
+    // agentConfig should win over legacy frontmatter for the same key
+    assert.ok(planner.content.includes("permissionMode: plan"));
+    // Legacy custom field should still be present
+    assert.ok(planner.content.includes("customField: value"));
+  });
+});
+
 describe("generateRunCommand with orchestrator", () => {
   it("delegates to orchestrator agent when one is configured", () => {
     const config = makeConfig();
