@@ -236,4 +236,4 @@ These are intentionally left open — the right answers depend on implementation
 - How are errors and failures handled mid-pipeline?
 - ~~Should the language support importing or extending other pipeline configs?~~ (Done: pipeline imports and sub-flow imports)
 - How does versioning work for skills referenced by URL?
-- Should there be a package registry for shared skills?
+- ~~Should there be a package registry for shared skills?~~ (Done: npm-based registry with `npm:` prefix resolution and `skillfold search`)
