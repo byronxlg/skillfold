@@ -169,6 +169,7 @@ Located in `library/examples/`:
 - `--target windsurf` output mode generating `.windsurf/rules/*.md` with Windsurf-specific frontmatter
 - `--target codex` output mode generating a single `AGENTS.md` for OpenAI Codex CLI
 - `--target copilot` output mode generating `.github/copilot-instructions.md` and `.github/instructions/*.instructions.md`
+- `--target agent-teams` output mode generating Claude Code Agent Teams bootstrap artifacts (skills, agents, and `.claude/commands/start-team.md` with team structure, shared state, task sequence, and coordination)
 - `--target gemini` output mode generating `.gemini/agents/*.md` and `.gemini/skills/{name}/SKILL.md` with Gemini-specific frontmatter
 - `agentConfig` supports `mcpServers` (object map) and `skills` (string array) for full Claude Code agent frontmatter parity
 - `skillfold plugin` command for packaging pipelines as distributable Claude Code plugins
@@ -191,7 +192,7 @@ Located in `library/examples/`:
 - `SdkSpawner` uses `@anthropic-ai/claude-agent-sdk` (optional peer dependency) to spawn agents with full tool access (Read, Write, Bash, etc.), Claude Code system prompt, and project settings loading
 - State backend integration: `skillfold run` reads initial state from and writes changes to configured external backends (github-issues, github-discussions, github-pull-requests) via `gh` CLI, with graceful fallback to `state.json` when backends are unreachable
 - VitePress documentation site (`docs/`) with GitHub Pages deployment, config reference, CLI reference, live demo with interactive pipeline visualizer, interactive pipeline builder (YAML editor with live Mermaid graph), examples gallery, skill authoring guide, comparison table, detailed comparisons page (vs Agent Teams, CrewAI, manual SKILL.md), changelog page, blog section, and existing guides
-- Test suite with 830 tests across 162 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, integrations, visualize, remote, init, adopt, library, validate, list, search, npm, skills-prefix, watch, errors, subflow, api, run, backends, cli, and e2e modules
+- Test suite with 846 tests across 164 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, integrations, visualize, remote, init, adopt, library, validate, list, search, npm, skills-prefix, watch, errors, subflow, api, run, backends, cli, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next
