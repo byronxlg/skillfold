@@ -171,10 +171,10 @@ Located in `library/examples/`:
 - `--target copilot` output mode generating `.github/copilot-instructions.md` and `.github/instructions/*.instructions.md`
 - `--target agent-teams` output mode generating Claude Code Agent Teams bootstrap artifacts (skills, agents, and `.claude/commands/start-team.md` with team structure, shared state, task sequence, and coordination)
 - `--target gemini` output mode generating `.gemini/agents/*.md` and `.gemini/skills/{name}/SKILL.md` with Gemini-specific frontmatter
-- `--target goose` output mode generating `.goose/skills/{name}/SKILL.md` for Block's Goose
-- `--target roo-code` output mode generating `.roo/skills/`, `.roo/rules/`, and `.roomodes` for Roo Code
+- `--target goose` output mode generating `.goosehints` for Block's Goose
+- `--target roo-code` output mode generating `.roo/skills/`, `.roo/rules-{slug}/`, and `.roomodes` for Roo Code
 - `--target kiro` output mode generating `.kiro/skills/` and `.kiro/steering/` for Amazon's Kiro
-- `--target junie` output mode generating `.junie/skills/` and guidelines for JetBrains Junie
+- `--target junie` output mode generating `.junie/skills/` and `.junie/AGENTS.md` for JetBrains Junie
 - `agentConfig` supports `mcpServers` (object map) and `skills` (string array) for full Claude Code agent frontmatter parity
 - `skillfold plugin` command for packaging pipelines as distributable Claude Code plugins
 - `skillfold adopt` command for adopting existing Claude Code agents into a pipeline
@@ -196,7 +196,7 @@ Located in `library/examples/`:
 - `SdkSpawner` uses `@anthropic-ai/claude-agent-sdk` (optional peer dependency) to spawn agents with full tool access (Read, Write, Bash, etc.), Claude Code system prompt, and project settings loading
 - State backend integration: `skillfold run` reads initial state from and writes changes to configured external backends (github-issues, github-discussions, github-pull-requests) via `gh` CLI, with graceful fallback to `state.json` when backends are unreachable
 - VitePress documentation site (`docs/`) with GitHub Pages deployment, config reference, CLI reference, live demo with interactive pipeline visualizer, interactive pipeline builder (YAML editor with live Mermaid graph), examples gallery, skill authoring guide, comparison table, detailed comparisons page (vs Agent Teams, CrewAI, manual SKILL.md), changelog page, blog section, and existing guides
-- Test suite with 857 tests across 168 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, integrations, visualize, remote, init, adopt, library, validate, list, search, npm, skills-prefix, watch, errors, subflow, api, run, backends, cli, and e2e modules
+- Test suite with 858 tests across 168 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, integrations, visualize, remote, init, adopt, library, validate, list, search, npm, skills-prefix, watch, errors, subflow, api, run, backends, cli, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next

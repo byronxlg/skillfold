@@ -62,10 +62,10 @@ npx skillfold --target windsurf            # compile to .windsurf/rules/*.md
 npx skillfold --target codex               # compile to build/AGENTS.md
 npx skillfold --target copilot             # compile to .github/ structure
 npx skillfold --target gemini              # compile to .gemini/ structure
-npx skillfold --target goose              # compile to .goose/skills/
+npx skillfold --target goose              # compile to .goosehints
 npx skillfold --target roo-code           # compile to .roo/ with .roomodes
 npx skillfold --target kiro               # compile to .kiro/ with steering files
-npx skillfold --target junie              # compile to .junie/ with guidelines
+npx skillfold --target junie              # compile to .junie/ with AGENTS.md
 npx skillfold --check                      # verify output is current (CI mode)
 ```
 

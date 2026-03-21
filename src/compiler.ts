@@ -568,17 +568,43 @@ export function generateGoose(
   version: string,
   configFile: string,
 ): GenerateResult[] {
-  const results: GenerateResult[] = [];
+  const composedBodies = expandComposedBodies(config, bodies);
   const provenance = formatProvenance(config.name, version, configFile);
+  const sections: string[] = [];
 
-  // Generate skills under skills/ subdirectory
-  const skillResults = generate(config, bodies, outDir, version, configFile);
-  for (const result of skillResults) {
-    result.path = join(outDir, "skills", result.name, "SKILL.md");
-    results.push(result);
+  sections.push(`# ${config.name}`);
+
+  // If team flow exists, add orchestrator plan first
+  if (config.team) {
+    const orchestratorMd = generateOrchestrator(config, true);
+    sections.push("");
+    sections.push(orchestratorMd);
   }
 
-  return results;
+  // Add each composed skill as a section
+  for (const [name, skill] of Object.entries(config.skills)) {
+    if (!isComposed(skill)) continue;
+    if (config.team && name === config.team.orchestrator) continue;
+
+    const body = composedBodies.get(name) ?? "";
+    sections.push("");
+    sections.push(`## ${name}`);
+    sections.push("");
+    sections.push(`${skill.description}`);
+    if (body) {
+      sections.push("");
+      sections.push(body);
+    }
+  }
+
+  const content = provenance + sections.join("\n") + "\n";
+
+  // .goosehints goes at project root (parent of outDir since outDir is .goose)
+  return [{
+    name: "goosehints",
+    path: join(dirname(outDir), ".goosehints"),
+    content,
+  }];
 }
 
 /**
@@ -616,7 +642,7 @@ export function generateRooCode(
     const content = provenance + body + "\n";
     results.push({
       name: `rule-${name}`,
-      path: join(outDir, "rules", `${name}.md`),
+      path: join(outDir, `rules-${name}`, `${name}.md`),
       content,
     });
   }
@@ -627,7 +653,7 @@ export function generateRooCode(
     const content = provenance + orchestratorMd + "\n";
     results.push({
       name: "rule-orchestrator",
-      path: join(outDir, "rules", "orchestrator.md"),
+      path: join(outDir, "rules-orchestrator", "orchestrator.md"),
       content,
     });
   }
@@ -724,7 +750,7 @@ export function generateKiro(
 }
 
 /**
- * Generate output for junie target: .junie/skills/ and .junie/guidelines.
+ * Generate output for junie target: .junie/skills/ and .junie/AGENTS.md.
  */
 export function generateJunie(
   config: Config,
@@ -744,35 +770,40 @@ export function generateJunie(
     results.push(result);
   }
 
-  // Generate guideline files per agent (plain markdown, no frontmatter)
+  // Generate single AGENTS.md with all agent instructions
+  const sections: string[] = [];
+
+  sections.push(`# ${config.name}`);
+
+  // If team flow exists, add orchestrator plan first
+  if (config.team) {
+    const orchestratorMd = generateOrchestrator(config, true);
+    sections.push("");
+    sections.push(orchestratorMd);
+  }
+
+  // Add each composed skill as a section
   for (const [name, skill] of Object.entries(config.skills)) {
     if (!isComposed(skill)) continue;
+    if (config.team && name === config.team.orchestrator) continue;
 
-    let body = composedBodies.get(name) ?? "";
-
-    if (config.team && name === config.team.orchestrator) {
-      const orchestratorPlan = generateOrchestrator(config, true);
-      body = body ? body + "\n\n" + orchestratorPlan : orchestratorPlan;
+    const body = composedBodies.get(name) ?? "";
+    sections.push("");
+    sections.push(`## ${name}`);
+    sections.push("");
+    sections.push(`${skill.description}`);
+    if (body) {
+      sections.push("");
+      sections.push(body);
     }
-
-    const content = provenance + body + "\n";
-    results.push({
-      name: `guideline-${name}`,
-      path: join(outDir, `${name}_guidelines.md`),
-      content,
-    });
   }
 
-  // Generate standalone orchestrator guideline if no orchestrator skill
-  if (config.team && !config.team.orchestrator) {
-    const orchestratorMd = generateOrchestrator(config);
-    const content = provenance + orchestratorMd + "\n";
-    results.push({
-      name: "guideline-orchestrator",
-      path: join(outDir, "orchestrator_guidelines.md"),
-      content,
-    });
-  }
+  const content = provenance + sections.join("\n") + "\n";
+  results.push({
+    name: "AGENTS",
+    path: join(outDir, "AGENTS.md"),
+    content,
+  });
 
   return results;
 }
