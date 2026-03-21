@@ -9,6 +9,7 @@ const SELF_IMPORT_PREFIX = "node_modules/skillfold/";
 
 import { ConfigError, didYouMean } from "./errors.js";
 import { type Graph, type GraphNode, type SubFlowNode, isMapNode, isSubFlowNode, parseGraph, validateGraph } from "./graph.js";
+import { isNpmRef, resolveNpmImportPath } from "./npm.js";
 import { fetchRemoteConfig } from "./remote.js";
 import { parseState, StateSchema } from "./state.js";
 
@@ -512,7 +513,7 @@ export function validateAndBuild(raw: RawConfig): Config {
 }
 
 // Rebase imported atomic skill paths from importDir-relative to targetDir-relative.
-// Remote (https://) paths are left unchanged.
+// Remote (https://) and npm: paths are left unchanged.
 function rebaseSkillPaths(
   skills: Record<string, SkillEntry>,
   importDir: string,
@@ -520,7 +521,7 @@ function rebaseSkillPaths(
 ): Record<string, SkillEntry> {
   const result: Record<string, SkillEntry> = {};
   for (const [name, skill] of Object.entries(skills)) {
-    if (isAtomic(skill) && !skill.path.startsWith("https://")) {
+    if (isAtomic(skill) && !skill.path.startsWith("https://") && !isNpmRef(skill.path)) {
       const abs = resolve(importDir, skill.path);
       const rebased = relative(targetDir, abs);
       const rebasedSkill: AtomicSkill = { path: rebased };
@@ -571,6 +572,14 @@ async function resolveImports(
     if (importPath.startsWith("https://")) {
       content = await fetchRemoteConfig(importPath);
       // Remote imports keep their paths as-is (already URLs or relative to remote)
+    } else if (isNpmRef(importPath)) {
+      const resolved = resolveNpmImportPath(importPath, baseDir);
+      importDir = dirname(resolved);
+      try {
+        content = readFileSync(resolved, "utf-8");
+      } catch {
+        throw new ConfigError(`Cannot read npm imported config: ${importPath} (resolved to ${resolved})`);
+      }
     } else {
       let resolved = resolve(baseDir, importPath);
       // When running via npx, node_modules/skillfold/ won't exist in the

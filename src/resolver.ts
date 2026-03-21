@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 
 import { type Config, isAtomic } from "./config.js";
 import { ResolveError } from "./errors.js";
+import { isNpmRef, resolveNpmSkillPath } from "./npm.js";
 import { fetchRemoteSkill } from "./remote.js";
 
 export function stripFrontmatter(content: string): string {
@@ -34,7 +35,9 @@ export async function resolveSkills(
       continue;
     }
 
-    const skillDir = resolve(baseDir, skill.path);
+    const skillDir = isNpmRef(skill.path)
+      ? resolveNpmSkillPath(skill.path, baseDir)
+      : resolve(baseDir, skill.path);
     const skillFile = join(skillDir, "SKILL.md");
 
     if (!existsSync(skillDir)) {
