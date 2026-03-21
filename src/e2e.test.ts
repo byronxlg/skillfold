@@ -362,6 +362,61 @@ team:
     assert.ok(existsSync(join(outDir, "reviewer", "SKILL.md")));
   });
 
+  it("inline config with resource declarations renders resolved URLs", () => {
+    const raw = parseRawConfig(`
+name: resources-test
+skills:
+  atomic:
+    github:
+      path: ./skills/github
+      resources:
+        discussions: "https://github.com/org/repo/discussions"
+        issues: "https://github.com/org/repo/issues"
+        pull-requests: "https://github.com/org/repo/pulls"
+    coding: ./skills/coding
+  composed:
+    engineer:
+      compose: [coding]
+      description: "Writes code."
+    orchestrator:
+      compose: [github]
+      description: "Coordinates."
+state:
+  direction:
+    type: string
+    location:
+      skill: github
+      path: discussions/general
+  tasks:
+    type: string
+    location:
+      skill: github
+      path: issues
+  review:
+    type: string
+    location:
+      skill: github
+      path: pull-requests
+      kind: review
+team:
+  orchestrator: orchestrator
+  flow:
+    - engineer:
+        reads: [state.direction]
+        writes: [state.tasks]
+      then: end
+`);
+    const config = validateAndBuild(raw);
+    const output = generateOrchestrator(config);
+
+    // State table should have resolved URLs
+    assert.ok(output.includes("https://github.com/org/repo/discussions/general"));
+    assert.ok(output.includes("https://github.com/org/repo/issues"));
+    assert.ok(output.includes("https://github.com/org/repo/pulls (review)"));
+    // Should NOT contain abstract format
+    assert.ok(!output.includes("github: discussions"));
+  });
+
   it("orchestrator includes async step in execution plan", async () => {
     asyncTmpDir = makeTmpDir();
     const outDir = join(asyncTmpDir, "dist");

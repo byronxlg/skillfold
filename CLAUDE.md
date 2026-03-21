@@ -68,7 +68,7 @@ BRIEF.md               - Full design brief
 
 Three top-level sections: `skills`, `state`, `team`.
 
-- **skills.atomic**: Path references to atomic skill directories
+- **skills.atomic**: Path references to atomic skill directories (can declare `resources` for compile-time location validation)
 - **skills.composed**: Composition declarations combining atomic skills into agents
 - **state**: Typed state schema (top-level, importable independently)
 - **team.orchestrator**: Optional skill name to append generated plan to
@@ -82,7 +82,7 @@ Read BRIEF.md for full context. Key points:
 
 - **Skill composition**: Atomic skills define reusable fragments. Composed skills concatenate atomic skill bodies in declared order. Composition is recursive.
 - **Team flow**: Agents wired into typed execution graphs with conditional routing, loops, and parallel map. Parsed and validated.
-- **State schema**: Typed state schema with custom types, primitives, lists, and external locations. Reads/writes validated against team flow.
+- **State schema**: Typed state schema with custom types, primitives, lists, and external locations. Reads/writes validated against team flow. Location paths validated against skill resource declarations at compile time.
 - **Orchestrator generation**: Generated from the team flow definition. Produces structured execution plan with step numbering, state table, and conditional/map rendering.
 
 ## Shared Skills Library
@@ -156,7 +156,10 @@ Located in `library/examples/`:
 - `skillfold plugin` command for packaging pipelines as distributable Claude Code plugins
 - `skillfold adopt` command for adopting existing Claude Code agents into a pipeline
 - Async flow nodes for external agents (humans, CI, other teams) with `async: true` and policy options (block, skip, use-latest)
-- Test suite with 469 tests across 85 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, adopt, library, validate, list, watch, errors, and e2e modules
+- Resource namespace declarations on atomic skills for compile-time state location path validation
+- Resolved location URLs in orchestrator state table output (base URL templates from skill resources)
+- Compiler warnings for implicit state locations (skills without resource declarations)
+- Test suite with 489 tests across 89 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, adopt, library, validate, list, watch, errors, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next

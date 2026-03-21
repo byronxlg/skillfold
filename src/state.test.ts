@@ -534,4 +534,97 @@ describe("parseState", () => {
       );
     });
   });
+
+  describe("resource namespace validation", () => {
+    const SKILLS_WITH_RESOURCES = {
+      github: {
+        resources: {
+          discussions: "https://github.com/org/repo/discussions",
+          issues: "https://github.com/org/repo/issues",
+          "pull-requests": "https://github.com/org/repo/pulls",
+        },
+      },
+      lint: {},
+    };
+
+    it("accepts location path matching a declared namespace", () => {
+      const raw = {
+        direction: {
+          type: "string",
+          location: { skill: "github", path: "discussions/general" },
+        },
+      };
+      const schema = parseState(raw, SKILLS_WITH_RESOURCES);
+      assert.equal(schema.fields["direction"].location?.path, "discussions/general");
+    });
+
+    it("accepts location path that is just a namespace (no sub-path)", () => {
+      const raw = {
+        tasks: {
+          type: "string",
+          location: { skill: "github", path: "issues" },
+        },
+      };
+      const schema = parseState(raw, SKILLS_WITH_RESOURCES);
+      assert.equal(schema.fields["tasks"].location?.path, "issues");
+    });
+
+    it("rejects location path with unrecognized namespace", () => {
+      const raw = {
+        data: {
+          type: "string",
+          location: { skill: "github", path: "wikis/page" },
+        },
+      };
+      assert.throws(
+        () => parseState(raw, SKILLS_WITH_RESOURCES),
+        (err: unknown) => {
+          assert.ok(err instanceof ConfigError);
+          assert.match(err.message, /namespace "wikis" which is not declared/);
+          assert.match(err.message, /Declared namespaces: discussions, issues, pull-requests/);
+          return true;
+        }
+      );
+    });
+
+    it("includes didYouMean hint for close namespace match", () => {
+      const raw = {
+        data: {
+          type: "string",
+          location: { skill: "github", path: "issue/123" },
+        },
+      };
+      assert.throws(
+        () => parseState(raw, SKILLS_WITH_RESOURCES),
+        (err: unknown) => {
+          assert.ok(err instanceof ConfigError);
+          assert.match(err.message, /namespace "issue"/);
+          assert.match(err.message, /Did you mean "issues"/);
+          return true;
+        }
+      );
+    });
+
+    it("accepts any path for skills without resource declarations", () => {
+      const raw = {
+        result: {
+          type: "string",
+          location: { skill: "lint", path: "anything/goes" },
+        },
+      };
+      const schema = parseState(raw, SKILLS_WITH_RESOURCES);
+      assert.equal(schema.fields["result"].location?.path, "anything/goes");
+    });
+
+    it("backward compat: Set<string> still works for skills param", () => {
+      const raw = {
+        result: {
+          type: "string",
+          location: { skill: "review", path: "anything" },
+        },
+      };
+      const schema = parseState(raw, SOME_SKILLS);
+      assert.equal(schema.fields["result"].location?.skill, "review");
+    });
+  });
 });

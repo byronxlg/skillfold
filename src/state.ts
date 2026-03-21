@@ -1,5 +1,9 @@
 import { ConfigError, didYouMean } from "./errors.js";
 
+export interface SkillResources {
+  resources?: Record<string, string>;
+}
+
 export type PrimitiveType = "string" | "bool" | "number";
 
 export type StateType =
@@ -103,7 +107,7 @@ function parseCustomType(
 function validateLocation(
   fieldName: string,
   location: unknown,
-  skillNames: Set<string>
+  skills: Record<string, SkillResources>,
 ): StateLocation {
   if (typeof location !== "object" || location === null) {
     throw new ConfigError(
@@ -125,9 +129,29 @@ function validateLocation(
     );
   }
 
-  if (!skillNames.has(loc.skill)) {
+  if (!(loc.skill in skills)) {
     throw new ConfigError(
       `State field "${fieldName}": location references unknown skill "${loc.skill}"`
+    );
+  }
+
+  const skill = skills[loc.skill];
+
+  // Validate namespace against resource declarations
+  if (skill.resources && Object.keys(skill.resources).length > 0) {
+    const slashIdx = loc.path.indexOf("/");
+    const namespace = slashIdx === -1 ? loc.path : loc.path.slice(0, slashIdx);
+    if (!(namespace in skill.resources)) {
+      const declared = Object.keys(skill.resources);
+      const hint = didYouMean(namespace, declared);
+      throw new ConfigError(
+        `State field "${fieldName}": location path "${loc.path}" references namespace "${namespace}" which is not declared by skill "${loc.skill}". Declared namespaces: ${declared.join(", ")}${hint}`
+      );
+    }
+  } else {
+    // Emit warning for implicit locations
+    process.stderr.write(
+      `Warning: state field "${fieldName}" references skill "${loc.skill}" which has no resource declarations. Consider adding a "resources" map to the "${loc.skill}" skill definition for compile-time path validation.\n`
     );
   }
 
@@ -141,8 +165,14 @@ function validateLocation(
 
 export function parseState(
   raw: Record<string, unknown>,
-  skillNames: Set<string>
+  skills: Set<string> | Record<string, SkillResources>,
 ): StateSchema {
+  // Normalize: accept both Set<string> (legacy) and Record (new)
+  const skillsRecord: Record<string, SkillResources> =
+    skills instanceof Set
+      ? Object.fromEntries([...skills].map((n) => [n, {}]))
+      : skills;
+
   const types: Record<string, CustomType> = {};
   const fields: Record<string, StateField> = {};
 
@@ -180,7 +210,7 @@ export function parseState(
     const field: StateField = { type: stateType };
 
     if ("location" in obj) {
-      field.location = validateLocation(name, obj.location, skillNames);
+      field.location = validateLocation(name, obj.location, skillsRecord);
     }
 
     fields[name] = field;

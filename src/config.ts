@@ -14,6 +14,7 @@ import { parseState, StateSchema } from "./state.js";
 
 export interface AtomicSkill {
   path: string;
+  resources?: Record<string, string>;
 }
 
 /** Known Claude Code subagent frontmatter fields that can be set on composed skills. */
@@ -89,6 +90,34 @@ export function isComposed(skill: SkillEntry): skill is ComposedSkill {
   return "compose" in skill;
 }
 
+const RESOURCE_NAME_RE = /^[a-z0-9][a-z0-9-]*$/;
+
+function parseResources(
+  name: string,
+  rawResources: unknown,
+): Record<string, string> {
+  if (typeof rawResources !== "object" || rawResources === null || Array.isArray(rawResources)) {
+    throw new ConfigError(
+      `Skill "${name}": resources must be a YAML map`
+    );
+  }
+  const resources: Record<string, string> = {};
+  for (const [key, val] of Object.entries(rawResources as Record<string, unknown>)) {
+    if (!RESOURCE_NAME_RE.test(key)) {
+      throw new ConfigError(
+        `Skill "${name}": resource name "${key}" must be lowercase alphanumeric with hyphens`
+      );
+    }
+    if (typeof val !== "string" || val.length === 0) {
+      throw new ConfigError(
+        `Skill "${name}": resource "${key}" must be a non-empty string`
+      );
+    }
+    resources[key] = val;
+  }
+  return resources;
+}
+
 function normalizeAtomicSkills(
   raw: Record<string, unknown>
 ): Record<string, AtomicSkill> {
@@ -106,7 +135,12 @@ function normalizeAtomicSkills(
       if (typeof path !== "string") {
         throw new ConfigError(`Skill "${name}": path must be a string`);
       }
-      skills[name] = { path };
+      const skill: AtomicSkill = { path };
+      const rawObj = value as Record<string, unknown>;
+      if ("resources" in rawObj && rawObj.resources !== undefined) {
+        skill.resources = parseResources(name, rawObj.resources);
+      }
+      skills[name] = skill;
     } else {
       throw new ConfigError(
         `Skill "${name}": must be a path string, or an object with "path"`
@@ -445,8 +479,11 @@ export function validateAndBuild(raw: RawConfig): Config {
   const config: Config = { name: raw.name, skills: raw.skills };
 
   if (raw.rawState !== undefined) {
-    const skillNames = new Set(Object.keys(raw.skills));
-    config.state = parseState(raw.rawState, skillNames);
+    const skillsForState: Record<string, { resources?: Record<string, string> }> = {};
+    for (const [name, skill] of Object.entries(raw.skills)) {
+      skillsForState[name] = isAtomic(skill) ? { resources: skill.resources } : {};
+    }
+    config.state = parseState(raw.rawState, skillsForState);
   }
 
   if (raw.rawTeam !== undefined) {
@@ -482,7 +519,11 @@ function rebaseSkillPaths(
     if (isAtomic(skill) && !skill.path.startsWith("https://")) {
       const abs = resolve(importDir, skill.path);
       const rebased = relative(targetDir, abs);
-      result[name] = { path: rebased };
+      const rebasedSkill: AtomicSkill = { path: rebased };
+      if (skill.resources) {
+        rebasedSkill.resources = skill.resources;
+      }
+      result[name] = rebasedSkill;
     } else {
       result[name] = skill;
     }
