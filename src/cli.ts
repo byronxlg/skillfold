@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 import { type CompileTarget, check, compile, computeStats } from "./compiler.js";
 import { isAtomic, isComposed, loadConfig } from "./config.js";
-import { ConfigError, CompileError, GraphError, ResolveError } from "./errors.js";
+import { ConfigError, CompileError, GraphError, ResolveError, RunError } from "./errors.js";
 import { initFromTemplate, initProject, TEMPLATES } from "./init.js";
 import { listPipeline } from "./list.js";
 import { resolveSkills } from "./resolver.js";
@@ -27,6 +27,7 @@ Commands:
   validate          Validate config without compiling
   list              Display a structured summary of the pipeline
   graph             Output Mermaid flowchart of the team flow
+  run               Execute a compiled pipeline (linear flows only)
   watch             Compile and watch for changes
   plugin            Package compiled output as a Claude Code plugin
   search [query]    Search npm for skillfold skill packages
@@ -39,6 +40,7 @@ Options:
   --target <mode>      Output mode: skill, claude-code, cursor, windsurf, codex, copilot
   --template <name>    Start from a library template (init only)
   --check              Verify compiled output is up-to-date (exit 1 if stale)
+  --dry-run            Show execution plan without running (run only)
   --html               Output interactive HTML instead of Mermaid (graph only)
   --help               Show this help
   --version            Show version
@@ -46,7 +48,7 @@ Options:
 Templates: ${TEMPLATES.join(", ")}`);
 }
 
-type Command = "init" | "adopt" | "compile" | "graph" | "list" | "validate" | "watch" | "plugin" | "search";
+type Command = "init" | "adopt" | "compile" | "graph" | "list" | "run" | "validate" | "watch" | "plugin" | "search";
 
 interface Args {
   command: Command;
@@ -58,6 +60,7 @@ interface Args {
   template: string | undefined;
   query: string | undefined;
   check: boolean;
+  dryRun: boolean;
   html: boolean;
   help: boolean;
   version: boolean;
@@ -73,6 +76,7 @@ function parseArgs(argv: string[]): Args {
   let template: string | undefined;
   let query: string | undefined;
   let checkMode = false;
+  let dryRun = false;
   let html = false;
   let help = false;
   let version = false;
@@ -105,6 +109,9 @@ function parseArgs(argv: string[]): Args {
     i = 1;
   } else if (argv.length > 0 && argv[0] === "plugin") {
     command = "plugin";
+    i = 1;
+  } else if (argv.length > 0 && argv[0] === "run") {
+    command = "run";
     i = 1;
   } else if (argv.length > 0 && argv[0] === "search") {
     command = "search";
@@ -140,6 +147,8 @@ function parseArgs(argv: string[]): Args {
       template = argv[++i];
     } else if (argv[i] === "--check") {
       checkMode = true;
+    } else if (argv[i] === "--dry-run") {
+      dryRun = true;
     } else if (argv[i] === "--html") {
       html = true;
     } else if (argv[i] === "--help") {
@@ -175,6 +184,7 @@ function parseArgs(argv: string[]): Args {
     template,
     query,
     check: checkMode,
+    dryRun,
     html,
     help,
     version,
@@ -337,6 +347,68 @@ async function main(): Promise<void> {
         err instanceof ConfigError ||
         err instanceof ResolveError ||
         err instanceof CompileError
+      ) {
+        console.error(`skillfold error: ${err.message}`);
+        process.exit(1);
+      }
+      throw err;
+    }
+    return;
+  }
+
+  if (args.command === "run") {
+    const { run } = await import("./run.js");
+    try {
+      if (args.target === "skill") {
+        console.error("skillfold error: --target is required for run (e.g. --target claude-code)");
+        process.exit(1);
+      }
+
+      const config = await loadConfig(args.configPath);
+      if (!config.team) {
+        console.error("skillfold error: config has no team.flow defined - nothing to run");
+        process.exit(1);
+      }
+
+      const baseDir = dirname(args.configPath);
+      const bodies = await resolveSkills(config, baseDir);
+
+      const nodeCount = config.team.flow.nodes.length;
+      if (args.dryRun) {
+        process.stderr.write(`skillfold: dry run for ${config.name} (${nodeCount} steps)\n`);
+      } else {
+        process.stderr.write(`skillfold: running ${config.name} (${nodeCount} steps)\n`);
+      }
+
+      const result = await run({
+        config,
+        bodies,
+        target: args.target,
+        outDir: args.outDir,
+        dryRun: args.dryRun,
+      });
+
+      if (!args.dryRun) {
+        for (const step of result.steps) {
+          const statusLabel = step.status === "ok" ? "done" :
+            step.status === "skipped" ? "skipped (async)" :
+            `error: ${step.error}`;
+          process.stderr.write(`  [${step.step}/${nodeCount}] ${step.agent}... ${statusLabel}\n`);
+        }
+
+        const failed = result.steps.find(s => s.status === "error");
+        if (failed) {
+          process.stderr.write(`skillfold: pipeline failed at step ${failed.step}\n`);
+          process.exit(1);
+        } else {
+          process.stderr.write(`skillfold: pipeline complete\n`);
+        }
+      }
+    } catch (err) {
+      if (
+        err instanceof ConfigError ||
+        err instanceof ResolveError ||
+        err instanceof RunError
       ) {
         console.error(`skillfold error: ${err.message}`);
         process.exit(1);
