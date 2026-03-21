@@ -38,7 +38,17 @@ export interface MapNode {
   then?: Then;
 }
 
-export type GraphNode = StepNode | AsyncNode | MapNode;
+export interface SubFlowNode {
+  name: string;
+  flow: string;
+  reads: string[];
+  writes: string[];
+  /** Populated after config resolution loads the referenced pipeline. */
+  graph?: GraphNode[];
+  then?: Then;
+}
+
+export type GraphNode = StepNode | AsyncNode | MapNode | SubFlowNode;
 
 export interface Graph {
   nodes: GraphNode[];
@@ -50,6 +60,10 @@ export function isAsyncNode(node: GraphNode): node is AsyncNode {
 
 export function isMapNode(node: GraphNode): node is MapNode {
   return "over" in node;
+}
+
+export function isSubFlowNode(node: GraphNode): node is SubFlowNode {
+  return "flow" in node;
 }
 
 export function isConditionalThen(then: Then): then is ConditionalBranch[] {
@@ -191,6 +205,7 @@ function parseGraphNodes(raw: unknown[], insideMap = false): GraphNode[] {
       const writes: string[] = [];
       let isAsync = false;
       let policy: "block" | "skip" | "use-latest" = "block";
+      let flowPath: string | undefined;
 
       if (typeof value === "object" && value !== null && !Array.isArray(value)) {
         const stepObj = value as Record<string, unknown>;
@@ -211,6 +226,20 @@ function parseGraphNodes(raw: unknown[], insideMap = false): GraphNode[] {
             );
           }
           writes.push(...(stepObj.writes as string[]));
+        }
+
+        if (stepObj.flow !== undefined) {
+          if (typeof stepObj.flow !== "string" || stepObj.flow.length === 0) {
+            throw new GraphError(
+              `Graph element "${primaryKey}": flow must be a non-empty string (path to a pipeline config)`
+            );
+          }
+          if (insideMap) {
+            throw new GraphError(
+              `Graph element "${primaryKey}": sub-flow nodes are not allowed inside map subgraphs`
+            );
+          }
+          flowPath = stepObj.flow;
         }
 
         if (stepObj.async === true) {
@@ -236,7 +265,15 @@ function parseGraphNodes(raw: unknown[], insideMap = false): GraphNode[] {
         );
       }
 
-      if (isAsync) {
+      if (flowPath !== undefined) {
+        nodes.push({
+          name: primaryKey,
+          flow: flowPath,
+          reads,
+          writes,
+          ...(then !== undefined ? { then } : {}),
+        });
+      } else if (isAsync) {
         nodes.push({
           name: primaryKey,
           async: true,
@@ -272,10 +309,11 @@ export function parseGraph(raw: unknown): Graph {
   return { nodes };
 }
 
-// Collect all node labels (skill names for steps, async node names, "map" for map nodes)
+// Collect all node labels (skill names for steps, async node names, sub-flow names, "map" for map nodes)
 function collectNodeLabels(nodes: GraphNode[]): string[] {
   return nodes.map((node) => {
     if (isMapNode(node)) return "map";
+    if (isSubFlowNode(node)) return node.name;
     if (isAsyncNode(node)) return node.name;
     return node.skill;
   });
@@ -288,9 +326,10 @@ function getThenTargets(then: Then | undefined): string[] {
   return then.map((b) => b.to);
 }
 
-// Get a label for a node (skill name, async name, or "map")
+// Get a label for a node (skill name, async name, sub-flow name, or "map")
 function nodeLabel(node: GraphNode): string {
   if (isMapNode(node)) return "map";
+  if (isSubFlowNode(node)) return node.name;
   if (isAsyncNode(node)) return node.name;
   return node.skill;
 }
@@ -310,10 +349,10 @@ function validateNodes(
 ): void {
   const nodeLabels = new Set(collectNodeLabels(nodes));
 
-  // Rule 1: Skill references (async nodes skip this check)
+  // Rule 1: Skill references (async and sub-flow nodes skip this check)
   const skillNames = Object.keys(skills);
   for (const node of nodes) {
-    if (!isMapNode(node) && !isAsyncNode(node)) {
+    if (!isMapNode(node) && !isAsyncNode(node) && !isSubFlowNode(node)) {
       if (!(node.skill in skills)) {
         const hint = didYouMean(node.skill, skillNames);
         throw new GraphError(
@@ -338,11 +377,11 @@ function validateNodes(
     }
   }
 
-  // Rule 3: State path validation (applies identically to step and async nodes)
+  // Rule 3: State path validation (applies to step, async, and sub-flow nodes)
   const stateFieldNames = state ? Object.keys(state.fields) : [];
   for (const node of nodes) {
     if (isMapNode(node)) continue;
-    const label = isAsyncNode(node) ? node.name : node.skill;
+    const label = (isAsyncNode(node) || isSubFlowNode(node)) ? node.name : node.skill;
 
     for (const path of node.reads) {
       if (path.startsWith("state.")) {
@@ -457,7 +496,7 @@ function validateNodes(
   const writeOwners = new Map<string, { label: string; isAsync: boolean }>();
   for (const node of nodes) {
     if (isMapNode(node)) continue;
-    const label = isAsyncNode(node) ? node.name : node.skill;
+    const label = (isAsyncNode(node) || isSubFlowNode(node)) ? node.name : node.skill;
     const nodeIsAsync = isAsyncNode(node);
     for (const path of node.writes) {
       if (!path.startsWith("state.")) continue;
@@ -525,6 +564,16 @@ function validateNodes(
 
     // Recursively validate the subgraph
     validateNodes(node.graph, skills, state, subMapCtx);
+  }
+
+  // Rule 9: Sub-flow inner graph validation (after resolution populates graph)
+  for (const node of nodes) {
+    if (!isSubFlowNode(node)) continue;
+    if (node.graph) {
+      // The inner graph was resolved from the referenced config;
+      // validate it with the merged skills and state.
+      validateNodes(node.graph, skills, state);
+    }
   }
 
   // Build index: node label -> position in this level's node list

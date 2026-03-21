@@ -1,5 +1,5 @@
 import { type Config, type SkillEntry, isComposed } from "./config.js";
-import { type GraphNode, isAsyncNode, isConditionalThen, isMapNode } from "./graph.js";
+import { type GraphNode, isAsyncNode, isConditionalThen, isMapNode, isSubFlowNode } from "./graph.js";
 
 // Sanitize a name into a valid Mermaid node ID by replacing non-alphanumeric
 // characters with underscores.
@@ -47,6 +47,8 @@ function buildIdMap(nodes: GraphNode[]): Map<string, string> {
   for (const node of nodes) {
     if (isMapNode(node)) {
       ids.set("map", `map_${sanitizeId(node.over)}`);
+    } else if (isSubFlowNode(node)) {
+      ids.set(node.name, `subflow_${sanitizeId(node.name)}`);
     } else if (isAsyncNode(node)) {
       ids.set(node.name, sanitizeId(node.name));
     } else {
@@ -106,6 +108,7 @@ function renderThen(
 // Get the Mermaid ID for a node when it's the target of a fall-through edge.
 function getNextTarget(node: GraphNode): string {
   if (isMapNode(node)) return `map_${sanitizeId(node.over)}`;
+  if (isSubFlowNode(node)) return `subflow_${sanitizeId(node.name)}`;
   if (isAsyncNode(node)) return sanitizeId(node.name);
   return sanitizeId(node.skill);
 }
@@ -166,6 +169,37 @@ function renderNodes(
             lines,
             indent,
             currentId,
+            `${endNodeId}([end])`,
+            node.writes,
+          );
+        }
+      }
+    } else if (isSubFlowNode(node)) {
+      // Sub-flow nodes render as subgraphs containing their inner flow
+      const subgraphId = `subflow_${sanitizeId(node.name)}`;
+      const subgraphLabel = `sub-flow: ${node.name}`;
+      lines.push(`${indent}subgraph ${subgraphId}["${subgraphLabel}"]`);
+
+      if (node.graph && node.graph.length > 0) {
+        const innerIndent = indent + "    ";
+        const innerEndId = `end_${subgraphId}`;
+        renderNodes(node.graph, lines, innerIndent, innerEndId, skills);
+      }
+
+      lines.push(`${indent}end`);
+
+      if (node.then !== undefined) {
+        renderThen(lines, indent, subgraphId, node.then, endNodeId, idMap, node.writes);
+      } else {
+        const nextNode = nodes[i + 1];
+        if (nextNode) {
+          const nextId = getNextTarget(nextNode);
+          renderEdge(lines, indent, subgraphId, nextId, node.writes);
+        } else {
+          renderEdge(
+            lines,
+            indent,
+            subgraphId,
             `${endNodeId}([end])`,
             node.writes,
           );
