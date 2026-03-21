@@ -70,15 +70,16 @@ BRIEF.md               - Full design brief
 
 ## Config Structure
 
-Three top-level sections: `skills`, `state`, `team`.
+Four top-level sections: `resources`, `skills`, `state`, `team`.
 
-- **skills.atomic**: Path references to atomic skill directories (can declare `resources` for compile-time location validation)
+- **resources**: Resource declarations mapping group names to namespace URLs for state location validation and orchestrator URL resolution
+- **skills.atomic**: Path references to atomic skill directories
 - **skills.composed**: Composition declarations combining atomic skills into agents
 - **state**: Typed state schema (top-level, importable independently)
 - **team.orchestrator**: Optional skill name to append generated plan to
 - **team.flow**: Directed execution graph with conditional routing, loops, parallel map, and sub-flow imports
 
-Imports pull in `skills` and `state`, ignore `team`.
+Imports pull in `skills`, `state`, and `resources`, ignore `team`.
 
 ## Design Brief Summary
 
@@ -161,8 +162,8 @@ Located in `library/examples/`:
 - `skillfold plugin` command for packaging pipelines as distributable Claude Code plugins
 - `skillfold adopt` command for adopting existing Claude Code agents into a pipeline
 - Async flow nodes for external agents (humans, CI, other teams) with `async: true` and policy options (block, skip, use-latest)
-- Resource namespace declarations on atomic skills for compile-time state location path validation
-- Resolved location URLs in orchestrator state table output (base URL templates from skill resources)
+- Top-level `resources` section for resource namespace declarations with compile-time state location path validation (skill-level resources deprecated but backward compatible)
+- Resolved location URLs in orchestrator state table output (base URL templates from top-level resources)
 - Compiler warnings for implicit state locations (skills without resource declarations)
 - Sub-flow imports: flow nodes can reference external pipeline configs via `flow:` field, with recursive resolution, skill/state merging, circular reference detection, orchestrator rendering with hierarchical steps, and Mermaid visualization as subgraphs
 - Async nodes inside map subgraphs for modeling human/external tasks alongside agent tasks in parallel maps
@@ -172,7 +173,7 @@ Located in `library/examples/`:
 - `npm:` prefix support for skill references and imports (resolves to node_modules paths)
 - Publishing guide (`docs/publishing.md`) for sharing skills via npm
 - `skillfold.local.yaml` support for local config overrides (gitignored), with merge semantics for skills/state/team
-- Test suite with 580 tests across 107 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, adopt, library, validate, list, search, npm, watch, errors, subflow, api, and e2e modules
+- Test suite with 592 tests across 108 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, adopt, library, validate, list, search, npm, watch, errors, subflow, api, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next

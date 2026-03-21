@@ -18,6 +18,23 @@
         "type": "string"
       }
     },
+    "resources": {
+      "type": "object",
+      "description": "Top-level resource declarations mapping resource group names to namespace-URL maps. State locations reference these by the group name in the 'skill' field. Decouples deployment-specific URLs from skill definitions.",
+      "additionalProperties": {
+        "type": "object",
+        "description": "Resource namespaces with base URL templates.",
+        "additionalProperties": {
+          "type": "string"
+        },
+        "propertyNames": {
+          "pattern": "^[a-z0-9][a-z0-9-]*$"
+        }
+      },
+      "propertyNames": {
+        "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
+      }
+    },
     "skills": {
       "type": "object",
       "description": "Skill definitions split into atomic and composed sub-sections.",

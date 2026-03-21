@@ -1,5 +1,11 @@
 name: skillfold-team
 
+resources:
+  github:
+    discussions: "https://github.com/byronxlg/skillfold/discussions"
+    issues: "https://github.com/byronxlg/skillfold/issues"
+    pull-requests: "https://github.com/byronxlg/skillfold/pulls"
+
 skills:
   atomic:
     # Remote public skills
@@ -12,12 +18,7 @@ skills:
     security-best-practices: https://github.com/openai/skills/tree/main/skills/.curated/security-best-practices
 
     # Project-specific skills
-    github:
-      path: ./skills/github
-      resources:
-        discussions: "https://github.com/byronxlg/skillfold/discussions"
-        issues: "https://github.com/byronxlg/skillfold/issues"
-        pull-requests: "https://github.com/byronxlg/skillfold/pulls"
+    github: ./skills/github
     moltbook: ./skills/moltbook
     product-strategy: ./skills/product-strategy
     skillfold-context: ./skills/skillfold-context

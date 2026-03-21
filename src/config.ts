@@ -68,6 +68,7 @@ export interface TeamConfig {
 export interface Config {
   name: string;
   skills: Record<string, SkillEntry>;
+  resources?: Record<string, Record<string, string>>;
   state?: StateSchema;
   team?: TeamConfig;
 }
@@ -75,6 +76,7 @@ export interface Config {
 export interface RawConfig {
   name: string;
   skills: Record<string, SkillEntry>;
+  resources?: Record<string, Record<string, string>>;
   rawState?: Record<string, unknown>;
   rawTeam?: {
     orchestrator?: string;
@@ -119,6 +121,24 @@ function parseResources(
     resources[key] = val;
   }
   return resources;
+}
+
+function parseTopLevelResources(
+  rawResources: unknown,
+): Record<string, Record<string, string>> {
+  if (typeof rawResources !== "object" || rawResources === null || Array.isArray(rawResources)) {
+    throw new ConfigError("Top-level resources must be a YAML map");
+  }
+  const result: Record<string, Record<string, string>> = {};
+  for (const [groupName, groupValue] of Object.entries(rawResources as Record<string, unknown>)) {
+    if (!RESOURCE_NAME_RE.test(groupName)) {
+      throw new ConfigError(
+        `Resource group "${groupName}" must be lowercase alphanumeric with hyphens`
+      );
+    }
+    result[groupName] = parseResources(groupName, groupValue);
+  }
+  return result;
 }
 
 function normalizeAtomicSkills(
@@ -422,6 +442,34 @@ export function parseRawConfig(content: string): RawConfig {
 
   const result: RawConfig = { name: raw.name, skills };
 
+  // Parse top-level resources
+  if (raw.resources !== undefined) {
+    result.resources = parseTopLevelResources(raw.resources);
+  }
+
+  // Check for deprecated skill-level resources and merge into top-level
+  let mergedResources: Record<string, Record<string, string>> = result.resources ? { ...result.resources } : {};
+  let hasSkillLevelResources = false;
+  for (const [name, skill] of Object.entries(skills)) {
+    if (isAtomic(skill) && skill.resources && Object.keys(skill.resources).length > 0) {
+      hasSkillLevelResources = true;
+      process.stderr.write(
+        `Warning: resources on skills.atomic.${name} is deprecated, move to top-level "resources" section\n`
+      );
+      // Skill-level provides defaults; top-level overrides
+      if (!(name in mergedResources)) {
+        mergedResources[name] = { ...skill.resources };
+      } else {
+        mergedResources[name] = { ...skill.resources, ...mergedResources[name] };
+      }
+    }
+  }
+  if (Object.keys(mergedResources).length > 0) {
+    result.resources = mergedResources;
+  } else if (hasSkillLevelResources) {
+    result.resources = mergedResources;
+  }
+
   if (raw.state !== undefined) {
     if (typeof raw.state !== "object" || raw.state === null) {
       throw new ConfigError("State must be a YAML object");
@@ -481,10 +529,20 @@ export function validateAndBuild(raw: RawConfig): Config {
 
   const config: Config = { name: raw.name, skills: raw.skills };
 
+  if (raw.resources && Object.keys(raw.resources).length > 0) {
+    config.resources = raw.resources;
+  }
+
   if (raw.rawState !== undefined) {
     const skillsForState: Record<string, { resources?: Record<string, string> }> = {};
     for (const [name, skill] of Object.entries(raw.skills)) {
-      skillsForState[name] = isAtomic(skill) ? { resources: skill.resources } : {};
+      if (config.resources && config.resources[name]) {
+        skillsForState[name] = { resources: config.resources[name] };
+      } else if (isAtomic(skill) && skill.resources) {
+        skillsForState[name] = { resources: skill.resources };
+      } else {
+        skillsForState[name] = {};
+      }
     }
     config.state = parseState(raw.rawState, skillsForState);
   }
@@ -524,11 +582,7 @@ function rebaseSkillPaths(
     if (isAtomic(skill) && !skill.path.startsWith("https://") && !isNpmRef(skill.path)) {
       const abs = resolve(importDir, skill.path);
       const rebased = relative(targetDir, abs);
-      const rebasedSkill: AtomicSkill = { path: rebased };
-      if (skill.resources) {
-        rebasedSkill.resources = skill.resources;
-      }
-      result[name] = rebasedSkill;
+      result[name] = { path: rebased };
     } else {
       result[name] = skill;
     }
@@ -551,6 +605,21 @@ function mergeRawState(
   if (!base) return overlay;
   if (!overlay) return base;
   return { ...base, ...overlay };
+}
+
+function mergeResources(
+  base: Record<string, Record<string, string>> | undefined,
+  overlay: Record<string, Record<string, string>> | undefined,
+): Record<string, Record<string, string>> | undefined {
+  if (!base) return overlay;
+  if (!overlay) return base;
+  const merged = { ...base };
+  for (const [group, resources] of Object.entries(overlay)) {
+    merged[group] = group in merged
+      ? { ...merged[group], ...resources }
+      : { ...resources };
+  }
+  return merged;
 }
 
 // Derive the local config filename from the main config path.
@@ -662,6 +731,7 @@ function mergeLocalOverride(raw: RawConfig, localPath: string): RawConfig {
   return {
     name: raw.name,
     skills: local.skills ? mergeSkills(raw.skills, local.skills) : raw.skills,
+    resources: raw.resources,
     rawState: local.rawState !== undefined
       ? mergeRawState(raw.rawState, local.rawState)
       : raw.rawState,
@@ -681,6 +751,7 @@ async function resolveImports(
 
   let mergedSkills: Record<string, SkillEntry> = {};
   let mergedState: Record<string, unknown> | undefined;
+  let mergedResources: Record<string, Record<string, string>> | undefined;
 
   for (const importPath of raw.imports) {
     let content: string;
@@ -722,15 +793,18 @@ async function resolveImports(
       : imported.skills;
     mergedSkills = mergeSkills(mergedSkills, skills);
     mergedState = mergeRawState(mergedState, imported.rawState);
+    mergedResources = mergeResources(mergedResources, imported.resources);
   }
 
   // Apply local on top (last-write-wins)
   mergedSkills = mergeSkills(mergedSkills, raw.skills);
   mergedState = mergeRawState(mergedState, raw.rawState);
+  mergedResources = mergeResources(mergedResources, raw.resources);
 
   return {
     name: raw.name,
     skills: mergedSkills,
+    resources: mergedResources,
     rawState: mergedState,
     rawTeam: raw.rawTeam,
     // imports consumed
@@ -769,6 +843,7 @@ async function resolveSubFlows(
   const resolvedPaths = visited ?? new Set<string>();
   let mergedSkills = { ...raw.skills };
   let mergedState = raw.rawState ? { ...raw.rawState } : undefined;
+  let mergedResources = raw.resources ? { ...raw.resources } : undefined;
 
   for (const sfNode of subFlowNodes) {
     const configPath = resolve(baseDir, sfNode.flow);
@@ -814,6 +889,9 @@ async function resolveSubFlows(
       mergedState = mergeRawState(mergedState, subResolved.rawState);
     }
 
+    // Merge resources from the sub-flow config
+    mergedResources = mergeResources(mergedResources, subResolved.resources);
+
     // Parse the sub-flow's flow graph and attach it to the node.
     // We mutate the sfNode.graph here; this is safe because parseGraph
     // created fresh objects from the raw YAML.
@@ -831,6 +909,7 @@ async function resolveSubFlows(
   return {
     name: raw.name,
     skills: mergedSkills,
+    resources: mergedResources,
     rawState: mergedState,
     rawTeam: raw.rawTeam,
     _resolvedGraph: graph,

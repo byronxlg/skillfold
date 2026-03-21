@@ -845,9 +845,11 @@ describe("generateOrchestrator: async nodes inside map", () => {
 
 describe("formatLocation with resolved URLs", () => {
   const resources = {
-    discussions: "https://github.com/org/repo/discussions",
-    issues: "https://github.com/org/repo/issues",
-    "pull-requests": "https://github.com/org/repo/pulls",
+    github: {
+      discussions: "https://github.com/org/repo/discussions",
+      issues: "https://github.com/org/repo/issues",
+      "pull-requests": "https://github.com/org/repo/pulls",
+    },
   };
 
   it("resolves URL with sub-path", () => {
@@ -914,18 +916,18 @@ describe("formatLocation with resolved URLs", () => {
 });
 
 describe("generateOrchestrator with resolved URLs", () => {
-  it("renders resolved URLs in state table when skills have resources", () => {
+  it("renders resolved URLs in state table when config has resources", () => {
     const config: Config = {
       name: "resolved-urls",
       skills: {
-        github: {
-          path: "./skills/github",
-          resources: {
-            discussions: "https://github.com/org/repo/discussions",
-            issues: "https://github.com/org/repo/issues",
-          },
-        },
+        github: { path: "./skills/github" },
         worker: { compose: ["github"], description: "Does work." },
+      },
+      resources: {
+        github: {
+          discussions: "https://github.com/org/repo/discussions",
+          issues: "https://github.com/org/repo/issues",
+        },
       },
       state: {
         types: {},
@@ -957,5 +959,77 @@ describe("generateOrchestrator with resolved URLs", () => {
     const output = generateOrchestrator(config);
     assert.ok(output.includes("https://github.com/org/repo/discussions/general"));
     assert.ok(output.includes("https://github.com/org/repo/issues"));
+  });
+
+  it("renders resolved URLs from top-level resources", () => {
+    const config: Config = {
+      name: "top-level-resources",
+      skills: {
+        github: { path: "./skills/github" },
+        worker: { compose: ["github"], description: "Does work." },
+      },
+      resources: {
+        github: {
+          discussions: "https://github.com/org/repo/discussions",
+          issues: "https://github.com/org/repo/issues",
+        },
+      },
+      state: {
+        types: {},
+        fields: {
+          direction: {
+            type: { kind: "primitive", value: "string" },
+            location: { skill: "github", path: "discussions/general" },
+          },
+          tasks: {
+            type: { kind: "primitive", value: "string" },
+            location: { skill: "github", path: "issues" },
+          },
+        },
+      },
+      team: {
+        flow: {
+          nodes: [{ skill: "worker", reads: [], writes: [], then: "end" }],
+        },
+      },
+    };
+
+    const output = generateOrchestrator(config);
+    assert.ok(output.includes("https://github.com/org/repo/discussions/general"));
+    assert.ok(output.includes("https://github.com/org/repo/issues"));
+  });
+
+  it("top-level resources take precedence over inline in orchestrator", () => {
+    const config: Config = {
+      name: "precedence-test",
+      skills: {
+        github: {
+          path: "./skills/github",
+          resources: { issues: "https://old.example.com/issues" },
+        },
+        worker: { compose: ["github"], description: "Does work." },
+      },
+      resources: {
+        github: { issues: "https://new.example.com/issues" },
+      },
+      state: {
+        types: {},
+        fields: {
+          tasks: {
+            type: { kind: "primitive", value: "string" },
+            location: { skill: "github", path: "issues" },
+          },
+        },
+      },
+      team: {
+        flow: {
+          nodes: [{ skill: "worker", reads: [], writes: [], then: "end" }],
+        },
+      },
+    };
+
+    const output = generateOrchestrator(config);
+    assert.ok(output.includes("https://new.example.com/issues"));
+    assert.ok(!output.includes("https://old.example.com/issues"));
   });
 });

@@ -1720,6 +1720,190 @@ skills:
   });
 });
 
+describe("top-level resources", () => {
+  let tmpDir: string | undefined;
+
+  afterEach(() => {
+    if (tmpDir) {
+      rmSync(tmpDir, { recursive: true, force: true });
+      tmpDir = undefined;
+    }
+  });
+
+  it("parses top-level resources section", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    github: ./skills/github
+resources:
+  github:
+    discussions: "https://github.com/org/repo/discussions"
+    issues: "https://github.com/org/repo/issues"
+`);
+    const config = readConfig(configPath);
+    assert.deepEqual(config.resources, {
+      github: {
+        discussions: "https://github.com/org/repo/discussions",
+        issues: "https://github.com/org/repo/issues",
+      },
+    });
+  });
+
+  it("uses top-level resources for state location validation", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    github: ./skills/github
+resources:
+  github:
+    discussions: "https://github.com/org/repo/discussions"
+    issues: "https://github.com/org/repo/issues"
+state:
+  direction:
+    type: string
+    location:
+      skill: github
+      path: discussions/strategy
+`);
+    const config = readConfig(configPath);
+    assert.equal(config.state?.fields.direction.location?.skill, "github");
+    assert.equal(config.state?.fields.direction.location?.path, "discussions/strategy");
+  });
+
+  it("rejects invalid namespace against top-level resources", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    github: ./skills/github
+resources:
+  github:
+    discussions: "https://github.com/org/repo/discussions"
+state:
+  direction:
+    type: string
+    location:
+      skill: github
+      path: wikis/strategy
+`);
+    assert.throws(
+      () => readConfig(configPath),
+      (err: unknown) => {
+        assert.ok(err instanceof ConfigError);
+        assert.match(err.message, /namespace "wikis"/);
+        return true;
+      }
+    );
+  });
+
+  it("top-level resources take precedence over inline skill resources", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    github:
+      path: ./skills/github
+      resources:
+        discussions: "https://old.example.com/discussions"
+resources:
+  github:
+    discussions: "https://new.example.com/discussions"
+state:
+  direction:
+    type: string
+    location:
+      skill: github
+      path: discussions/strategy
+`);
+    const config = readConfig(configPath);
+    assert.equal(config.state?.fields.direction.location?.skill, "github");
+    assert.deepEqual(config.resources, {
+      github: {
+        discussions: "https://new.example.com/discussions",
+      },
+    });
+  });
+
+  it("rejects top-level resources with invalid group name", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    github: ./skills/github
+resources:
+  GitHub:
+    discussions: "https://example.com"
+`);
+    assert.throws(
+      () => readConfig(configPath),
+      (err: unknown) => {
+        assert.ok(err instanceof ConfigError);
+        assert.match(err.message, /Resource group "GitHub"/);
+        return true;
+      }
+    );
+  });
+
+  it("rejects top-level resources with non-map value", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    github: ./skills/github
+resources: "not a map"
+`);
+    assert.throws(
+      () => readConfig(configPath),
+      (err: unknown) => {
+        assert.ok(err instanceof ConfigError);
+        assert.match(err.message, /resources.*must be a YAML map/i);
+        return true;
+      }
+    );
+  });
+
+  it("accepts config with no resources section", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    github: ./skills/github
+`);
+    const config = readConfig(configPath);
+    assert.equal(config.resources, undefined);
+  });
+
+  it("supports multiple resource groups", () => {
+    tmpDir = makeTmpDir();
+    const configPath = writeYaml(tmpDir, `
+name: test
+skills:
+  atomic:
+    github: ./skills/github
+    slack: ./skills/slack
+resources:
+  github:
+    issues: "https://github.com/org/repo/issues"
+  slack:
+    channels: "https://slack.com/api/channels"
+`);
+    const config = readConfig(configPath);
+    assert.deepEqual(config.resources, {
+      github: { issues: "https://github.com/org/repo/issues" },
+      slack: { channels: "https://slack.com/api/channels" },
+    });
+  });
+});
+
 describe("getLocalConfigName", () => {
   it("derives local name from skillfold.yaml", () => {
     assert.equal(getLocalConfigName("skillfold.yaml"), "skillfold.local.yaml");
