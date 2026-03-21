@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 import type { Config } from "./config.js";
-import type { GraphNode, MapNode, StepNode } from "./graph.js";
+import type { AsyncNode, GraphNode, MapNode, StepNode } from "./graph.js";
 import { generateMermaid } from "./visualize.js";
 
 // Helper: build a StepNode
@@ -465,5 +465,57 @@ describe("generateMermaid", () => {
     const sharedCount = output.split('top_shared["shared"]').length - 1;
     assert.equal(sharedCount, 1, "shared should appear exactly once");
     assert.ok(output.includes('top_unique["unique"]'));
+  });
+
+  it("renders async nodes with stadium shape", () => {
+    const asyncNode: AsyncNode = {
+      name: "owner",
+      async: true,
+      reads: [],
+      writes: ["state.direction"],
+      policy: "block",
+      then: "worker",
+    };
+    const config = atomicConfig(
+      [asyncNode, step("worker")],
+      ["worker"],
+    );
+    const output = generateMermaid(config);
+    // Async nodes use stadium shape: ([name])
+    assert.ok(output.includes("owner([owner])"));
+    assert.ok(output.includes("owner -->"));
+  });
+
+  it("renders async node with writes as edge label", () => {
+    const asyncNode: AsyncNode = {
+      name: "ci",
+      async: true,
+      reads: [],
+      writes: ["state.status"],
+      policy: "skip",
+      then: "end",
+    };
+    const config = atomicConfig([asyncNode], []);
+    const output = generateMermaid(config);
+    assert.ok(output.includes("ci([ci])"));
+    assert.ok(output.includes("|\"status\"|"));
+  });
+
+  it("renders async node followed by step node with fall-through", () => {
+    const asyncNode: AsyncNode = {
+      name: "external",
+      async: true,
+      reads: [],
+      writes: ["state.data"],
+      policy: "block",
+    };
+    const config = atomicConfig(
+      [asyncNode, step("processor")],
+      ["processor"],
+    );
+    const output = generateMermaid(config);
+    assert.ok(output.includes("external([external])"));
+    assert.ok(output.includes("external -->"));
+    assert.ok(output.includes("processor"));
   });
 });
