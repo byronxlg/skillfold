@@ -64,7 +64,7 @@
                   },
                   "resources": {
                     "type": "object",
-                    "description": "Resource namespaces this skill exposes, with base URL templates.",
+                    "description": "Deprecated: use top-level 'resources' section instead. Resource namespaces this skill exposes, with base URL templates.",
                     "additionalProperties": {
                       "type": "string"
                     },

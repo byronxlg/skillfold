@@ -536,13 +536,15 @@ describe("parseState", () => {
   });
 
   describe("resource namespace validation", () => {
-    const SKILL_NAMES = new Set(["github", "lint"]);
-    const RESOURCES = {
+    const SKILLS_WITH_RESOURCES: Record<string, { resources?: Record<string, string> }> = {
       github: {
-        discussions: "https://github.com/org/repo/discussions",
-        issues: "https://github.com/org/repo/issues",
-        "pull-requests": "https://github.com/org/repo/pulls",
+        resources: {
+          discussions: "https://github.com/org/repo/discussions",
+          issues: "https://github.com/org/repo/issues",
+          "pull-requests": "https://github.com/org/repo/pulls",
+        },
       },
+      lint: {},
     };
 
     it("accepts location path matching a declared namespace", () => {
@@ -552,7 +554,7 @@ describe("parseState", () => {
           location: { skill: "github", path: "discussions/general" },
         },
       };
-      const schema = parseState(raw, SKILL_NAMES, RESOURCES);
+      const schema = parseState(raw, SKILLS_WITH_RESOURCES);
       assert.equal(schema.fields["direction"].location?.path, "discussions/general");
     });
 
@@ -563,7 +565,7 @@ describe("parseState", () => {
           location: { skill: "github", path: "issues" },
         },
       };
-      const schema = parseState(raw, SKILL_NAMES, RESOURCES);
+      const schema = parseState(raw, SKILLS_WITH_RESOURCES);
       assert.equal(schema.fields["tasks"].location?.path, "issues");
     });
 
@@ -575,7 +577,7 @@ describe("parseState", () => {
         },
       };
       assert.throws(
-        () => parseState(raw, SKILL_NAMES, RESOURCES),
+        () => parseState(raw, SKILLS_WITH_RESOURCES),
         (err: unknown) => {
           assert.ok(err instanceof ConfigError);
           assert.match(err.message, /namespace "wikis" which is not declared/);
@@ -593,7 +595,7 @@ describe("parseState", () => {
         },
       };
       assert.throws(
-        () => parseState(raw, SKILL_NAMES, RESOURCES),
+        () => parseState(raw, SKILLS_WITH_RESOURCES),
         (err: unknown) => {
           assert.ok(err instanceof ConfigError);
           assert.match(err.message, /namespace "issue"/);
@@ -610,7 +612,7 @@ describe("parseState", () => {
           location: { skill: "lint", path: "anything/goes" },
         },
       };
-      const schema = parseState(raw, SKILL_NAMES, RESOURCES);
+      const schema = parseState(raw, SKILLS_WITH_RESOURCES);
       assert.equal(schema.fields["result"].location?.path, "anything/goes");
     });
 
