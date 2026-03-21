@@ -1,10 +1,11 @@
 # Anthropic Plugin Marketplace Submission
 
-## Status: Ready to publish as self-hosted marketplace
+## Status: Ready to submit to official directory
 
-There is no centralized Anthropic plugin submission portal. Claude Code uses a
-decentralized plugin marketplace system where anyone can create and host their
-own marketplace. Users add marketplaces with `/plugin marketplace add`.
+The official Anthropic plugin directory is at
+[anthropics/claude-plugins-official](https://github.com/anthropics/claude-plugins-official).
+Submit via [clau.de/plugin-directory-submission](https://clau.de/plugin-directory-submission).
+Users can also add self-hosted marketplaces with `/plugin marketplace add`.
 
 ## Our Plugin Structure
 
