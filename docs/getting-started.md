@@ -403,6 +403,7 @@ See the [Publishing Guide](publishing.md) for package structure, required fields
 
 ## 13. Next steps
 
+- **Using Agent Teams?** Follow the [Agent Teams Tutorial](/agent-teams-tutorial) to go from YAML to a running team with `/start-team`
 - Run your pipeline with `skillfold run --target claude-code` (linear flows), or preview with `--dry-run`
 - Read the full config specification in [BRIEF.md](https://github.com/byronxlg/skillfold/blob/main/BRIEF.md)
 - Explore the [shared library examples](https://github.com/byronxlg/skillfold/tree/main/library/examples/) for real pipeline patterns
