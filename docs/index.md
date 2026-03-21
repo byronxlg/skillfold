@@ -77,30 +77,40 @@ onMounted(() => {
 </div>
 </div>
 
-<div class="stats-bar">
-  <div class="stat">
-    <span class="stat-value">12</span>
-    <span class="stat-label">Platform Targets</span>
+<div class="proof-bar fade-in">
+  <div class="proof-stats">
+    <span class="proof-stat"><strong>12</strong> platforms</span>
+    <span class="proof-sep"></span>
+    <span class="proof-stat"><strong>11</strong> library skills</span>
+    <span class="proof-sep"></span>
+    <span class="proof-stat"><strong>0</strong> runtime deps</span>
+    <span class="proof-sep"></span>
+    <span class="proof-stat"><strong>859+</strong> tests</span>
   </div>
-  <div class="stat">
-    <span class="stat-value">11</span>
-    <span class="stat-label">Library Skills</span>
-  </div>
-  <div class="stat">
-    <span class="stat-value">0</span>
-    <span class="stat-label">Runtime Dependencies</span>
-  </div>
-  <div class="stat">
-    <span class="stat-value">859+</span>
-    <span class="stat-label">Tests</span>
+  <div class="proof-badges">
+    <a href="https://www.npmjs.com/package/skillfold"><img src="https://img.shields.io/npm/v/skillfold?color=10b981&label=npm" alt="npm version" /></a>
+    <a href="https://www.npmjs.com/package/skillfold"><img src="https://img.shields.io/npm/dw/skillfold?color=06b6d4&label=downloads" alt="npm downloads" /></a>
+    <a href="https://github.com/byronxlg/skillfold"><img src="https://img.shields.io/github/stars/byronxlg/skillfold?style=social" alt="GitHub stars" /></a>
+    <a href="https://github.com/byronxlg/skillfold/blob/main/LICENSE"><img src="https://img.shields.io/github/license/byronxlg/skillfold?color=10b981" alt="MIT License" /></a>
   </div>
 </div>
 
-<div class="badges-bar">
-  <a href="https://www.npmjs.com/package/skillfold"><img src="https://img.shields.io/npm/v/skillfold?color=10b981&label=npm" alt="npm version" /></a>
-  <a href="https://www.npmjs.com/package/skillfold"><img src="https://img.shields.io/npm/dw/skillfold?color=06b6d4&label=downloads" alt="npm downloads" /></a>
-  <a href="https://github.com/byronxlg/skillfold"><img src="https://img.shields.io/github/stars/byronxlg/skillfold?style=social" alt="GitHub stars" /></a>
-  <a href="https://github.com/byronxlg/skillfold/blob/main/LICENSE"><img src="https://img.shields.io/github/license/byronxlg/skillfold?color=10b981" alt="MIT License" /></a>
+<div class="works-with fade-in">
+<div class="works-with-label">Works with</div>
+<div class="works-with-grid">
+  <div class="works-with-item"><img :src="withBase('/icons/targets/claude.svg')" alt="" />Claude Code</div>
+  <div class="works-with-item"><img :src="withBase('/icons/targets/agent-teams.svg')" alt="" />Agent Teams</div>
+  <div class="works-with-item"><img :src="withBase('/icons/targets/cursor.svg')" alt="" />Cursor</div>
+  <div class="works-with-item"><img :src="withBase('/icons/targets/windsurf.svg')" alt="" />Windsurf</div>
+  <div class="works-with-item"><img :src="withBase('/icons/targets/copilot.svg')" alt="" />Copilot</div>
+  <div class="works-with-item"><img :src="withBase('/icons/targets/codex.svg')" alt="" />Codex</div>
+  <div class="works-with-item"><img :src="withBase('/icons/targets/gemini.svg')" alt="" />Gemini</div>
+  <div class="works-with-item"><img :src="withBase('/icons/targets/goose.svg')" alt="" />Goose</div>
+  <div class="works-with-item"><img :src="withBase('/icons/targets/roo.svg')" alt="" />Roo Code</div>
+  <div class="works-with-item"><img :src="withBase('/icons/targets/kiro.svg')" alt="" />Kiro</div>
+  <div class="works-with-item"><img :src="withBase('/icons/targets/junie.svg')" alt="" />Junie</div>
+  <div class="works-with-item"><img :src="withBase('/icons/targets/skill.svg')" alt="" />SKILL.md</div>
+</div>
 </div>
 
 <div class="how-it-works fade-in">
@@ -172,23 +182,26 @@ npx skillfold --target cursor       # generates .cursor/
 
 </div>
 
-<div class="why-section fade-in">
-<div class="why-grid">
-  <div class="why-card">
-    <div class="why-icon">0</div>
-    <h3>Zero lock-in</h3>
-    <p>Output is plain files. No SDK, no runtime, no middleware. Delete skillfold and the files still work.</p>
+<div class="scale-section fade-in">
+<div class="scale-inner">
+
+## The Math Gets Worse Without a Compiler
+
+<div class="scale-visual">
+  <div class="scale-card scale-manual">
+    <div class="scale-number">45+</div>
+    <div class="scale-desc">files to maintain</div>
+    <div class="scale-detail">5 agents, 3 shared skills, 3 platforms</div>
   </div>
-  <div class="why-card">
-    <div class="why-icon">12</div>
-    <h3>Every platform</h3>
-    <p>One YAML config compiles to Claude Code, Cursor, Codex, Gemini, Windsurf, Copilot, and 6 more.</p>
+  <div class="scale-vs">vs</div>
+  <div class="scale-card scale-compiled">
+    <div class="scale-number">1</div>
+    <div class="scale-desc">config file</div>
+    <div class="scale-detail">skillfold.yaml</div>
   </div>
-  <div class="why-card">
-    <div class="why-icon">0s</div>
-    <h3>No runtime cost</h3>
-    <p>Validation happens at compile time. Agents run natively on the platform with no framework overhead.</p>
-  </div>
+</div>
+<p class="scale-caption">Every agent that shares a skill creates another copy. Every platform multiplies the total. Skillfold compiles from one source.</p>
+
 </div>
 </div>
 
@@ -246,12 +259,6 @@ npx skillfold --target cursor
 # .cursor/rules/engineer.mdc
 ```
 
-<div class="pipeline-more-targets">
-
-Also: Windsurf, Copilot, Codex, Gemini, Goose, Roo Code, Kiro, Junie, Agent Teams, SKILL.md
-
-</div>
-
 Or run the pipeline directly:
 
 ```sh
@@ -268,7 +275,7 @@ npx skillfold run --target claude-code
 
 ## Compiler vs. Runtime Orchestration
 
-Skillfold catches errors before agents run. Runtime tools like CrewAI and LangGraph catch them during execution.
+Skillfold validates your pipeline at compile time and produces standard files with zero runtime overhead. Runtime frameworks like CrewAI and LangGraph validate during execution and require their SDK at runtime.
 
 <div class="comparison-table-wrap">
 
@@ -287,28 +294,29 @@ Skillfold catches errors before agents run. Runtime tools like CrewAI and LangGr
 </div>
 </div>
 
-<div class="targets-section fade-in">
+<div class="templates-section fade-in">
 
-## Compile Once, Run Anywhere
+## Start from a Template
 
-One config, 12 platform targets. Write your pipeline in YAML and compile to whichever agent platform your team uses.
+Three example pipelines ship with the library. Use them directly or as a starting point for your own.
 
-<div class="targets-grid">
-  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/claude.svg')" alt="" />Claude Code</div>
-  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/agent-teams.svg')" alt="" />Agent Teams</div>
-  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/cursor.svg')" alt="" />Cursor</div>
-  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/windsurf.svg')" alt="" />Windsurf</div>
-  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/copilot.svg')" alt="" />VS Code Copilot</div>
-  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/codex.svg')" alt="" />OpenAI Codex</div>
-  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/gemini.svg')" alt="" />Gemini CLI</div>
-  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/goose.svg')" alt="" />Goose</div>
-  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/roo.svg')" alt="" />Roo Code</div>
-  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/kiro.svg')" alt="" />Kiro</div>
-  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/junie.svg')" alt="" />Junie</div>
-  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/skill.svg')" alt="" />SKILL.md</div>
+<div class="templates-grid">
+  <a class="template-card" :href="withBase('/examples')">
+    <div class="template-name">dev-team</div>
+    <div class="template-desc">Planner, engineer, reviewer with a review loop. The default <code>skillfold init</code> template.</div>
+    <div class="template-flow">planner -> engineer -> reviewer -> (loop)</div>
+  </a>
+  <a class="template-card" :href="withBase('/examples')">
+    <div class="template-name">content-pipeline</div>
+    <div class="template-desc">Parallel map over topics. Researcher, writer, and editor run concurrently per item.</div>
+    <div class="template-flow">researcher -> map(writer, editor)</div>
+  </a>
+  <a class="template-card" :href="withBase('/examples')">
+    <div class="template-name">code-review-bot</div>
+    <div class="template-desc">Minimal two-agent flow. Analyzer scans code, reporter writes the review.</div>
+    <div class="template-flow">analyzer -> reporter</div>
+  </a>
 </div>
-
-<p class="targets-link"><a :href="withBase('/integrations')">See platform integration details -></a></p>
 
 </div>
 
@@ -323,7 +331,7 @@ One config, 12 platform targets. Write your pipeline in YAML and compile to whic
 
 <div class="cta-section fade-in">
 
-## Start building in 60 seconds
+## Get started in 60 seconds
 
 <div class="cta-install">
 
@@ -333,23 +341,10 @@ npm install skillfold && npx skillfold init my-pipeline
 
 </div>
 
-<div class="cta-grid">
-  <a class="cta-card" :href="withBase('/getting-started')">
-    <strong>Getting Started Guide</strong>
-    <span>Build your first pipeline in 5 minutes</span>
-  </a>
-  <a class="cta-card" :href="withBase('/demo')">
-    <strong>Live Demo</strong>
-    <span>Try the interactive pipeline visualizer</span>
-  </a>
-  <a class="cta-card" :href="withBase('/builder')">
-    <strong>Pipeline Builder</strong>
-    <span>Edit YAML and see the graph update live</span>
-  </a>
-  <a class="cta-card" :href="withBase('/library')">
-    <strong>Library Skills</strong>
-    <span>11 ready-to-use skills, no config needed</span>
-  </a>
+<div class="cta-links">
+  <a class="cta-primary" :href="withBase('/getting-started')">Read the guide -></a>
+  <a class="cta-secondary" :href="withBase('/demo')">Try the live demo -></a>
+  <a class="cta-secondary" href="https://github.com/byronxlg/skillfold">View on GitHub -></a>
 </div>
 
 </div>
