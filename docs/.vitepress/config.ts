@@ -22,6 +22,7 @@ export default defineConfig({
         items: [
           { text: "Getting Started", link: "/getting-started" },
           { text: "Live Demo", link: "/demo" },
+          { text: "Examples", link: "/examples" },
           { text: "Platform Integration", link: "/integrations" },
           { text: "Publishing Skills", link: "/publishing" },
         ],
