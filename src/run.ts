@@ -19,6 +19,9 @@ import {
 const execFileAsync = promisify(execFile);
 
 const DEFAULT_MAX_ITERATIONS = 10;
+const DEFAULT_MAX_RETRIES = 3;
+
+export type OnErrorMode = "retry" | "skip" | "abort";
 
 export interface RunOptions {
   config: Config;
@@ -27,6 +30,8 @@ export interface RunOptions {
   outDir: string;
   dryRun: boolean;
   maxIterations?: number;
+  onError?: OnErrorMode;
+  maxRetries?: number;
 }
 
 export interface StepResult {
@@ -34,11 +39,14 @@ export interface StepResult {
   agent: string;
   status: "ok" | "error" | "skipped";
   error?: string;
+  attempts?: number;
+  durationMs?: number;
 }
 
 export interface RunResult {
   steps: StepResult[];
   state: Record<string, unknown>;
+  durationMs: number;
 }
 
 export interface Spawner {
@@ -184,12 +192,26 @@ function resolveConditionalTarget(
   return undefined;
 }
 
+/**
+ * Format a duration in milliseconds as a human-readable string.
+ */
+export function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  const seconds = Math.floor(ms / 1000);
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`;
+}
+
 export async function run(
   options: RunOptions,
   spawner?: Spawner,
 ): Promise<RunResult> {
   const { config, bodies, dryRun } = options;
   const maxIterations = options.maxIterations ?? DEFAULT_MAX_ITERATIONS;
+  const onError: OnErrorMode = options.onError ?? "abort";
+  const maxRetries = options.maxRetries ?? DEFAULT_MAX_RETRIES;
 
   if (!config.team) {
     throw new RunError("Config has no team.flow defined - nothing to run");
@@ -224,6 +246,7 @@ export async function run(
 
   const activeSpawner = dryRun ? undefined : (spawner ?? new ClaudeSpawner());
   const steps: StepResult[] = [];
+  const pipelineStart = Date.now();
 
   // Track visit counts per node for loop detection
   const visitCounts = new Map<number, number>();
@@ -298,35 +321,79 @@ export async function run(
       continue;
     }
 
-    let spawnError = false;
-    try {
-      const updates = await activeSpawner!.spawn(node.skill, skillBody, state);
+    const stepStart = Date.now();
+    let stepSucceeded = false;
+    let lastError: string | undefined;
+    let attempts = 0;
+    const attemptsAllowed = onError === "retry" ? maxRetries : 1;
 
-      // Apply state updates (only for fields declared in writes)
-      for (const writePath of node.writes) {
-        const field = stripStatePrefix(writePath);
-        if (field in updates) {
-          state[field] = updates[field];
+    for (let attempt = 1; attempt <= attemptsAllowed; attempt++) {
+      attempts = attempt;
+      try {
+        const updates = await activeSpawner!.spawn(node.skill, skillBody, state);
+
+        // Apply state updates (only for fields declared in writes)
+        for (const writePath of node.writes) {
+          const field = stripStatePrefix(writePath);
+          if (field in updates) {
+            state[field] = updates[field];
+          }
         }
+
+        // Write updated state to disk after each step
+        writeFileSync(statePath, JSON.stringify(state, null, 2) + "\n", "utf-8");
+
+        stepSucceeded = true;
+        break;
+      } catch (err) {
+        lastError = err instanceof Error ? err.message : String(err);
       }
+    }
 
-      // Write updated state to disk after each step
-      writeFileSync(statePath, JSON.stringify(state, null, 2) + "\n", "utf-8");
+    const stepDuration = Date.now() - stepStart;
 
-      steps.push({ step: stepNumber, agent: node.skill, status: "ok" });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
+    if (stepSucceeded) {
       steps.push({
         step: stepNumber,
         agent: node.skill,
-        status: "error",
-        error: message,
+        status: "ok",
+        attempts: attempts > 1 ? attempts : undefined,
+        durationMs: stepDuration,
       });
-      // Stop on first error
-      spawnError = true;
-    }
+    } else {
+      // Record error in state for debugging
+      const errors: unknown[] = Array.isArray(state._errors) ? state._errors : [];
+      errors.push({
+        step: stepNumber,
+        agent: node.skill,
+        error: lastError,
+        attempts,
+      });
+      state._errors = errors;
+      writeFileSync(statePath, JSON.stringify(state, null, 2) + "\n", "utf-8");
 
-    if (spawnError) break;
+      if (onError === "skip") {
+        steps.push({
+          step: stepNumber,
+          agent: node.skill,
+          status: "skipped",
+          error: lastError,
+          attempts,
+          durationMs: stepDuration,
+        });
+      } else {
+        // abort or retry-exhausted
+        steps.push({
+          step: stepNumber,
+          agent: node.skill,
+          status: "error",
+          error: lastError,
+          attempts: onError === "retry" ? attempts : undefined,
+          durationMs: stepDuration,
+        });
+        break;
+      }
+    }
 
     // Resolve next node (outside try/catch so routing errors propagate)
     const nextIndex = resolveNextIndex(node, currentIndex, nodeLookup, state, dryRun);
@@ -334,7 +401,8 @@ export async function run(
     currentIndex = nextIndex;
   }
 
-  return { steps, state };
+  const pipelineDuration = Date.now() - pipelineStart;
+  return { steps, state, durationMs: pipelineDuration };
 }
 
 /**
