@@ -647,4 +647,160 @@ describe("parseState", () => {
       assert.equal(schema.fields["direction"].location?.path, "discussions/general");
     });
   });
+
+  describe("integration locations", () => {
+    it("parses github-issues integration location", () => {
+      const raw = {
+        tasks: {
+          type: "string",
+          location: {
+            "github-issues": { repo: "org/repo", label: "task" },
+          },
+        },
+      };
+      const schema = parseState(raw, NO_SKILLS);
+      assert.ok(schema.fields["tasks"].location);
+      assert.deepEqual(schema.fields["tasks"].location!.integration, {
+        type: "github-issues",
+        config: { repo: "org/repo", label: "task" },
+      });
+      assert.equal(schema.fields["tasks"].location!.skill, undefined);
+      assert.equal(schema.fields["tasks"].location!.path, undefined);
+    });
+
+    it("parses github-discussions integration location", () => {
+      const raw = {
+        direction: {
+          type: "string",
+          location: {
+            "github-discussions": { repo: "org/repo", category: "strategy" },
+          },
+        },
+      };
+      const schema = parseState(raw, NO_SKILLS);
+      assert.deepEqual(schema.fields["direction"].location!.integration, {
+        type: "github-discussions",
+        config: { repo: "org/repo", category: "strategy" },
+      });
+    });
+
+    it("parses github-pull-requests integration location", () => {
+      const raw = {
+        review: {
+          type: "string",
+          location: {
+            "github-pull-requests": { repo: "org/repo" },
+          },
+        },
+      };
+      const schema = parseState(raw, NO_SKILLS);
+      assert.deepEqual(schema.fields["review"].location!.integration, {
+        type: "github-pull-requests",
+        config: { repo: "org/repo" },
+      });
+    });
+
+    it("preserves kind field on integration location", () => {
+      const raw = {
+        tasks: {
+          type: "string",
+          location: {
+            "github-issues": { repo: "org/repo" },
+            kind: "artifact",
+          },
+        },
+      };
+      const schema = parseState(raw, NO_SKILLS);
+      assert.equal(schema.fields["tasks"].location!.kind, "artifact");
+      assert.ok(schema.fields["tasks"].location!.integration);
+    });
+
+    it("integration locations do not require skills to be defined", () => {
+      const raw = {
+        tasks: {
+          type: "string",
+          location: {
+            "github-issues": { repo: "org/repo" },
+          },
+        },
+      };
+      // No skills needed for integration locations
+      const schema = parseState(raw, NO_SKILLS);
+      assert.ok(schema.fields["tasks"].location!.integration);
+    });
+
+    it("rejects integration with missing required field", () => {
+      const raw = {
+        tasks: {
+          type: "string",
+          location: {
+            "github-issues": { label: "task" },
+          },
+        },
+      };
+      assert.throws(
+        () => parseState(raw, NO_SKILLS),
+        (err: unknown) => {
+          assert.ok(err instanceof ConfigError);
+          assert.match(err.message, /github-issues requires a "repo" field/);
+          return true;
+        },
+      );
+    });
+
+    it("rejects integration with unknown fields", () => {
+      const raw = {
+        tasks: {
+          type: "string",
+          location: {
+            "github-issues": { repo: "org/repo", unknown: "value" },
+          },
+        },
+      };
+      assert.throws(
+        () => parseState(raw, NO_SKILLS),
+        (err: unknown) => {
+          assert.ok(err instanceof ConfigError);
+          assert.match(err.message, /github-issues has unknown field "unknown"/);
+          return true;
+        },
+      );
+    });
+
+    it("traditional skill+path location still works alongside integrations", () => {
+      const raw = {
+        direction: {
+          type: "string",
+          location: {
+            "github-discussions": { repo: "org/repo", category: "strategy" },
+          },
+        },
+        output: {
+          type: "string",
+          location: { skill: "review", path: "output.md" },
+        },
+      };
+      const schema = parseState(raw, SOME_SKILLS);
+      assert.ok(schema.fields["direction"].location!.integration);
+      assert.equal(schema.fields["output"].location!.skill, "review");
+      assert.equal(schema.fields["output"].location!.path, "output.md");
+    });
+
+    it("gives helpful error when location has neither skill nor integration", () => {
+      const raw = {
+        tasks: {
+          type: "string",
+          location: { path: "output.md" },
+        },
+      };
+      assert.throws(
+        () => parseState(raw, SOME_SKILLS),
+        (err: unknown) => {
+          assert.ok(err instanceof ConfigError);
+          assert.match(err.message, /location must have a "skill" field or use a built-in integration/);
+          return true;
+        },
+      );
+    });
+  });
 });

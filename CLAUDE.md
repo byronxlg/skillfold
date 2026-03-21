@@ -42,6 +42,7 @@ src/
   search.ts       - npm registry search for skillfold-skill packages (skillfold search)
   watch.ts        - File watching and auto-recompile (skillfold watch)
   init.ts         - skillfold init scaffolding
+  integrations.ts - Built-in state integrations (GitHub issues, discussions, pull requests)
   errors.ts       - ConfigError, ResolveError, CompileError, GraphError
 skills/           - Atomic skill definitions (each has a SKILL.md)
 library/          - Shared skills library (11 generic skills + 3 example configs)
@@ -173,7 +174,8 @@ Located in `library/examples/`:
 - `npm:` prefix support for skill references and imports (resolves to node_modules paths)
 - Publishing guide (`docs/publishing.md`) for sharing skills via npm
 - `skillfold.local.yaml` support for local config overrides (gitignored), with merge semantics for skills/state/team
-- Test suite with 592 tests across 108 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, visualize, remote, init, adopt, library, validate, list, search, npm, watch, errors, subflow, api, and e2e modules
+- Built-in state integrations for GitHub services (github-issues, github-discussions, github-pull-requests) with auto-generated URLs, filter options, and orchestrator instructions
+- Test suite with 649 tests across 121 suites covering config, resolver, compiler, agent, plugin, state, graph, orchestrator, integrations, visualize, remote, init, adopt, library, validate, list, search, npm, watch, errors, subflow, api, and e2e modules
   - Run with `npm test` (uses `node:test`, no extra dependencies)
 
 ## What's Next

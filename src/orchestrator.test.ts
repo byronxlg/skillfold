@@ -1033,3 +1033,182 @@ describe("generateOrchestrator with resolved URLs", () => {
     assert.ok(!output.includes("https://old.example.com/issues"));
   });
 });
+
+describe("formatLocation with integration locations", () => {
+  it("renders github-issues integration location", () => {
+    const field: StateField = {
+      type: { kind: "primitive", value: "string" },
+      location: {
+        integration: {
+          type: "github-issues",
+          config: { repo: "org/repo" },
+        },
+      },
+    };
+    const result = formatLocation(field);
+    assert.equal(
+      result,
+      "https://github.com/org/repo/issues - GitHub issues in org/repo",
+    );
+  });
+
+  it("renders github-issues with label filter", () => {
+    const field: StateField = {
+      type: { kind: "primitive", value: "string" },
+      location: {
+        integration: {
+          type: "github-issues",
+          config: { repo: "org/repo", label: "task" },
+        },
+      },
+    };
+    const result = formatLocation(field);
+    assert.ok(result.includes("https://github.com/org/repo/issues"));
+    assert.ok(result.includes('labeled "task"'));
+  });
+
+  it("renders github-discussions integration location", () => {
+    const field: StateField = {
+      type: { kind: "primitive", value: "string" },
+      location: {
+        integration: {
+          type: "github-discussions",
+          config: { repo: "org/repo", category: "strategy" },
+        },
+      },
+    };
+    const result = formatLocation(field);
+    assert.ok(result.includes("https://github.com/org/repo/discussions"));
+    assert.ok(result.includes('category "strategy"'));
+  });
+
+  it("renders github-pull-requests integration location", () => {
+    const field: StateField = {
+      type: { kind: "primitive", value: "string" },
+      location: {
+        integration: {
+          type: "github-pull-requests",
+          config: { repo: "org/repo" },
+        },
+      },
+    };
+    const result = formatLocation(field);
+    assert.ok(result.includes("https://github.com/org/repo/pulls"));
+    assert.ok(result.includes("GitHub pull requests in org/repo"));
+  });
+
+  it("renders integration location with kind qualifier", () => {
+    const field: StateField = {
+      type: { kind: "primitive", value: "string" },
+      location: {
+        integration: {
+          type: "github-pull-requests",
+          config: { repo: "org/repo" },
+        },
+        kind: "review",
+      },
+    };
+    const result = formatLocation(field);
+    assert.ok(result.includes("https://github.com/org/repo/pulls (review)"));
+  });
+
+  it("renders empty string for field without location", () => {
+    const field: StateField = {
+      type: { kind: "primitive", value: "string" },
+    };
+    assert.equal(formatLocation(field), "");
+  });
+});
+
+describe("generateOrchestrator with integration locations", () => {
+  it("renders integration URLs in state table", () => {
+    const config: Config = {
+      name: "integration-test",
+      skills: {
+        worker: { path: "./skills/worker" },
+      },
+      state: {
+        types: {},
+        fields: {
+          direction: {
+            type: { kind: "primitive", value: "string" },
+            location: {
+              integration: {
+                type: "github-discussions",
+                config: { repo: "org/repo", category: "strategy" },
+              },
+            },
+          },
+          tasks: {
+            type: { kind: "primitive", value: "string" },
+            location: {
+              integration: {
+                type: "github-issues",
+                config: { repo: "org/repo", label: "task" },
+              },
+            },
+          },
+          review: {
+            type: { kind: "primitive", value: "string" },
+            location: {
+              integration: {
+                type: "github-pull-requests",
+                config: { repo: "org/repo" },
+              },
+            },
+          },
+        },
+      },
+      team: {
+        flow: {
+          nodes: [{ skill: "worker", reads: [], writes: [], then: "end" }],
+        },
+      },
+    };
+
+    const output = generateOrchestrator(config);
+    assert.ok(output.includes("## State"));
+    assert.ok(output.includes("https://github.com/org/repo/discussions"));
+    assert.ok(output.includes("https://github.com/org/repo/issues"));
+    assert.ok(output.includes("https://github.com/org/repo/pulls"));
+    assert.ok(output.includes('category "strategy"'));
+    assert.ok(output.includes('labeled "task"'));
+    assert.ok(output.includes("external locations"));
+  });
+
+  it("mixes integration and traditional locations in state table", () => {
+    const config: Config = {
+      name: "mixed-locations",
+      skills: {
+        worker: { path: "./skills/worker" },
+      },
+      state: {
+        types: {},
+        fields: {
+          direction: {
+            type: { kind: "primitive", value: "string" },
+            location: {
+              integration: {
+                type: "github-discussions",
+                config: { repo: "org/repo" },
+              },
+            },
+          },
+          output: {
+            type: { kind: "primitive", value: "string" },
+            location: { skill: "worker", path: "result.md" },
+          },
+        },
+      },
+      team: {
+        flow: {
+          nodes: [{ skill: "worker", reads: [], writes: [], then: "end" }],
+        },
+      },
+    };
+
+    const output = generateOrchestrator(config);
+    assert.ok(output.includes("https://github.com/org/repo/discussions"));
+    assert.ok(output.includes("worker: result.md"));
+  });
+});

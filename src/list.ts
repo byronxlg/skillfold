@@ -1,5 +1,6 @@
 import { type Config, type SkillEntry, isAtomic, isComposed } from "./config.js";
 import { type GraphNode, isAsyncNode, isConditionalThen, isMapNode, isSubFlowNode } from "./graph.js";
+import { resolveIntegrationUrl } from "./integrations.js";
 import { type StateField, type StateSchema } from "./state.js";
 
 function formatStateType(field: StateField): string {
@@ -15,6 +16,19 @@ function formatStateType(field: StateField): string {
 
 function formatLocation(field: StateField): string {
   if (!field.location) return "";
+
+  // Integration location
+  if (field.location.integration) {
+    const url = resolveIntegrationUrl(field.location.integration);
+    const parts = [url];
+    if (field.location.kind) {
+      parts.push(`(${field.location.kind})`);
+    }
+    return "-> " + parts.join(" ");
+  }
+
+  // Traditional skill+path location
+  if (!field.location.skill || !field.location.path) return "";
   const parts = [field.location.skill + ": " + field.location.path];
   if (field.location.kind) {
     parts.push(`(${field.location.kind})`);

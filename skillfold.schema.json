@@ -221,21 +221,116 @@
     },
     "stateLocation": {
       "type": "object",
-      "description": "External storage location for a state field.",
-      "required": ["skill", "path"],
+      "description": "External storage location for a state field. Use either skill+path (traditional) or a built-in integration type (github-issues, github-discussions, github-pull-requests).",
+      "oneOf": [
+        {
+          "required": ["skill", "path"],
+          "additionalProperties": false,
+          "properties": {
+            "skill": {
+              "type": "string",
+              "description": "Name of the skill or resource group that provides access to this storage."
+            },
+            "path": {
+              "type": "string",
+              "description": "Path within the external system."
+            },
+            "kind": {
+              "type": "string",
+              "description": "Optional qualifier (e.g., 'reply', 'review')."
+            }
+          }
+        },
+        {
+          "required": ["github-issues"],
+          "additionalProperties": false,
+          "properties": {
+            "github-issues": {
+              "$ref": "#/$defs/githubIssuesConfig"
+            },
+            "kind": {
+              "type": "string",
+              "description": "Optional qualifier."
+            }
+          }
+        },
+        {
+          "required": ["github-discussions"],
+          "additionalProperties": false,
+          "properties": {
+            "github-discussions": {
+              "$ref": "#/$defs/githubDiscussionsConfig"
+            },
+            "kind": {
+              "type": "string",
+              "description": "Optional qualifier."
+            }
+          }
+        },
+        {
+          "required": ["github-pull-requests"],
+          "additionalProperties": false,
+          "properties": {
+            "github-pull-requests": {
+              "$ref": "#/$defs/githubPullRequestsConfig"
+            },
+            "kind": {
+              "type": "string",
+              "description": "Optional qualifier."
+            }
+          }
+        }
+      ]
+    },
+    "githubIssuesConfig": {
+      "type": "object",
+      "description": "GitHub Issues integration config.",
+      "required": ["repo"],
       "additionalProperties": false,
       "properties": {
-        "skill": {
+        "repo": {
           "type": "string",
-          "description": "Name of the skill that provides access to this storage."
+          "description": "GitHub repository (owner/name)."
         },
-        "path": {
+        "label": {
           "type": "string",
-          "description": "Path within the external system."
+          "description": "Filter issues by label."
         },
-        "kind": {
+        "assignee": {
           "type": "string",
-          "description": "Optional qualifier (e.g., 'reply', 'review')."
+          "description": "Filter issues by assignee."
+        }
+      }
+    },
+    "githubDiscussionsConfig": {
+      "type": "object",
+      "description": "GitHub Discussions integration config.",
+      "required": ["repo"],
+      "additionalProperties": false,
+      "properties": {
+        "repo": {
+          "type": "string",
+          "description": "GitHub repository (owner/name)."
+        },
+        "category": {
+          "type": "string",
+          "description": "Filter discussions by category."
+        }
+      }
+    },
+    "githubPullRequestsConfig": {
+      "type": "object",
+      "description": "GitHub Pull Requests integration config.",
+      "required": ["repo"],
+      "additionalProperties": false,
+      "properties": {
+        "repo": {
+          "type": "string",
+          "description": "GitHub repository (owner/name)."
+        },
+        "state": {
+          "type": "string",
+          "description": "Filter pull requests by state (e.g., 'open', 'closed')."
         }
       }
     },
