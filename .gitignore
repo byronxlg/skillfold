@@ -13,3 +13,14 @@ build/
 test-output/
 docs/.vitepress/dist/
 docs/.vitepress/cache/
+
+# Development artifacts
+.oss-bot-test/
+.parse_project.mjs
+.test-goose/
+.tmp_payload.json
+.update-readme.mjs
+decode_readme.js
+decode_readme.mjs
+readme_decoded.md
+update_readme.mjs
