@@ -37,7 +37,7 @@ Options:
   --config <path>      Config file (default: skillfold.yaml)
   --out-dir <path>     Output directory (default: build, or .claude for claude-code target)
   --dir <path>         Target directory for init (default: .)
-  --target <mode>      Output mode: skill, claude-code, cursor, windsurf, codex, copilot
+  --target <mode>      Output mode: skill, claude-code, cursor, windsurf, codex, copilot, gemini
   --template <name>    Start from a library template (init only)
   --check              Verify compiled output is up-to-date (exit 1 if stale)
   --dry-run            Show execution plan without running (run only)
@@ -140,7 +140,7 @@ function parseArgs(argv: string[]): Args {
       dir = argv[++i];
     } else if (argv[i] === "--target" && argv[i + 1]) {
       const val = argv[++i];
-      const validTargets: CompileTarget[] = ["skill", "claude-code", "cursor", "windsurf", "codex", "copilot"];
+      const validTargets: CompileTarget[] = ["skill", "claude-code", "cursor", "windsurf", "codex", "copilot", "gemini"];
       if (!validTargets.includes(val as CompileTarget)) {
         console.error(`skillfold error: unknown target "${val}" (expected: ${validTargets.join(", ")})`);
         process.exit(1);
@@ -171,6 +171,8 @@ function parseArgs(argv: string[]): Args {
       outDir = ".windsurf";
     } else if (target === "copilot") {
       outDir = ".github";
+    } else if (target === "gemini") {
+      outDir = ".gemini";
     } else if (command === "plugin") {
       outDir = "plugin";
     }

@@ -160,7 +160,27 @@ This outputs to `.windsurf/` by default:
 
 ## Gemini CLI
 
-Gemini CLI reads skills from `.gemini/skills/` and `.agents/skills/`.
+Use `--target gemini` to generate Gemini CLI subagent files and skills:
+
+```bash
+npx skillfold --target gemini
+```
+
+This writes to `.gemini/` by default:
+
+```
+.gemini/
+  agents/
+    engineer.md          # Agent with Gemini frontmatter
+    reviewer.md
+  skills/
+    engineer/SKILL.md    # Standard Agent Skills format
+    reviewer/SKILL.md
+```
+
+Agent files include Gemini-specific YAML frontmatter (`name`, `description`, `model`, `tools`, `max_turns`, `timeout_mins`, `temperature`, `kind`). Use `agentConfig` in your `skillfold.yaml` to set `model`, `tools`, and `maxTurns` (mapped to `max_turns`).
+
+Alternatively, use the cross-platform skill output without agents:
 
 ```bash
 npx skillfold --out-dir .gemini/skills
