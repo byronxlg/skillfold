@@ -16,10 +16,44 @@ export interface AtomicSkill {
   path: string;
 }
 
+/** Known Claude Code subagent frontmatter fields that can be set on composed skills. */
+export interface AgentFrontmatter {
+  tools?: string[];
+  disallowedTools?: string[];
+  permissionMode?: "default" | "acceptEdits" | "bypassPermissions" | "plan";
+  model?: string;
+  memory?: boolean;
+  hooks?: Record<string, unknown>;
+  isolation?: "worktree" | "none";
+  effort?: "low" | "medium" | "high";
+  maxTurns?: number;
+  background?: boolean;
+}
+
+export const VALID_PERMISSION_MODES = ["default", "acceptEdits", "bypassPermissions", "plan"] as const;
+export const VALID_ISOLATION_VALUES = ["worktree", "none"] as const;
+export const VALID_EFFORT_VALUES = ["low", "medium", "high"] as const;
+
+/** Keys that are recognized as AgentFrontmatter fields on composed skills. */
+export const AGENT_FRONTMATTER_KEYS = new Set<string>([
+  "tools",
+  "disallowedTools",
+  "permissionMode",
+  "model",
+  "memory",
+  "hooks",
+  "isolation",
+  "effort",
+  "maxTurns",
+  "background",
+]);
+
 export interface ComposedSkill {
   compose: string[];
   description: string;
+  /** @deprecated Use named agent frontmatter fields (tools, permissionMode, etc.) instead. */
   frontmatter?: Record<string, unknown>;
+  agentConfig?: AgentFrontmatter;
 }
 
 export type SkillEntry = AtomicSkill | ComposedSkill;
@@ -83,6 +117,110 @@ function normalizeAtomicSkills(
   return skills;
 }
 
+function validateStringArray(name: string, field: string, value: unknown): string[] {
+  if (!Array.isArray(value) || !value.every((v) => typeof v === "string")) {
+    throw new ConfigError(
+      `Skill "${name}": ${field} must be an array of strings`
+    );
+  }
+  return value;
+}
+
+function parseAgentFrontmatter(
+  name: string,
+  raw: Record<string, unknown>,
+): AgentFrontmatter | undefined {
+  const config: AgentFrontmatter = {};
+  let hasFields = false;
+
+  if ("tools" in raw) {
+    config.tools = validateStringArray(name, "tools", raw.tools);
+    hasFields = true;
+  }
+
+  if ("disallowedTools" in raw) {
+    config.disallowedTools = validateStringArray(name, "disallowedTools", raw.disallowedTools);
+    hasFields = true;
+  }
+
+  if ("permissionMode" in raw) {
+    const v = raw.permissionMode;
+    if (typeof v !== "string" || !(VALID_PERMISSION_MODES as readonly string[]).includes(v)) {
+      throw new ConfigError(
+        `Skill "${name}": permissionMode must be one of: ${VALID_PERMISSION_MODES.join(", ")}`
+      );
+    }
+    config.permissionMode = v as AgentFrontmatter["permissionMode"];
+    hasFields = true;
+  }
+
+  if ("model" in raw) {
+    if (typeof raw.model !== "string") {
+      throw new ConfigError(`Skill "${name}": model must be a string`);
+    }
+    config.model = raw.model;
+    hasFields = true;
+  }
+
+  if ("memory" in raw) {
+    if (typeof raw.memory !== "boolean") {
+      throw new ConfigError(`Skill "${name}": memory must be a boolean`);
+    }
+    config.memory = raw.memory;
+    hasFields = true;
+  }
+
+  if ("hooks" in raw) {
+    if (typeof raw.hooks !== "object" || raw.hooks === null || Array.isArray(raw.hooks)) {
+      throw new ConfigError(`Skill "${name}": hooks must be a YAML map`);
+    }
+    config.hooks = raw.hooks as Record<string, unknown>;
+    hasFields = true;
+  }
+
+  if ("isolation" in raw) {
+    const v = raw.isolation;
+    if (typeof v !== "string" || !(VALID_ISOLATION_VALUES as readonly string[]).includes(v)) {
+      throw new ConfigError(
+        `Skill "${name}": isolation must be one of: ${VALID_ISOLATION_VALUES.join(", ")}`
+      );
+    }
+    config.isolation = v as AgentFrontmatter["isolation"];
+    hasFields = true;
+  }
+
+  if ("effort" in raw) {
+    const v = raw.effort;
+    if (typeof v !== "string" || !(VALID_EFFORT_VALUES as readonly string[]).includes(v)) {
+      throw new ConfigError(
+        `Skill "${name}": effort must be one of: ${VALID_EFFORT_VALUES.join(", ")}`
+      );
+    }
+    config.effort = v as AgentFrontmatter["effort"];
+    hasFields = true;
+  }
+
+  if ("maxTurns" in raw) {
+    if (typeof raw.maxTurns !== "number" || !Number.isInteger(raw.maxTurns) || raw.maxTurns < 1) {
+      throw new ConfigError(
+        `Skill "${name}": maxTurns must be a positive integer`
+      );
+    }
+    config.maxTurns = raw.maxTurns;
+    hasFields = true;
+  }
+
+  if ("background" in raw) {
+    if (typeof raw.background !== "boolean") {
+      throw new ConfigError(`Skill "${name}": background must be a boolean`);
+    }
+    config.background = raw.background;
+    hasFields = true;
+  }
+
+  return hasFields ? config : undefined;
+}
+
 function normalizeComposedSkills(
   raw: Record<string, unknown>
 ): Record<string, ComposedSkill> {
@@ -120,6 +258,12 @@ function normalizeComposedSkills(
         );
       }
       entry.frontmatter = frontmatter as Record<string, unknown>;
+    }
+
+    // Parse named agent frontmatter fields
+    const agentConfig = parseAgentFrontmatter(name, value as Record<string, unknown>);
+    if (agentConfig) {
+      entry.agentConfig = agentConfig;
     }
 
     skills[name] = entry;

@@ -74,8 +74,55 @@
               },
               "frontmatter": {
                 "type": "object",
-                "description": "Extra YAML frontmatter fields emitted in --target claude-code output. Passthrough key-value pairs such as tools, permissionMode, isolation, maxTurns, etc.",
+                "description": "Extra YAML frontmatter fields emitted in --target claude-code output. Passthrough key-value pairs. Prefer the named fields (tools, permissionMode, etc.) for validated overrides.",
                 "additionalProperties": true
+              },
+              "tools": {
+                "type": "array",
+                "description": "Claude Code tools available to this agent (e.g., Read, Edit, Write, Bash, Grep, Glob).",
+                "items": { "type": "string" }
+              },
+              "disallowedTools": {
+                "type": "array",
+                "description": "Claude Code tools explicitly denied to this agent.",
+                "items": { "type": "string" }
+              },
+              "permissionMode": {
+                "type": "string",
+                "description": "Claude Code permission mode for this agent.",
+                "enum": ["default", "acceptEdits", "bypassPermissions", "plan"]
+              },
+              "model": {
+                "type": "string",
+                "description": "Model override for this agent (e.g., sonnet, opus, haiku). Replaces the default 'inherit'."
+              },
+              "memory": {
+                "type": "boolean",
+                "description": "Whether this agent has memory enabled."
+              },
+              "hooks": {
+                "type": "object",
+                "description": "Claude Code lifecycle hooks for this agent.",
+                "additionalProperties": true
+              },
+              "isolation": {
+                "type": "string",
+                "description": "Isolation mode for this agent.",
+                "enum": ["worktree", "none"]
+              },
+              "effort": {
+                "type": "string",
+                "description": "Reasoning effort level for this agent.",
+                "enum": ["low", "medium", "high"]
+              },
+              "maxTurns": {
+                "type": "integer",
+                "description": "Maximum number of turns for this agent.",
+                "minimum": 1
+              },
+              "background": {
+                "type": "boolean",
+                "description": "Whether this agent runs in the background."
               }
             }
           }
