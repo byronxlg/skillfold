@@ -141,6 +141,38 @@ skillfold: 3 passed, 1 skipped in 8s
 
 Each step shows its status, agent name, retry count (if applicable), and duration.
 
+## Agent Spawners
+
+The runner supports two agent spawners, selected with `--spawner`:
+
+### CLI spawner (default)
+
+```bash
+npx skillfold run --target claude-code --spawner cli
+```
+
+Uses `claude --print` to invoke agents. Each agent receives its compiled skill as a prompt and returns state updates as JSON. No additional dependencies required.
+
+Best for: quick iteration, environments without the Agent SDK installed.
+
+### SDK spawner
+
+```bash
+npx skillfold run --target claude-code --spawner sdk
+```
+
+Uses `@anthropic-ai/claude-agent-sdk` to spawn agents programmatically. Agents get full tool access (Read, Write, Bash, Grep, Glob, etc.), the Claude Code system prompt, and project settings loading.
+
+Install the SDK as a peer dependency:
+
+```bash
+npm install @anthropic-ai/claude-agent-sdk
+```
+
+Best for: production pipelines where agents need to read files, run commands, and interact with the codebase. The SDK spawner gives agents the same capabilities they have in an interactive Claude Code session.
+
+If the SDK is not installed and `--spawner sdk` is specified, the runner exits with an error.
+
 ## State Backends
 
 When state fields declare integration locations, the runner connects to external backends automatically:
@@ -203,6 +235,7 @@ npx skillfold run --target claude-code --config path/to/pipeline.yaml
 | `--target` | (required) | Compilation target (`claude-code`) |
 | `--config` | `skillfold.yaml` | Path to pipeline config |
 | `--dry-run` | `false` | Preview without executing |
+| `--spawner` | `cli` | Agent spawner: `cli` or `sdk` |
 | `--on-error` | `abort` | Error mode: `abort`, `skip`, or `retry` |
 | `--max-retries` | `3` | Max retry attempts (with `--on-error retry`) |
 | `--max-iterations` | `10` | Max visits per node (loop guard) |
