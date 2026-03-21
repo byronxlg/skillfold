@@ -152,7 +152,7 @@ and the documentation accurately describes what the tool does.
   stored or logged.
 - **Single dependency** - The only runtime dependency is `yaml` (YAML parser).
   No transitive dependency tree to audit.
-- **550 tests** across 95 suites, run with `node:test` (zero test framework
+- **550 tests** across 103 suites, run with `node:test` (zero test framework
   dependencies).
 - **MIT license**, clearly stated in LICENSE and package.json.
 - **CI on Node 20 + 22** via GitHub Actions, with `--check` flag for verifying
