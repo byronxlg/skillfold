@@ -20,15 +20,16 @@ Skillfold compiles YAML config into standard SKILL.md files per the Agent Skills
 
 ## Config Structure
 
-Three top-level sections: `skills`, `state`, `team`.
+Four top-level sections: `resources`, `skills`, `state`, `team`.
 
+- `resources` - Resource declarations mapping group names to namespace URLs for state location validation and orchestrator URL resolution
 - `skills.atomic` - Path references to atomic skill directories (local or GitHub URLs)
 - `skills.composed` - Composition declarations combining atomic skills into agents
 - `state` - Typed state schema with custom types, primitives, lists, and external locations
 - `team.orchestrator` - Optional skill name to append generated plan to
 - `team.flow` - Directed execution flow with conditional routing, loops, and parallel map
 
-Imports pull in `skills` and `state`, ignore `team`.
+Imports pull in `resources`, `skills`, and `state`, ignore `team`.
 
 ## Architecture
 
@@ -58,7 +59,7 @@ The codebase is TypeScript (strict, ESM modules). Key modules:
 
 ## What's Implemented
 
-All compiler features are working: skill composition with atomic/composed sub-sections, state schema, flow validation, map subgraph validation, when-clause parsing, orchestrator generation, spec-compliant output, URL-based skill references (with private repo auth via GITHUB_TOKEN), pipeline imports, graph visualization with full composition lineage and interactive HTML output (`skillfold graph --html`), `skillfold init`, `skillfold adopt`, `skillfold validate`, `skillfold list`, `--check` for CI integration, async flow nodes for external agents, resource namespace declarations with compile-time location path validation, sub-flow imports for nested pipeline composition, npm skill search (`skillfold search`), `npm:` prefix resolution for skill imports, and skill publishing guide. Published on npm as `skillfold`. 560 tests across 104 suites, CI on GitHub Actions. The project self-hosts its own dev team via `skillfold.yaml`.
+All compiler features are working: skill composition with atomic/composed sub-sections, state schema, flow validation, map subgraph validation, when-clause parsing, orchestrator generation, spec-compliant output, URL-based skill references (with private repo auth via GITHUB_TOKEN), pipeline imports, graph visualization with full composition lineage and interactive HTML output (`skillfold graph --html`), `skillfold init`, `skillfold adopt`, `skillfold validate`, `skillfold list`, `--check` for CI integration, async flow nodes for external agents, top-level resource declarations with compile-time location path validation (skill-level resources deprecated but backward compatible), sub-flow imports for nested pipeline composition, npm skill search (`skillfold search`), `npm:` prefix resolution for skill imports, local config overrides (`skillfold.local.yaml`), and skill publishing guide. Published on npm as `skillfold`. 592 tests across 108 suites, CI on GitHub Actions. The project self-hosts its own dev team via `skillfold.yaml`.
 
 ## What's Next
 
