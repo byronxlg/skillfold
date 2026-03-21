@@ -266,7 +266,7 @@ It also does not replace individual skill management. The [skills CLI](https://s
 
 Think of it like TypeScript for agent pipelines. TypeScript does not replace JavaScript. It adds a type system that catches errors at compile time. Skillfold does not replace SKILL.md files. It adds typed state, flow validation, and orchestrator generation, then compiles down to the same Markdown your platform already reads.
 
-The output is portable across [32 platforms](https://agentskills.io) that support the Agent Skills standard. If your tool reads SKILL.md files, it reads skillfold output.
+The output is portable across [33+ platforms](https://agentskills.io) that support the Agent Skills standard. If your tool reads SKILL.md files, it reads skillfold output.
 
 ---
 

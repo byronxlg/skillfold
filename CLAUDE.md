@@ -134,7 +134,7 @@ Located in `library/examples/`:
 
 ## What's Implemented
 
-- Config parsing with three top-level sections (skills, state, team), cycle detection, and reference validation
+- Config parsing with four top-level sections (resources, skills, state, team), cycle detection, and reference validation
 - Skills split into atomic and composed sub-sections
 - Skill path resolution and SKILL.md reading (local paths + GitHub URLs)
 - Recursive skill composition and compilation to build/

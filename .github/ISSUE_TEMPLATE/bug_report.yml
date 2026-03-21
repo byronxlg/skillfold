@@ -1,0 +1,36 @@
+name: Bug Report
+description: Report a bug in skillfold
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened? What did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction Steps
+      description: Minimal steps to reproduce the issue.
+      placeholder: |
+        1. Create a skillfold.yaml with...
+        2. Run `npx skillfold`
+        3. See error...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Skillfold Version
+      description: Output of `npx skillfold --version`
+    validations:
+      required: true
+  - type: input
+    id: node-version
+    attributes:
+      label: Node.js Version
+      description: Output of `node --version`
+    validations:
+      required: true

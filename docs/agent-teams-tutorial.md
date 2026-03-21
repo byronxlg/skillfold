@@ -406,6 +406,6 @@ You can also use the reusable GitHub Action:
 
 - [Agent Teams Bridge](/agent-teams-bridge) - deeper explanation of what skillfold solves for Agent Teams
 - [Getting Started](/getting-started) - the full getting-started guide with all features
-- [Platform Integration](/integrations) - all 7 supported compilation targets
+- [Platform Integration](/integrations) - all 12 supported compilation targets
 - [Running Pipelines](/running-pipelines) - execute pipelines with `skillfold run`
 - [Publishing Skills](/publishing) - share your skills via npm

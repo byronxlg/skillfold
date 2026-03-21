@@ -1,9 +1,10 @@
 # Config Format
 
-Skillfold pipelines are defined in a single YAML file (default: `skillfold.yaml`). Three top-level sections, each building on the last:
+Skillfold pipelines are defined in a single YAML file (default: `skillfold.yaml`). Four top-level sections, each building on the last:
 
 | Section | What you define | What the compiler does |
 |---------|----------------|----------------------|
+| **resources** | Namespace URLs for external services | Validates state location paths at compile time |
 | **skills** | Atomic skill directories + composition rules | Concatenates skill bodies in order, recursively |
 | **state** | Typed schema with custom types and external locations | Validates reads/writes against the flow |
 | **team** | Execution flow with conditionals, loops, and parallel map | Generates orchestrator plan, checks reachability |

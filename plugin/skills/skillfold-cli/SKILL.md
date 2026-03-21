@@ -9,8 +9,9 @@ You use the skillfold compiler to manage multi-agent pipeline configurations. Sk
 
 ## Config File
 
-The pipeline is defined in `skillfold.yaml` at the project root. It has three top-level sections:
+The pipeline is defined in `skillfold.yaml` at the project root. It has four top-level sections:
 
+- **resources** - Namespace URLs for external services
 - **skills** - Atomic skill directories and composition rules
 - **state** - Typed state schema with custom types and external locations
 - **team** - Orchestrator designation and execution flow

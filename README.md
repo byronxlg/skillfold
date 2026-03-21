@@ -490,6 +490,7 @@ Commands:
   watch             Compile and watch for changes
   plugin            Package compiled output as a Claude Code plugin
   search [query]    Discover skill packages on npm
+  run               Execute the pipeline (spawns agents per the team flow)
   (default)         Compile the pipeline config
 
 Options:
@@ -500,6 +501,12 @@ Options:
   --template <name>    Start from a library template (init only)
   --html               Output interactive HTML instead of Mermaid (graph only)
   --check              Verify compiled output is up-to-date (exit 1 if stale)
+  --spawner <type>     Agent spawner for run: cli or sdk (default: cli)
+  --dry-run            Preview pipeline execution without spawning agents
+  --resume             Resume from last checkpoint
+  --on-error <mode>    Error handling: retry, skip, or abort (default: abort)
+  --max-retries <n>    Max retries per step (default: 3)
+  --max-iterations <n> Max loop iterations (default: 10)
   --help               Show this help
   --version            Show version
 ```
@@ -525,7 +532,7 @@ jobs:
 
 ### Config
 
-Three top-level sections. Full specification in [BRIEF.md](BRIEF.md). A [JSON Schema](skillfold.schema.json) is available for IDE autocompletion.
+Four top-level sections: `resources`, `skills`, `state`, `team`. Full specification in [BRIEF.md](BRIEF.md). A [JSON Schema](skillfold.schema.json) is available for IDE autocompletion.
 
 Add this line to the top of your `skillfold.yaml` for editor support:
 

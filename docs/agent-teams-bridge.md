@@ -184,6 +184,6 @@ Requires Claude Code v2.1.32+.
 ## Next steps
 
 - [Getting Started](/getting-started) - install skillfold and compile your first pipeline
-- [Platform Integration](/integrations) - all 7 supported compilation targets
+- [Platform Integration](/integrations) - all 12 supported compilation targets
 - [Running Pipelines](/running-pipelines) - execute pipelines with `skillfold run`
 - [Comparison with Agent Teams](/comparisons#agent-teams) - feature-by-feature comparison

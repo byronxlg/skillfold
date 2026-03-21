@@ -42,7 +42,7 @@ A prior violation triggered a cooldown:
 
 **Description:**
 
-Configuration language and compiler for multi-agent AI pipelines. Compiles a single YAML config into agent skills for 11 platforms including Claude Code, Cursor, Copilot, and Gemini. Validates skill references, state types, and write conflicts at build time. Ships with 11 reusable library skills, a Claude Code plugin, and example pipeline templates.
+Configuration language and compiler for multi-agent AI pipelines. Compiles a single YAML config into agent skills for 12 targets including Claude Code, Cursor, Copilot, Gemini, and Goose. Validates skill references, state types, and write conflicts at build time. Ships with 11 reusable library skills, a Claude Code plugin, and example pipeline templates.
 
 **Validate Claims:**
 
@@ -97,11 +97,11 @@ does not execute agents.
 
 **3. Documentation and Transparency: 9/10**
 README accurately describes all features. Getting-started tutorial, integration
-guide for 11 platforms, JSON Schema for IDE autocompletion, VitePress docs site,
+guide for 12 targets, JSON Schema for IDE autocompletion, VitePress docs site,
 CLI reference, config reference. No undocumented side effects.
 
 **4. Functionality and Scope: 9/10**
-Does exactly what it claims: compiles YAML config to agent skills for 11
+Does exactly what it claims: compiles YAML config to agent skills for 12
 platform targets. Validates skill references, state types, write conflicts,
 cycles, and reachability at compile time. Self-hosts its own dev team pipeline.
 
