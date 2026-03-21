@@ -771,26 +771,6 @@ describe("run", () => {
   });
 
   describe("unsupported features", () => {
-    it("map node produces clear error", async () => {
-      const config = makeConfig({
-        nodes: [
-          { over: "state.items", as: "item", flow: [] },
-        ],
-      });
-
-      await assert.rejects(
-        () => run(
-          { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
-          mockSpawner({}),
-        ),
-        (err: Error) => {
-          assert.ok(err instanceof RunError);
-          assert.ok(err.message.includes("map nodes not supported"));
-          return true;
-        },
-      );
-    });
-
     it("sub-flow node produces clear error", async () => {
       const config = makeConfig({
         nodes: [
@@ -1606,6 +1586,576 @@ describe("run", () => {
       ) as Checkpoint;
       assert.deepEqual(finalCheckpoint.completedSteps, ["planner", "engineer"]);
       assert.equal(finalCheckpoint.state.code, "done");
+    });
+  });
+
+  describe("map execution", () => {
+    it("executes subgraph for each item in parallel", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      // Pre-seed state with a list of items
+      writeFileSync(join(tmpDir, "state.json"), JSON.stringify({
+        tasks: [
+          { title: "task-a", output: "" },
+          { title: "task-b", output: "" },
+        ],
+      }));
+
+      const config = makeConfig({
+        nodes: [
+          {
+            over: "state.tasks",
+            as: "task",
+            flow: [
+              { skill: "engineer", reads: ["task.title"], writes: ["task.output"] },
+            ],
+          },
+        ],
+      });
+
+      const { spawner, calls } = recordingSpawner({
+        engineer: { output: "done" },
+      });
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        spawner,
+      );
+
+      // Both items should have been processed
+      assert.equal(calls.length, 2);
+      assert.equal(result.steps.length, 1);
+      assert.equal(result.steps[0].agent, "map");
+      assert.equal(result.steps[0].status, "ok");
+      assert.ok(result.steps[0].mapItems);
+      assert.equal(result.steps[0].mapItems!.length, 2);
+      assert.equal(result.steps[0].mapItems![0].status, "ok");
+      assert.equal(result.steps[0].mapItems![1].status, "ok");
+
+      // State should have updated items
+      const tasks = result.state.tasks as Array<{ title: string; output: string }>;
+      assert.equal(tasks[0].output, "done");
+      assert.equal(tasks[1].output, "done");
+    });
+
+    it("scopes item state correctly per item", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      writeFileSync(join(tmpDir, "state.json"), JSON.stringify({
+        tasks: [
+          { title: "first" },
+          { title: "second" },
+        ],
+      }));
+
+      const config = makeConfig({
+        nodes: [
+          {
+            over: "state.tasks",
+            as: "task",
+            flow: [
+              { skill: "engineer", reads: ["task.title"], writes: ["task.output"] },
+            ],
+          },
+        ],
+      });
+
+      // Return different output per call to verify scoped state
+      const callStates: Array<Record<string, unknown>> = [];
+      const spawner: Spawner = {
+        async spawn(_agentName: string, _skillContent: string, state: Record<string, unknown>) {
+          callStates.push(JSON.parse(JSON.stringify(state)));
+          const task = state.task as Record<string, unknown>;
+          return { output: `processed-${task.title}` };
+        },
+      };
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        spawner,
+      );
+
+      // Each call should have received scoped state with the task variable
+      assert.equal(callStates.length, 2);
+      assert.deepEqual((callStates[0].task as Record<string, unknown>).title, "first");
+      assert.deepEqual((callStates[1].task as Record<string, unknown>).title, "second");
+
+      const tasks = result.state.tasks as Array<{ title: string; output: string }>;
+      assert.equal(tasks[0].output, "processed-first");
+      assert.equal(tasks[1].output, "processed-second");
+    });
+
+    it("handles empty list gracefully", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      writeFileSync(join(tmpDir, "state.json"), JSON.stringify({ tasks: [] }));
+
+      const config = makeConfig({
+        nodes: [
+          {
+            over: "state.tasks",
+            as: "task",
+            flow: [
+              { skill: "engineer", reads: [], writes: ["task.output"] },
+            ],
+          },
+        ],
+      });
+
+      const { spawner, calls } = recordingSpawner({});
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        spawner,
+      );
+
+      assert.equal(calls.length, 0);
+      assert.equal(result.steps[0].status, "ok");
+      assert.equal(result.steps[0].mapItems!.length, 0);
+    });
+
+    it("map with multi-step subgraph executes steps in order per item", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      writeFileSync(join(tmpDir, "state.json"), JSON.stringify({
+        tasks: [{ title: "task-1" }],
+      }));
+
+      const config = makeConfig({
+        nodes: [
+          {
+            over: "state.tasks",
+            as: "task",
+            flow: [
+              { skill: "engineer", reads: ["task.title"], writes: ["task.output"], then: "reviewer" },
+              { skill: "reviewer", reads: ["task.output"], writes: ["task.approved"] },
+            ],
+          },
+        ],
+      });
+
+      const callOrder: string[] = [];
+      const spawner: Spawner = {
+        async spawn(agentName: string) {
+          callOrder.push(agentName);
+          if (agentName === "engineer") return { output: "code" };
+          return { approved: true };
+        },
+      };
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        spawner,
+      );
+
+      assert.deepEqual(callOrder, ["engineer", "reviewer"]);
+      assert.equal(result.steps[0].mapItems![0].steps.length, 2);
+      assert.equal(result.steps[0].mapItems![0].steps[0].agent, "engineer");
+      assert.equal(result.steps[0].mapItems![0].steps[1].agent, "reviewer");
+
+      const tasks = result.state.tasks as Array<{ output: string; approved: boolean }>;
+      assert.equal(tasks[0].output, "code");
+      assert.equal(tasks[0].approved, true);
+    });
+
+    it("map with conditional routing in subgraph", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      writeFileSync(join(tmpDir, "state.json"), JSON.stringify({
+        tasks: [{ title: "task-1" }],
+      }));
+
+      const config = makeConfig({
+        nodes: [
+          {
+            over: "state.tasks",
+            as: "task",
+            flow: [
+              { skill: "engineer", reads: ["task.title"], writes: ["task.output"], then: "reviewer" },
+              {
+                skill: "reviewer",
+                reads: ["task.output"],
+                writes: ["task.approved"],
+                then: [
+                  { when: "task.approved == false", to: "engineer" },
+                  { when: "task.approved == true", to: "end" },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      // Engineer runs twice, reviewer approves on second pass
+      let engineerCalls = 0;
+      let reviewerCalls = 0;
+      const spawner: Spawner = {
+        async spawn(agentName: string) {
+          if (agentName === "engineer") {
+            engineerCalls++;
+            return { output: `code-v${engineerCalls}` };
+          }
+          reviewerCalls++;
+          return { approved: reviewerCalls >= 2 };
+        },
+      };
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        spawner,
+      );
+
+      assert.equal(result.steps[0].status, "ok");
+      assert.equal(engineerCalls, 2);
+      assert.equal(reviewerCalls, 2);
+      const tasks = result.state.tasks as Array<{ approved: boolean }>;
+      assert.equal(tasks[0].approved, true);
+    });
+
+    it("per-item error handling with abort mode", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      writeFileSync(join(tmpDir, "state.json"), JSON.stringify({
+        tasks: [{ title: "good" }, { title: "bad" }],
+      }));
+
+      const config = makeConfig({
+        nodes: [
+          {
+            over: "state.tasks",
+            as: "task",
+            flow: [
+              { skill: "engineer", reads: ["task.title"], writes: ["task.output"] },
+            ],
+          },
+        ],
+      });
+
+      const spawner: Spawner = {
+        async spawn(_agentName: string, _skillContent: string, state: Record<string, unknown>) {
+          const task = state.task as Record<string, unknown>;
+          if (task.title === "bad") throw new Error("Item failed");
+          return { output: "ok" };
+        },
+      };
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false, onError: "abort" },
+        spawner,
+      );
+
+      // Map step should report error because at least one item failed
+      assert.equal(result.steps[0].status, "error");
+      const items = result.steps[0].mapItems!;
+      // One should be ok, one should be error (order may vary since parallel)
+      const okItems = items.filter(i => i.status === "ok");
+      const errorItems = items.filter(i => i.status === "error");
+      assert.equal(okItems.length, 1);
+      assert.equal(errorItems.length, 1);
+    });
+
+    it("per-item error handling with skip mode", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      writeFileSync(join(tmpDir, "state.json"), JSON.stringify({
+        tasks: [{ title: "good" }, { title: "bad" }],
+      }));
+
+      const config = makeConfig({
+        nodes: [
+          {
+            over: "state.tasks",
+            as: "task",
+            flow: [
+              { skill: "engineer", reads: ["task.title"], writes: ["task.output"] },
+            ],
+          },
+        ],
+      });
+
+      const spawner: Spawner = {
+        async spawn(_agentName: string, _skillContent: string, state: Record<string, unknown>) {
+          const task = state.task as Record<string, unknown>;
+          if (task.title === "bad") throw new Error("Item failed");
+          return { output: "ok" };
+        },
+      };
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false, onError: "skip" },
+        spawner,
+      );
+
+      // With skip mode, overall map step should be ok
+      assert.equal(result.steps[0].status, "ok");
+    });
+
+    it("map before and after linear steps", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      writeFileSync(join(tmpDir, "state.json"), JSON.stringify({
+        plan: "",
+        tasks: [{ title: "task-1" }],
+      }));
+
+      const config = makeConfig({
+        nodes: [
+          { skill: "planner", reads: [], writes: ["state.plan", "state.tasks"] },
+          {
+            over: "state.tasks",
+            as: "task",
+            flow: [
+              { skill: "engineer", reads: ["task.title"], writes: ["task.output"] },
+            ],
+            then: "reviewer",
+          },
+          { skill: "reviewer", reads: ["state.tasks"], writes: ["state.review"] },
+        ],
+      });
+
+      const spawner: Spawner = {
+        async spawn(agentName: string) {
+          if (agentName === "planner") return { plan: "planned", tasks: [{ title: "task-1" }] };
+          if (agentName === "engineer") return { output: "coded" };
+          return { review: "approved" };
+        },
+      };
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        spawner,
+      );
+
+      assert.equal(result.steps.length, 3);
+      assert.equal(result.steps[0].agent, "planner");
+      assert.equal(result.steps[0].status, "ok");
+      assert.equal(result.steps[1].agent, "map");
+      assert.equal(result.steps[1].status, "ok");
+      assert.equal(result.steps[2].agent, "reviewer");
+      assert.equal(result.steps[2].status, "ok");
+    });
+
+    it("dry run logs map steps without executing", async () => {
+      const config = makeConfig({
+        nodes: [
+          {
+            over: "state.tasks",
+            as: "task",
+            flow: [
+              { skill: "engineer", reads: ["task.title"], writes: ["task.output"] },
+            ],
+          },
+        ],
+      });
+
+      // Pre-set state for dry run to read
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: true },
+        mockSpawner({}),
+      );
+
+      assert.equal(result.steps.length, 1);
+      assert.equal(result.steps[0].agent, "map");
+      assert.equal(result.steps[0].status, "skipped");
+    });
+
+    it("errors when over field is not an array", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      writeFileSync(join(tmpDir, "state.json"), JSON.stringify({
+        tasks: "not-an-array",
+      }));
+
+      const config = makeConfig({
+        nodes: [
+          {
+            over: "state.tasks",
+            as: "task",
+            flow: [
+              { skill: "engineer", reads: [], writes: ["task.output"] },
+            ],
+          },
+        ],
+      });
+
+      await assert.rejects(
+        () => run(
+          { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+          mockSpawner({}),
+        ),
+        (err: Error) => {
+          assert.ok(err instanceof RunError);
+          assert.ok(err.message.includes("not an array"));
+          return true;
+        },
+      );
+    });
+
+    it("map item timing is recorded", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      writeFileSync(join(tmpDir, "state.json"), JSON.stringify({
+        tasks: [{ title: "a" }, { title: "b" }],
+      }));
+
+      const config = makeConfig({
+        nodes: [
+          {
+            over: "state.tasks",
+            as: "task",
+            flow: [
+              { skill: "engineer", reads: [], writes: ["task.output"] },
+            ],
+          },
+        ],
+      });
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        mockSpawner({ engineer: { output: "done" } }),
+      );
+
+      assert.ok(result.steps[0].durationMs! >= 0);
+      for (const item of result.steps[0].mapItems!) {
+        assert.equal(typeof item.durationMs, "number");
+        assert.ok(item.durationMs! >= 0);
+      }
+    });
+
+    it("map with retry on per-item error", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      writeFileSync(join(tmpDir, "state.json"), JSON.stringify({
+        tasks: [{ title: "flaky" }],
+      }));
+
+      const config = makeConfig({
+        nodes: [
+          {
+            over: "state.tasks",
+            as: "task",
+            flow: [
+              { skill: "engineer", reads: ["task.title"], writes: ["task.output"] },
+            ],
+          },
+        ],
+      });
+
+      let attempts = 0;
+      const spawner: Spawner = {
+        async spawn() {
+          attempts++;
+          if (attempts < 2) throw new Error("Transient failure");
+          return { output: "recovered" };
+        },
+      };
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false, onError: "retry", maxRetries: 3 },
+        spawner,
+      );
+
+      assert.equal(result.steps[0].status, "ok");
+      const tasks = result.state.tasks as Array<{ output: string }>;
+      assert.equal(tasks[0].output, "recovered");
+    });
+
+    it("map writes state.json after completion", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      writeFileSync(join(tmpDir, "state.json"), JSON.stringify({
+        tasks: [{ title: "a" }],
+      }));
+
+      const config = makeConfig({
+        nodes: [
+          {
+            over: "state.tasks",
+            as: "task",
+            flow: [
+              { skill: "engineer", reads: [], writes: ["task.output"] },
+            ],
+          },
+        ],
+      });
+
+      await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        mockSpawner({ engineer: { output: "done" } }),
+      );
+
+      const saved = JSON.parse(readFileSync(join(tmpDir, "state.json"), "utf-8")) as { tasks: Array<{ output: string }> };
+      assert.equal(saved.tasks[0].output, "done");
+    });
+
+    it("async nodes inside map subgraph are skipped", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      writeFileSync(join(tmpDir, "state.json"), JSON.stringify({
+        tasks: [{ title: "a" }],
+      }));
+
+      const config = makeConfig({
+        nodes: [
+          {
+            over: "state.tasks",
+            as: "task",
+            flow: [
+              { skill: "engineer", reads: [], writes: ["task.output"], then: "human" },
+              { name: "human", async: true as const, reads: [], writes: ["task.feedback"], policy: "skip" as const, then: "reviewer" },
+              { skill: "reviewer", reads: ["task.feedback"], writes: ["task.approved"] },
+            ],
+          },
+        ],
+      });
+
+      const spawner: Spawner = {
+        async spawn(agentName: string) {
+          if (agentName === "engineer") return { output: "code" };
+          return { approved: true };
+        },
+      };
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        spawner,
+      );
+
+      assert.equal(result.steps[0].status, "ok");
+      const itemSteps = result.steps[0].mapItems![0].steps;
+      assert.equal(itemSteps.length, 3);
+      assert.equal(itemSteps[0].agent, "engineer");
+      assert.equal(itemSteps[0].status, "ok");
+      assert.equal(itemSteps[1].agent, "human");
+      assert.equal(itemSteps[1].status, "skipped");
+      assert.equal(itemSteps[2].agent, "reviewer");
+      assert.equal(itemSteps[2].status, "ok");
     });
   });
 });
