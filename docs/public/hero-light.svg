@@ -1,49 +1,118 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" fill="none">
-  <!-- Pipeline flow visualization -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 320" fill="none">
   <defs>
-    <linearGradient id="grad-light" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#10b981" stop-opacity="0.8"/>
-      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.8"/>
+    <linearGradient id="gl" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981"/>
+      <stop offset="100%" stop-color="#06b6d4"/>
     </linearGradient>
-    <linearGradient id="line-light" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#10b981" stop-opacity="0.5"/>
-      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.5"/>
+    <linearGradient id="gl2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.3"/>
     </linearGradient>
+    <linearGradient id="gl3" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#06b6d4" stop-opacity="0.08"/>
+    </linearGradient>
+    <filter id="glow-l">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <marker id="arr-l" viewBox="0 0 10 8" refX="10" refY="4" markerWidth="8" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,4 L0,8 Z" fill="#10b981" opacity="0.6"/>
+    </marker>
   </defs>
 
-  <!-- Node: YAML Config (top) -->
-  <rect x="100" y="30" width="120" height="44" rx="10" fill="url(#grad-light)"/>
-  <text x="160" y="57" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="white">YAML</text>
+  <!-- Background grid dots -->
+  <pattern id="dots-l" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
+    <circle cx="10" cy="10" r="0.8" fill="#10b981" opacity="0.08"/>
+  </pattern>
+  <rect width="420" height="320" fill="url(#dots-l)"/>
 
-  <!-- Arrow down -->
-  <line x1="160" y1="74" x2="160" y2="110" stroke="url(#line-light)" stroke-width="2.5" stroke-dasharray="6 4"/>
-  <polygon points="154,106 160,116 166,106" fill="#10b981" opacity="0.6"/>
+  <!-- === Left column: Atomic Skills === -->
+  <text x="68" y="24" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" font-weight="600" fill="#6b7280" letter-spacing="0.08em">SKILLS</text>
 
-  <!-- Node: Compiler (center) -->
-  <rect x="85" y="116" width="150" height="44" rx="10" fill="url(#grad-light)"/>
-  <text x="160" y="143" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" font-weight="600" fill="white">Compiler</text>
+  <!-- Skill: planning -->
+  <rect x="18" y="36" width="100" height="32" rx="8" fill="white" stroke="#10b981" stroke-width="1.5" stroke-opacity="0.5"/>
+  <circle cx="36" cy="52" r="6" fill="#10b981" opacity="0.15"/>
+  <text x="35" y="55" text-anchor="middle" font-family="system-ui,sans-serif" font-size="8" fill="#10b981" font-weight="700">P</text>
+  <text x="72" y="56" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" font-weight="500" fill="#374151">planning</text>
 
-  <!-- Arrow fan-out: three lines going to three output nodes -->
-  <!-- Left -->
-  <line x1="120" y1="160" x2="65" y2="210" stroke="url(#line-light)" stroke-width="2.5" stroke-dasharray="6 4"/>
-  <polygon points="60,205 62,216 72,210" fill="#06b6d4" opacity="0.6"/>
-  <!-- Center -->
-  <line x1="160" y1="160" x2="160" y2="210" stroke="url(#line-light)" stroke-width="2.5" stroke-dasharray="6 4"/>
-  <polygon points="154,206 160,216 166,206" fill="#10b981" opacity="0.6"/>
-  <!-- Right -->
-  <line x1="200" y1="160" x2="255" y2="210" stroke="url(#line-light)" stroke-width="2.5" stroke-dasharray="6 4"/>
-  <polygon points="248,210 258,216 260,205" fill="#06b6d4" opacity="0.6"/>
+  <!-- Skill: code-writing -->
+  <rect x="18" y="76" width="100" height="32" rx="8" fill="white" stroke="#10b981" stroke-width="1.5" stroke-opacity="0.5"/>
+  <circle cx="36" cy="92" r="6" fill="#06b6d4" opacity="0.15"/>
+  <text x="35" y="95" text-anchor="middle" font-family="system-ui,sans-serif" font-size="8" fill="#06b6d4" font-weight="700">C</text>
+  <text x="76" y="96" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" font-weight="500" fill="#374151">code-writing</text>
 
-  <!-- Output nodes -->
-  <rect x="15" y="216" width="100" height="38" rx="8" fill="#10b981" opacity="0.15" stroke="#10b981" stroke-opacity="0.4" stroke-width="1.5"/>
-  <text x="65" y="240" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="500" fill="#047857">Claude Code</text>
+  <!-- Skill: code-review -->
+  <rect x="18" y="116" width="100" height="32" rx="8" fill="white" stroke="#06b6d4" stroke-width="1.5" stroke-opacity="0.5"/>
+  <circle cx="36" cy="132" r="6" fill="#06b6d4" opacity="0.15"/>
+  <text x="35" y="135" text-anchor="middle" font-family="system-ui,sans-serif" font-size="8" fill="#06b6d4" font-weight="700">R</text>
+  <text x="76" y="136" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" font-weight="500" fill="#374151">code-review</text>
 
-  <rect x="110" y="216" width="100" height="38" rx="8" fill="#10b981" opacity="0.15" stroke="#10b981" stroke-opacity="0.4" stroke-width="1.5"/>
-  <text x="160" y="240" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="500" fill="#047857">Cursor</text>
+  <!-- === Center: Composed Agents === -->
+  <text x="210" y="24" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" font-weight="600" fill="#6b7280" letter-spacing="0.08em">AGENTS</text>
 
-  <rect x="205" y="216" width="100" height="38" rx="8" fill="#06b6d4" opacity="0.15" stroke="#06b6d4" stroke-opacity="0.4" stroke-width="1.5"/>
-  <text x="255" y="240" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" font-weight="500" fill="#0e7490">Codex</text>
+  <!-- Composition arrows: planning + code-writing -> engineer -->
+  <path d="M118,52 C145,52 145,60 170,60" stroke="#10b981" stroke-width="1.2" stroke-opacity="0.4" fill="none"/>
+  <path d="M118,92 C145,92 145,76 170,76" stroke="#10b981" stroke-width="1.2" stroke-opacity="0.4" fill="none"/>
 
-  <!-- Bottom label -->
-  <text x="160" y="285" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#6b7280">+ 9 more targets</text>
+  <!-- Agent: engineer -->
+  <rect x="170" y="46" width="80" height="42" rx="10" fill="url(#gl)" filter="url(#glow-l)"/>
+  <text x="210" y="63" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" font-weight="600" fill="white">engineer</text>
+  <text x="210" y="78" text-anchor="middle" font-family="system-ui,sans-serif" font-size="8" fill="white" opacity="0.8">P + C</text>
+
+  <!-- Composition arrows: planning + code-review -> reviewer -->
+  <path d="M118,52 C148,52 148,115 170,115" stroke="#06b6d4" stroke-width="1.2" stroke-opacity="0.4" fill="none"/>
+  <path d="M118,132 C148,132 148,131 170,131" stroke="#06b6d4" stroke-width="1.2" stroke-opacity="0.4" fill="none"/>
+
+  <!-- Agent: reviewer -->
+  <rect x="170" y="102" width="80" height="42" rx="10" fill="url(#gl)" filter="url(#glow-l)"/>
+  <text x="210" y="119" text-anchor="middle" font-family="system-ui,sans-serif" font-size="11" font-weight="600" fill="white">reviewer</text>
+  <text x="210" y="134" text-anchor="middle" font-family="system-ui,sans-serif" font-size="8" fill="white" opacity="0.8">P + R</text>
+
+  <!-- === Compiler block === -->
+  <text x="210" y="180" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" font-weight="600" fill="#6b7280" letter-spacing="0.08em">COMPILE</text>
+
+  <!-- Flow arrows down to compiler -->
+  <path d="M210,88 L210,188" stroke="url(#gl2)" stroke-width="1.5" fill="none" marker-end="url(#arr-l)"/>
+  <path d="M210,144 L210,188" stroke="url(#gl2)" stroke-width="1.5" fill="none"/>
+
+  <!-- Compiler -->
+  <rect x="155" y="190" width="110" height="36" rx="10" fill="url(#gl)"/>
+  <text x="210" y="213" text-anchor="middle" font-family="system-ui,sans-serif" font-size="13" font-weight="700" fill="white">skillfold</text>
+
+  <!-- === Bottom: Output Targets === -->
+  <text x="210" y="252" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" font-weight="600" fill="#6b7280" letter-spacing="0.08em">OUTPUT</text>
+
+  <!-- Fan-out arrows -->
+  <path d="M175,226 L70,264" stroke="#10b981" stroke-width="1.2" stroke-opacity="0.35" fill="none"/>
+  <path d="M195,226 L160,264" stroke="#10b981" stroke-width="1.2" stroke-opacity="0.35" fill="none"/>
+  <path d="M210,226 L210,264" stroke="#10b981" stroke-width="1.2" stroke-opacity="0.35" fill="none"/>
+  <path d="M225,226 L260,264" stroke="#06b6d4" stroke-width="1.2" stroke-opacity="0.35" fill="none"/>
+  <path d="M245,226 L350,264" stroke="#06b6d4" stroke-width="1.2" stroke-opacity="0.35" fill="none"/>
+
+  <!-- Target chips -->
+  <rect x="20" y="266" width="98" height="28" rx="6" fill="white" stroke="#10b981" stroke-width="1" stroke-opacity="0.4"/>
+  <text x="69" y="284" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" font-weight="500" fill="#047857">Claude Code</text>
+
+  <rect x="126" y="266" width="68" height="28" rx="6" fill="white" stroke="#10b981" stroke-width="1" stroke-opacity="0.4"/>
+  <text x="160" y="284" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" font-weight="500" fill="#047857">Cursor</text>
+
+  <rect x="202" y="266" width="56" height="28" rx="6" fill="white" stroke="#06b6d4" stroke-width="1" stroke-opacity="0.4"/>
+  <text x="230" y="284" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" font-weight="500" fill="#0e7490">Codex</text>
+
+  <rect x="266" y="266" width="66" height="28" rx="6" fill="white" stroke="#06b6d4" stroke-width="1" stroke-opacity="0.4"/>
+  <text x="299" y="284" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" font-weight="500" fill="#0e7490">Gemini</text>
+
+  <rect x="340" y="266" width="62" height="28" rx="6" fill="white" stroke="#06b6d4" stroke-width="1" stroke-opacity="0.3"/>
+  <text x="371" y="284" text-anchor="middle" font-family="system-ui,sans-serif" font-size="10" font-weight="500" fill="#9ca3af">+8 more</text>
+
+  <!-- Decorative: state flow indicator -->
+  <rect x="310" y="44" width="92" height="54" rx="8" fill="url(#gl3)" stroke="#10b981" stroke-width="1" stroke-opacity="0.2"/>
+  <text x="356" y="60" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9" font-weight="600" fill="#6b7280" letter-spacing="0.05em">STATE</text>
+  <text x="356" y="76" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9" fill="#9ca3af">tasks: list</text>
+  <text x="356" y="89" text-anchor="middle" font-family="system-ui,sans-serif" font-size="9" fill="#9ca3af">plan: Plan</text>
+
+  <!-- State connection line -->
+  <path d="M310,71 L254,67" stroke="#10b981" stroke-width="1" stroke-opacity="0.2" stroke-dasharray="3 3" fill="none"/>
+  <path d="M310,71 L254,123" stroke="#06b6d4" stroke-width="1" stroke-opacity="0.2" stroke-dasharray="3 3" fill="none"/>
 </svg>

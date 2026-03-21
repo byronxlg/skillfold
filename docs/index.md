@@ -4,7 +4,7 @@ layout: home
 hero:
   name: Skillfold
   text: One config for every AI coding agent
-  tagline: Define agent pipelines in YAML. Compile to 12 platforms. Validate state, flows, and skills at compile time - before anything runs.
+  tagline: Define pipelines in YAML. Compile to 12 platforms. Catch errors before agents run.
   image:
     light: /hero-light.svg
     dark: /hero-dark.svg
@@ -56,29 +56,24 @@ onMounted(() => {
 })
 </script>
 
-<div class="install-banner">
-<div class="install-inner">
-
-::: code-group
-
-```sh [npm]
-npm install skillfold
-```
-
-```sh [yarn]
-yarn add skillfold
-```
-
-```sh [pnpm]
-pnpm add skillfold
-```
-
-```sh [bun]
-bun add skillfold
-```
-
-:::
-
+<div class="quick-start-terminal fade-in">
+<div class="terminal-window">
+  <div class="terminal-header">
+    <div class="terminal-dots">
+      <span class="dot red"></span>
+      <span class="dot yellow"></span>
+      <span class="dot green"></span>
+    </div>
+    <span class="terminal-title">terminal</span>
+  </div>
+  <div class="terminal-body">
+    <div class="terminal-line"><span class="terminal-prompt">$</span> npx skillfold init my-pipeline</div>
+    <div class="terminal-output">Created skillfold.yaml with 3 skills, 2 agents, review loop</div>
+    <div class="terminal-line"><span class="terminal-prompt">$</span> npx skillfold --target claude-code</div>
+    <div class="terminal-output">Compiled 2 agents to .claude/agents/ (0 errors, 0 warnings)</div>
+    <div class="terminal-line"><span class="terminal-prompt">$</span> npx skillfold --target cursor</div>
+    <div class="terminal-output">Compiled 2 agents to .cursor/rules/ (0 errors, 0 warnings)</div>
+  </div>
 </div>
 </div>
 
@@ -103,6 +98,7 @@ bun add skillfold
 
 <div class="badges-bar">
   <a href="https://www.npmjs.com/package/skillfold"><img src="https://img.shields.io/npm/v/skillfold?color=10b981&label=npm" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/skillfold"><img src="https://img.shields.io/npm/dw/skillfold?color=06b6d4&label=downloads" alt="npm downloads" /></a>
   <a href="https://github.com/byronxlg/skillfold"><img src="https://img.shields.io/github/stars/byronxlg/skillfold?style=social" alt="GitHub stars" /></a>
   <a href="https://github.com/byronxlg/skillfold/blob/main/LICENSE"><img src="https://img.shields.io/github/license/byronxlg/skillfold?color=10b981" alt="MIT License" /></a>
 </div>
@@ -176,9 +172,33 @@ npx skillfold --target cursor       # generates .cursor/
 
 </div>
 
+<div class="why-section fade-in">
+<div class="why-grid">
+  <div class="why-card">
+    <div class="why-icon">0</div>
+    <h3>Zero lock-in</h3>
+    <p>Output is plain files. No SDK, no runtime, no middleware. Delete skillfold and the files still work.</p>
+  </div>
+  <div class="why-card">
+    <div class="why-icon">12</div>
+    <h3>Every platform</h3>
+    <p>One YAML config compiles to Claude Code, Cursor, Codex, Gemini, Windsurf, Copilot, and 6 more.</p>
+  </div>
+  <div class="why-card">
+    <div class="why-icon">0s</div>
+    <h3>No runtime cost</h3>
+    <p>Validation happens at compile time. Agents run natively on the platform with no framework overhead.</p>
+  </div>
+</div>
+</div>
+
 <div class="home-content fade-in">
 
 ## What a Pipeline Looks Like
+
+<div class="pipeline-demo">
+<div class="pipeline-input">
+<div class="pipeline-label">skillfold.yaml</div>
 
 ```yaml
 skills:
@@ -210,46 +230,36 @@ team:
       then: end
 ```
 
-Compile to any platform:
+</div>
+<div class="pipeline-output">
+<div class="pipeline-label">Compile to any target</div>
 
-::: code-group
-
-```sh [Claude Code]
+```sh
 npx skillfold --target claude-code
-# .claude/agents/*.md, .claude/skills/*/SKILL.md
-```
+# .claude/agents/planner.md
+# .claude/agents/engineer.md
+# .claude/skills/planning/SKILL.md
+# .claude/skills/code-writing/SKILL.md
 
-```sh [Cursor]
 npx skillfold --target cursor
-# .cursor/rules/*.mdc
+# .cursor/rules/planner.mdc
+# .cursor/rules/engineer.mdc
 ```
 
-```sh [Codex]
-npx skillfold --target codex
-# AGENTS.md
-```
+<div class="pipeline-more-targets">
 
-```sh [Gemini]
-npx skillfold --target gemini
-# .gemini/agents/*.md
-```
+Also: Windsurf, Copilot, Codex, Gemini, Goose, Roo Code, Kiro, Junie, Agent Teams, SKILL.md
 
-```sh [More targets]
-npx skillfold --target windsurf   # .windsurf/rules/*.md
-npx skillfold --target copilot    # .github/instructions/*.md
-npx skillfold --target goose      # .goosehints
-npx skillfold --target roo-code   # .roo/skills/
-npx skillfold --target kiro       # .kiro/skills/
-npx skillfold --target junie      # .junie/skills/
-```
-
-:::
+</div>
 
 Or run the pipeline directly:
 
 ```sh
-npx skillfold run --target claude-code --spawner sdk
+npx skillfold run --target claude-code
 ```
+
+</div>
+</div>
 
 </div>
 
@@ -260,27 +270,16 @@ npx skillfold run --target claude-code --spawner sdk
 
 Skillfold catches errors before agents run. Runtime tools like CrewAI and LangGraph catch them during execution.
 
-<div class="comparison-grid">
-  <div class="comparison-card">
-    <h3>Skillfold (compile-time)</h3>
-    <ul>
-      <li><strong>Output:</strong> Standard files (SKILL.md, .claude/agents/, Cursor rules)</li>
-      <li><strong>Lock-in:</strong> None - plain files any tool can read</li>
-      <li><strong>Validation:</strong> Compile-time type checking</li>
-      <li><strong>Overhead:</strong> Zero - no middleware at runtime</li>
-      <li><strong>Best for:</strong> Known pipeline topology with typed state</li>
-    </ul>
-  </div>
-  <div class="comparison-card">
-    <h3>Runtime orchestration</h3>
-    <ul>
-      <li><strong>Output:</strong> Proprietary runtime objects and APIs</li>
-      <li><strong>Lock-in:</strong> Tied to the framework's SDK</li>
-      <li><strong>Validation:</strong> Runtime errors during execution</li>
-      <li><strong>Overhead:</strong> Framework process alongside agents</li>
-      <li><strong>Best for:</strong> Dynamic workflows that adapt mid-execution</li>
-    </ul>
-  </div>
+<div class="comparison-table-wrap">
+
+| | **Skillfold** | **Runtime frameworks** |
+|---|---|---|
+| **Output** | Standard files any tool reads | Proprietary runtime objects |
+| **Lock-in** | None - delete the tool, keep the files | Tied to the framework SDK |
+| **Validation** | Compile-time type checking | Runtime errors during execution |
+| **Overhead** | Zero at runtime | Framework process alongside agents |
+| **Best for** | Known topology with typed state | Dynamic workflows that adapt mid-run |
+
 </div>
 
 <a class="comparison-link" :href="withBase('/comparisons')">Detailed comparisons -></a>
@@ -309,7 +308,7 @@ One config, 12 platform targets. Write your pipeline in YAML and compile to whic
   <div class="target"><img class="target-icon" :src="withBase('/icons/targets/skill.svg')" alt="" />SKILL.md</div>
 </div>
 
-[See platform integration details ->](/integrations)
+<p class="targets-link"><a :href="withBase('/integrations')">See platform integration details -></a></p>
 
 </div>
 
@@ -324,7 +323,15 @@ One config, 12 platform targets. Write your pipeline in YAML and compile to whic
 
 <div class="cta-section fade-in">
 
-## Ready to get started?
+## Start building in 60 seconds
+
+<div class="cta-install">
+
+```sh
+npm install skillfold && npx skillfold init my-pipeline
+```
+
+</div>
 
 <div class="cta-grid">
   <a class="cta-card" :href="withBase('/getting-started')">

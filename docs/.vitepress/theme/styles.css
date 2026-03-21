@@ -95,7 +95,7 @@
   display: flex;
   justify-content: center;
   gap: 48px;
-  padding: 32px 24px 0;
+  padding: 32px 24px 16px;
   max-width: 960px;
   margin: 0 auto;
 }
@@ -164,33 +164,83 @@
 }
 
 /* ============================================
-   Install banner below hero
+   Terminal-style quick start preview
    ============================================ */
-.vp-doc .install-banner {
-  max-width: 960px;
+.vp-doc .quick-start-terminal {
+  max-width: 600px;
   margin: 0 auto;
   padding: 0 24px;
 }
 
-.vp-doc .install-banner .install-inner {
+.vp-doc .terminal-window {
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--vp-c-divider);
+  background: #1e1e2e;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+}
+
+.dark .vp-doc .terminal-window {
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.vp-doc .terminal-header {
   display: flex;
-  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: #181825;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.vp-doc .install-banner div[class*="language-"] {
-  margin: 0;
-  border-radius: 8px;
-  display: inline-block;
-  min-width: 300px;
+.vp-doc .terminal-dots {
+  display: flex;
+  gap: 6px;
 }
 
-.vp-doc .install-banner .vp-code-group {
-  min-width: 340px;
-  max-width: 440px;
+.vp-doc .terminal-dots .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
 }
 
-.vp-doc .install-banner .vp-code-group div[class*="language-"] {
-  min-width: 0;
+.vp-doc .terminal-dots .dot.red { background: #f38ba8; }
+.vp-doc .terminal-dots .dot.yellow { background: #f9e2af; }
+.vp-doc .terminal-dots .dot.green { background: #a6e3a1; }
+
+.vp-doc .terminal-title {
+  font-size: 12px;
+  color: #6c7086;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.vp-doc .terminal-body {
+  padding: 16px 20px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.vp-doc .terminal-line {
+  color: #cdd6f4;
+}
+
+.vp-doc .terminal-prompt {
+  color: #a6e3a1;
+  margin-right: 8px;
+  user-select: none;
+}
+
+.vp-doc .terminal-output {
+  color: #6c7086;
+  padding-left: 18px;
+  margin-bottom: 4px;
+}
+
+.vp-doc .terminal-line:last-child + .terminal-output:last-child,
+.vp-doc .terminal-body > :last-child {
+  margin-bottom: 0;
 }
 
 /* ============================================
@@ -407,6 +457,79 @@
 }
 
 /* ============================================
+   Why Skillfold - 3-card value props
+   ============================================ */
+.vp-doc .why-section {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 48px 24px 0;
+}
+
+.vp-doc .why-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 640px) {
+  .vp-doc .why-grid {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+.vp-doc .why-card {
+  text-align: center;
+  padding: 28px 20px;
+  border-radius: 12px;
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  transition: border-color 0.25s, transform 0.2s, box-shadow 0.25s;
+}
+
+.vp-doc .why-card:hover {
+  border-color: var(--vp-c-brand-1);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.08);
+}
+
+.dark .vp-doc .why-card:hover {
+  box-shadow: 0 8px 24px rgba(52, 211, 153, 0.06);
+}
+
+.vp-doc .why-icon {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+  background: linear-gradient(120deg, #10b981 30%, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dark .vp-doc .why-icon {
+  background: linear-gradient(120deg, #34d399 30%, #22d3ee);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.vp-doc .why-card h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--vp-c-text-1);
+}
+
+.vp-doc .why-card p {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--vp-c-text-2);
+  margin: 0;
+}
+
+/* ============================================
    Home content section
    ============================================ */
 .vp-doc .home-content {
@@ -432,13 +555,27 @@
    Section divider gradient
    ============================================ */
 .vp-doc .how-it-works + .before-after::before,
-.vp-doc .before-after + .home-content::before {
+.vp-doc .before-after + .why-section::before,
+.vp-doc .why-section + .home-content::before {
   content: '';
   display: block;
   height: 1px;
   max-width: 200px;
   margin: 0 auto 48px;
   background: linear-gradient(90deg, transparent, var(--vp-c-brand-soft), transparent);
+}
+
+/* ============================================
+   Smooth scrolling
+   ============================================ */
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 /* ============================================
@@ -477,69 +614,23 @@
   margin-top: 24px;
 }
 
-.vp-doc .comparison-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 16px;
-  max-width: 960px;
+.vp-doc .comparison-table-wrap {
+  max-width: 720px;
   margin: 0 auto;
 }
 
-@media (min-width: 640px) {
-  .vp-doc .comparison-grid {
-    grid-template-columns: 1fr 1fr;
-  }
+.vp-doc .comparison-table-wrap table {
+  width: 100%;
+  font-size: 14px;
 }
 
-.vp-doc .comparison-card {
-  padding: 24px;
-  border-radius: 12px;
-  background: var(--vp-c-bg);
-  border: 1px solid var(--vp-c-divider);
-  transition: border-color 0.25s, box-shadow 0.25s;
-}
-
-.vp-doc .comparison-card:first-child {
-  border-color: var(--vp-c-brand-1);
-  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.1), 0 4px 16px rgba(16, 185, 129, 0.06);
-}
-
-.dark .vp-doc .comparison-card:first-child {
-  box-shadow: 0 0 0 1px rgba(52, 211, 153, 0.1), 0 4px 16px rgba(52, 211, 153, 0.04);
-}
-
-.vp-doc .comparison-card h3 {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 16px;
-  color: var(--vp-c-text-1);
-}
-
-.vp-doc .comparison-card:first-child h3 {
+.vp-doc .comparison-table-wrap th:nth-child(2) {
   color: var(--vp-c-brand-1);
 }
 
-.vp-doc .comparison-card ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.vp-doc .comparison-card li {
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--vp-c-text-2);
-  padding: 4px 0;
-}
-
-.vp-doc .comparison-card li + li {
-  border-top: 1px solid var(--vp-c-divider);
-  margin-top: 4px;
-  padding-top: 8px;
-}
-
-.vp-doc .comparison-card li strong {
+.vp-doc .comparison-table-wrap td:nth-child(2) {
   color: var(--vp-c-text-1);
+  font-weight: 500;
 }
 
 /* ============================================
@@ -636,8 +727,18 @@
   text-align: center;
   font-size: 28px;
   font-weight: 700;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
   letter-spacing: -0.02em;
+}
+
+.vp-doc .cta-install {
+  max-width: 520px;
+  margin: 0 auto 24px;
+}
+
+.vp-doc .cta-install div[class*="language-"] {
+  border-color: var(--vp-c-brand-1);
+  border-width: 1.5px;
 }
 
 .vp-doc .cta-grid {
@@ -849,4 +950,89 @@
 
 .vp-doc div[class*="language-"]:hover {
   border-color: var(--vp-c-brand-soft);
+}
+
+/* ============================================
+   Pipeline demo - side by side layout
+   ============================================ */
+.vp-doc .pipeline-demo {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+}
+
+@media (min-width: 860px) {
+  .vp-doc .pipeline-demo {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+}
+
+.vp-doc .pipeline-input,
+.vp-doc .pipeline-output {
+  min-width: 0;
+}
+
+.vp-doc .pipeline-label {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  border-radius: 4px;
+  margin-bottom: 8px;
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-1);
+}
+
+.vp-doc .pipeline-demo div[class*="language-"] {
+  margin-top: 0;
+}
+
+.vp-doc .pipeline-more-targets {
+  font-size: 13px;
+  color: var(--vp-c-text-3);
+  text-align: center;
+  padding: 8px 0;
+  font-style: italic;
+}
+
+/* ============================================
+   Section heading refinements
+   ============================================ */
+.vp-doc .how-it-works h2,
+.vp-doc .before-after h2,
+.vp-doc .why-section h2,
+.vp-doc .home-content h2,
+.vp-doc .comparison-section h2,
+.vp-doc .targets-section h2,
+.vp-doc .cta-section h2 {
+  background: linear-gradient(120deg, var(--vp-c-text-1) 60%, var(--vp-c-brand-1));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================
+   Improve link arrows on homepage
+   ============================================ */
+.vp-doc .targets-link {
+  text-align: center;
+  margin-top: 24px;
+}
+
+.vp-doc .targets-link a,
+.vp-doc .targets-section > p:last-child a,
+.vp-doc .comparison-link,
+.vp-doc .dogfood-link {
+  text-decoration: none;
+  transition: color 0.2s;
+}
+
+.vp-doc .targets-link a:hover,
+.vp-doc .targets-section > p:last-child a:hover,
+.vp-doc .comparison-link:hover,
+.vp-doc .dogfood-link:hover {
+  color: var(--vp-c-brand-2);
 }
