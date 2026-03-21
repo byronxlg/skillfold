@@ -2,7 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 
 import { ConfigError, ResolveError } from "./errors.js";
-import { fetchRemoteConfig, fetchRemoteSkill, getGitHubHeaders, parseGitHubUrl } from "./remote.js";
+import { extractPinnedRef, fetchRemoteConfig, fetchRemoteSkill, getGitHubHeaders, parseGitHubUrl } from "./remote.js";
 
 describe("getGitHubHeaders", () => {
   it("returns Authorization header when GITHUB_TOKEN is set", () => {
@@ -116,6 +116,197 @@ describe("parseGitHubUrl", () => {
   });
 });
 
+describe("extractPinnedRef", () => {
+  it("returns undefined ref when no @ is present", () => {
+    const [url, ref] = extractPinnedRef(
+      "https://github.com/org/repo/tree/main/skills/foo"
+    );
+    assert.equal(url, "https://github.com/org/repo/tree/main/skills/foo");
+    assert.equal(ref, undefined);
+  });
+
+  it("extracts a tag ref from the end of the URL", () => {
+    const [url, ref] = extractPinnedRef(
+      "https://github.com/org/repo/tree/main/skills/foo@v1.0.0"
+    );
+    assert.equal(url, "https://github.com/org/repo/tree/main/skills/foo");
+    assert.equal(ref, "v1.0.0");
+  });
+
+  it("extracts a SHA ref from the end of the URL", () => {
+    const [url, ref] = extractPinnedRef(
+      "https://github.com/org/repo/tree/main/skills/foo@abc1234"
+    );
+    assert.equal(url, "https://github.com/org/repo/tree/main/skills/foo");
+    assert.equal(ref, "abc1234");
+  });
+
+  it("throws on empty ref after @", () => {
+    assert.throws(
+      () => extractPinnedRef("https://github.com/org/repo/tree/main/skills/foo@"),
+      /Empty version ref after @/
+    );
+  });
+
+  it("throws on SHA shorter than 7 characters", () => {
+    assert.throws(
+      () => extractPinnedRef("https://github.com/org/repo/tree/main/skills/foo@abc12"),
+      /Invalid commit SHA.*must be 7-40 hex characters/
+    );
+  });
+
+  it("throws on SHA longer than 40 characters", () => {
+    const longSha = "a".repeat(41);
+    assert.throws(
+      () => extractPinnedRef(`https://github.com/org/repo/tree/main/skills/foo@${longSha}`),
+      /Invalid commit SHA.*must be 7-40 hex characters/
+    );
+  });
+
+  it("accepts a full 40-character SHA", () => {
+    const sha = "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2";
+    const [url, ref] = extractPinnedRef(
+      `https://github.com/org/repo/tree/main/skills/foo@${sha}`
+    );
+    assert.equal(url, "https://github.com/org/repo/tree/main/skills/foo");
+    assert.equal(ref, sha);
+  });
+
+  it("does not split on @ in earlier path segments", () => {
+    const [url, ref] = extractPinnedRef(
+      "https://github.com/org/repo/tree/main/skills/foo"
+    );
+    assert.equal(url, "https://github.com/org/repo/tree/main/skills/foo");
+    assert.equal(ref, undefined);
+  });
+
+  it("accepts non-hex tag-like refs without SHA validation", () => {
+    const [url, ref] = extractPinnedRef(
+      "https://github.com/org/repo/tree/main/skills/foo@release-2024"
+    );
+    assert.equal(url, "https://github.com/org/repo/tree/main/skills/foo");
+    assert.equal(ref, "release-2024");
+  });
+});
+
+describe("parseGitHubUrl with @ref pinning", () => {
+  it("uses pinned tag ref instead of branch from URL path", () => {
+    const parts = parseGitHubUrl(
+      "https://github.com/org/repo/tree/main/skills/foo@v1.0.0"
+    );
+    assert.deepEqual(parts, {
+      owner: "org",
+      repo: "repo",
+      ref: "v1.0.0",
+      path: "skills/foo",
+    });
+  });
+
+  it("uses pinned SHA ref instead of branch from URL path", () => {
+    const parts = parseGitHubUrl(
+      "https://github.com/org/repo/tree/main/skills/foo@abc1234"
+    );
+    assert.deepEqual(parts, {
+      owner: "org",
+      repo: "repo",
+      ref: "abc1234",
+      path: "skills/foo",
+    });
+  });
+
+  it("falls back to branch ref when no @ suffix is present", () => {
+    const parts = parseGitHubUrl(
+      "https://github.com/org/repo/tree/main/skills/foo"
+    );
+    assert.deepEqual(parts, {
+      owner: "org",
+      repo: "repo",
+      ref: "main",
+      path: "skills/foo",
+    });
+  });
+
+  it("throws on empty ref after @", () => {
+    assert.throws(
+      () => parseGitHubUrl("https://github.com/org/repo/tree/main/skills/foo@"),
+      /Empty version ref after @/
+    );
+  });
+
+  it("constructs correct raw URL with pinned ref via fetchRemoteSkill", async () => {
+    const fetchedUrls: string[] = [];
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (input: string | URL | Request, _init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      fetchedUrls.push(url);
+      return new Response("# Pinned Skill", { status: 200 });
+    };
+
+    try {
+      const content = await fetchRemoteSkill(
+        "pinned-skill",
+        "https://github.com/org/repo/tree/main/skills/foo@v2.0.0"
+      );
+      assert.equal(content, "# Pinned Skill");
+      assert.equal(fetchedUrls.length, 1);
+      assert.equal(
+        fetchedUrls[0],
+        "https://raw.githubusercontent.com/org/repo/v2.0.0/skills/foo/SKILL.md"
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("constructs correct raw URL without pinned ref (backward compat)", async () => {
+    const fetchedUrls: string[] = [];
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (input: string | URL | Request, _init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      fetchedUrls.push(url);
+      return new Response("# Branch Skill", { status: 200 });
+    };
+
+    try {
+      const content = await fetchRemoteSkill(
+        "branch-skill",
+        "https://github.com/org/repo/tree/develop/skills/foo"
+      );
+      assert.equal(content, "# Branch Skill");
+      assert.equal(fetchedUrls.length, 1);
+      assert.equal(
+        fetchedUrls[0],
+        "https://raw.githubusercontent.com/org/repo/develop/skills/foo/SKILL.md"
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+
+  it("constructs correct raw URL with SHA pinned ref via fetchRemoteSkill", async () => {
+    const fetchedUrls: string[] = [];
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = async (input: string | URL | Request, _init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+      fetchedUrls.push(url);
+      return new Response("# SHA Skill", { status: 200 });
+    };
+
+    try {
+      await fetchRemoteSkill(
+        "sha-skill",
+        "https://github.com/org/repo/tree/main/skills/foo@abc1234def"
+      );
+      assert.equal(
+        fetchedUrls[0],
+        "https://raw.githubusercontent.com/org/repo/abc1234def/skills/foo/SKILL.md"
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  });
+});
+
 describe("fetchRemoteSkill", () => {
   it("rejects non-GitHub URLs with ResolveError", async () => {
     await assert.rejects(
@@ -149,6 +340,38 @@ describe("fetchRemoteSkill", () => {
         assert.ok(err instanceof ResolveError);
         assert.match(err.message, /Unsupported URL format/);
         assert.match(err.message, /no-tree/);
+        return true;
+      }
+    );
+  });
+
+  it("rejects empty ref after @ with specific error message", async () => {
+    await assert.rejects(
+      () =>
+        fetchRemoteSkill(
+          "empty-ref",
+          "https://github.com/org/repo/tree/main/skills/foo@"
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof ResolveError);
+        assert.match(err.message, /Empty version ref/);
+        assert.match(err.message, /empty-ref/);
+        return true;
+      }
+    );
+  });
+
+  it("rejects invalid short SHA with specific error message", async () => {
+    await assert.rejects(
+      () =>
+        fetchRemoteSkill(
+          "bad-sha",
+          "https://github.com/org/repo/tree/main/skills/foo@abc"
+        ),
+      (err: unknown) => {
+        assert.ok(err instanceof ResolveError);
+        assert.match(err.message, /Invalid commit SHA/);
+        assert.match(err.message, /bad-sha/);
         return true;
       }
     );
