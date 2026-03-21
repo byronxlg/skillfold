@@ -133,7 +133,7 @@ describe("initFromTemplate", () => {
     const config = readFileSync(join(tmpDir, "skillfold.yaml"), "utf-8");
     assert.ok(config.includes("name: dev-team"));
     assert.ok(
-      config.includes("node_modules/skillfold/library/skillfold.yaml"),
+      config.includes("npm:skillfold/library/skillfold.yaml"),
       "import path should be rewritten to npm path"
     );
     assert.ok(
@@ -154,7 +154,7 @@ describe("initFromTemplate", () => {
 
       const config = readFileSync(join(tmpDir, "skillfold.yaml"), "utf-8");
       assert.ok(config.includes(`name: ${template}`));
-      assert.ok(config.includes("node_modules/skillfold/library/skillfold.yaml"));
+      assert.ok(config.includes("npm:skillfold/library/skillfold.yaml"));
 
       rmSync(tmpDir, { recursive: true, force: true });
       tmpDir = undefined;
@@ -250,7 +250,7 @@ describe("init CLI", () => {
 
     const config = readFileSync(join(subDir, "skillfold.yaml"), "utf-8");
     assert.ok(config.includes("name: dev-team"));
-    assert.ok(config.includes("node_modules/skillfold/library/skillfold.yaml"));
+    assert.ok(config.includes("npm:skillfold/library/skillfold.yaml"));
   });
 
   it("errors on unknown template via CLI", () => {
