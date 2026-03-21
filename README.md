@@ -505,6 +505,7 @@ Commands:
   graph             Output Mermaid flowchart of the team flow
   watch             Compile and watch for changes
   plugin            Package compiled output as a Claude Code plugin
+  search [query]    Discover skill packages on npm
   (default)         Compile the pipeline config
 
 Options:

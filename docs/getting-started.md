@@ -283,7 +283,24 @@ For Claude Code, `--target claude-code` generates agent markdown files alongside
 
 Skillfold also ships a built-in plugin with 11 generic skills. Install it by referencing `node_modules/skillfold/plugin/` from your Claude Code configuration.
 
-## 10. Next steps
+## 10. Sharing skills
+
+Once you have skills worth reusing across projects or teams, publish them to npm. Any skill directory or pipeline config can be packaged and shared.
+
+```bash
+npm publish
+```
+
+Consumers install your package and import it:
+
+```yaml
+imports:
+  - npm:@team/shared-skills
+```
+
+See the [Publishing Guide](publishing.md) for package structure, required fields, and discovery via `skillfold search`.
+
+## 11. Next steps
 
 - Read the full config specification in [BRIEF.md](../BRIEF.md)
 - Explore the [shared library examples](../library/examples/) for real pipeline patterns
