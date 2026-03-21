@@ -293,7 +293,11 @@ async function main(): Promise<void> {
       const rel = relative(process.cwd(), abs);
       const cdTarget = rel === "" ? "" : rel.startsWith("..") ? abs : rel;
       const cdPrefix = cdTarget ? `cd ${cdTarget} && ` : "";
-      console.log(`\nNext: ${cdPrefix}npx skillfold`);
+      if (args.template) {
+        console.log(`\nNext: ${cdPrefix}npm install skillfold && npx skillfold`);
+      } else {
+        console.log(`\nNext: ${cdPrefix}npx skillfold`);
+      }
       if (!args.template) {
         console.log(
           "\nTip: import shared skills from the library by uncommenting the imports line in skillfold.yaml"

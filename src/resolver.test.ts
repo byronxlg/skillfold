@@ -138,6 +138,24 @@ Review the code carefully.
     assert.ok(body.includes("Review the code carefully."), "Body should contain the body text");
   });
 
+  it("throws ResolveError with npm install hint for missing npm: skill", async () => {
+    tmpDir = makeTmpDir();
+
+    const config: Config = {
+      name: "test",
+      skills: {
+        planning: { path: "npm:@team/shared/skills/planning" },
+      },
+    };
+
+    await assert.rejects(() => resolveSkills(config, tmpDir!), (err: unknown) => {
+      assert.ok(err instanceof ResolveError);
+      assert.match(err.message, /Directory not found/);
+      assert.match(err.message, /npm install @team\/shared/);
+      return true;
+    });
+  });
+
   it("preserves body when no frontmatter present", async () => {
     tmpDir = makeTmpDir();
 
