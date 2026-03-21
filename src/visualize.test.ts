@@ -482,8 +482,9 @@ describe("generateMermaid", () => {
     );
     const output = generateMermaid(config);
     // Async nodes use stadium shape: ([name])
-    assert.ok(output.includes("owner([owner])"));
+    assert.ok(output.includes("owner([owner]):::async"));
     assert.ok(output.includes("owner -->"));
+    assert.ok(output.includes("classDef async stroke-dasharray: 5 5"));
   });
 
   it("renders async node with writes as edge label", () => {
@@ -497,8 +498,9 @@ describe("generateMermaid", () => {
     };
     const config = atomicConfig([asyncNode], []);
     const output = generateMermaid(config);
-    assert.ok(output.includes("ci([ci])"));
+    assert.ok(output.includes("ci([ci]):::async"));
     assert.ok(output.includes("|\"status\"|"));
+    assert.ok(output.includes("classDef async stroke-dasharray: 5 5"));
   });
 
   it("renders async node followed by step node with fall-through", () => {
@@ -514,9 +516,18 @@ describe("generateMermaid", () => {
       ["processor"],
     );
     const output = generateMermaid(config);
-    assert.ok(output.includes("external([external])"));
+    assert.ok(output.includes("external([external]):::async"));
     assert.ok(output.includes("external -->"));
     assert.ok(output.includes("processor"));
+    assert.ok(output.includes("classDef async stroke-dasharray: 5 5"));
+  });
+  it("does not emit async classDef when no async nodes exist", () => {
+    const config = atomicConfig(
+      [step("alpha", { then: "beta" }), step("beta")],
+      ["alpha", "beta"],
+    );
+    const output = generateMermaid(config);
+    assert.ok(!output.includes("classDef async"));
   });
 });
 
