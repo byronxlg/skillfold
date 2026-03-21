@@ -141,14 +141,50 @@ skillfold: 3 passed, 1 skipped in 8s
 
 Each step shows its status, agent name, retry count (if applicable), and duration.
 
+## State Backends
+
+When state fields declare integration locations, the runner connects to external backends automatically:
+
+```yaml
+state:
+  tasks:
+    type: list<Task>
+    location:
+      github-issues: { repo: org/repo, label: task }
+  direction:
+    type: string
+    location:
+      github-discussions: { repo: org/repo, category: strategy }
+```
+
+**Before execution**: the runner reads initial state from all configured backends (GitHub issues, discussions, pull requests). This populates the state with real data from external systems.
+
+**After each step**: state changes are written back to the corresponding backends. For example, new tasks created by an agent become GitHub issues.
+
+**On resume**: the runner reads from backends rather than relying solely on the local checkpoint, ensuring it has the latest data.
+
+If a backend is unreachable, the runner falls back to `state.json` and logs a warning. Backends never block pipeline execution.
+
+Supported backends:
+
+| Integration | Read | Write |
+|------------|------|-------|
+| `github-issues` | Lists open issues by label/assignee | Creates new issues, updates existing |
+| `github-discussions` | Fetches latest discussion in category | Creates discussions or replies |
+| `github-pull-requests` | Lists open PRs and reviews | Read-only (agents create PRs) |
+
+Requires the `gh` CLI authenticated with access to the target repository.
+
 ## State Persistence
 
 State is managed in two locations:
 
 | File | Purpose |
 |------|---------|
-| `state.json` | Working state, updated after each step |
+| `state.json` | Local cache, updated after each step |
 | `.skillfold/run/checkpoint.json` | Execution checkpoint for resume |
+
+When backends are configured, `state.json` acts as a working cache. External backends are the source of truth.
 
 Both files are written to the current working directory. Add `.skillfold/` to your `.gitignore`.
 

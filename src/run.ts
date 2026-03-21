@@ -3,6 +3,12 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node
 import { join } from "node:path";
 import { promisify } from "node:util";
 
+import {
+  type BackendBinding,
+  readStateFromBackends,
+  resolveBackendBindings,
+  writeStateToBackends,
+} from "./backends.js";
 import { type Config } from "./config.js";
 import { type CompileTarget, expandComposedBodies } from "./compiler.js";
 import { RunError } from "./errors.js";
@@ -641,7 +647,12 @@ export async function run(
     clearCheckpointDir();
   }
 
-  // Load initial state from state.json if it exists
+  // Resolve backend bindings for state fields with integration locations
+  const backendBindings: BackendBinding[] = !dryRun && config.state
+    ? resolveBackendBindings(config.state)
+    : [];
+
+  // Load initial state from state.json (local cache)
   const statePath = join(process.cwd(), "state.json");
   let state: Record<string, unknown> = {};
   if (!dryRun && existsSync(statePath)) {
@@ -656,12 +667,21 @@ export async function run(
     }
   }
 
-  // If resuming, restore state from checkpoint
+  // If resuming, prefer backend state over checkpoint (backends are source of truth)
   if (options.resume) {
     const checkpoint = loadCheckpoint();
     if (checkpoint) {
       state = checkpoint.state;
     }
+    if (backendBindings.length > 0) {
+      const backendState = await readStateFromBackends(backendBindings);
+      Object.assign(state, backendState);
+    }
+  } else if (!dryRun && backendBindings.length > 0) {
+    // Fresh run: read initial state from backends
+    const backendState = await readStateFromBackends(backendBindings);
+    Object.assign(state, backendState);
+    writeFileSync(statePath, JSON.stringify(state, null, 2) + "\n", "utf-8");
   }
 
   const activeSpawner = dryRun ? undefined : (spawner ?? new ClaudeSpawner());
@@ -711,6 +731,11 @@ export async function run(
         const overField = stripStatePrefix(node.over);
         state[overField] = mapResult.updatedItems;
         writeFileSync(statePath, JSON.stringify(state, null, 2) + "\n", "utf-8");
+
+        // Sync map results to external backends
+        if (backendBindings.length > 0) {
+          await writeStateToBackends(backendBindings, state, new Set([overField]));
+        }
 
         completedSteps.push("map");
         const nextIdx = resolveNextIndex(node, currentIndex, nodeLookup, state, dryRun);
@@ -791,15 +816,22 @@ export async function run(
         const updates = await activeSpawner!.spawn(node.skill, skillBody, state);
 
         // Apply state updates (only for fields declared in writes)
+        const updatedFields = new Set<string>();
         for (const writePath of node.writes) {
           const field = stripStatePrefix(writePath);
           if (field in updates) {
             state[field] = updates[field];
+            updatedFields.add(field);
           }
         }
 
         // Write updated state to disk after each step
         writeFileSync(statePath, JSON.stringify(state, null, 2) + "\n", "utf-8");
+
+        // Sync to external backends
+        if (backendBindings.length > 0 && updatedFields.size > 0) {
+          await writeStateToBackends(backendBindings, state, updatedFields);
+        }
 
         stepSucceeded = true;
         break;

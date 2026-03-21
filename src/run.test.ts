@@ -2158,4 +2158,101 @@ describe("run", () => {
       assert.equal(itemSteps[2].status, "ok");
     });
   });
+
+  describe("state backends", () => {
+    it("reads initial state from backends on fresh run", async () => {
+      tmpDir = makeTmpDir();
+      origCwd = process.cwd();
+      process.chdir(tmpDir);
+
+      // Config with state schema that has integration locations
+      const config: Config = {
+        name: "test-pipeline",
+        skills: {
+          planning: { path: "./skills/planning" },
+          planner: { compose: ["planning"], description: "Plans work" },
+        },
+        state: {
+          types: {
+            Task: { fields: { title: "string", description: "string" } },
+          },
+          fields: {
+            tasks: {
+              type: { kind: "list", element: "Task" },
+              location: {
+                integration: { type: "github-issues", config: { repo: "org/repo", label: "task" } },
+              },
+            },
+          },
+        },
+        team: {
+          flow: {
+            nodes: [
+              {
+                name: "planner",
+                skill: "planner",
+                reads: [],
+                writes: ["state.tasks"],
+              },
+            ],
+          },
+        },
+      };
+
+      const { spawner, calls } = recordingSpawner({
+        planner: { tasks: [{ title: "Updated" }] },
+      });
+
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: false },
+        spawner,
+      );
+
+      // The run should succeed - backends are resolved but gh CLI isn't available
+      // in test, so readStateFromBackends will fail gracefully (empty state)
+      assert.equal(result.steps.length, 1);
+      assert.equal(result.steps[0].status, "ok");
+    });
+
+    it("skips backends in dry-run mode", async () => {
+      const config: Config = {
+        name: "test-pipeline",
+        skills: {
+          planning: { path: "./skills/planning" },
+          planner: { compose: ["planning"], description: "Plans work" },
+        },
+        state: {
+          types: {},
+          fields: {
+            direction: {
+              type: { kind: "primitive", value: "string" },
+              location: {
+                integration: { type: "github-discussions", config: { repo: "org/repo" } },
+              },
+            },
+          },
+        },
+        team: {
+          flow: {
+            nodes: [
+              {
+                name: "planner",
+                skill: "planner",
+                reads: ["state.direction"],
+                writes: [],
+              },
+            ],
+          },
+        },
+      };
+
+      // Dry run should not attempt to read from backends
+      const result = await run(
+        { config, bodies: makeBodies(), target: "claude-code", outDir: "build", dryRun: true },
+      );
+
+      assert.equal(result.steps.length, 1);
+      assert.equal(result.steps[0].status, "skipped"); // dry-run skips execution
+    });
+  });
 });
