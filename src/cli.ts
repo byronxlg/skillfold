@@ -36,7 +36,7 @@ Options:
   --config <path>      Config file (default: skillfold.yaml)
   --out-dir <path>     Output directory (default: build, or .claude for claude-code target)
   --dir <path>         Target directory for init (default: .)
-  --target <mode>      Output mode: skill (default) or claude-code
+  --target <mode>      Output mode: skill, claude-code, cursor, windsurf, codex, copilot
   --template <name>    Start from a library template (init only)
   --check              Verify compiled output is up-to-date (exit 1 if stale)
   --html               Output interactive HTML instead of Mermaid (graph only)
@@ -130,11 +130,12 @@ function parseArgs(argv: string[]): Args {
       dir = argv[++i];
     } else if (argv[i] === "--target" && argv[i + 1]) {
       const val = argv[++i];
-      if (val !== "skill" && val !== "claude-code") {
-        console.error(`skillfold error: unknown target "${val}" (expected: skill, claude-code)`);
+      const validTargets: CompileTarget[] = ["skill", "claude-code", "cursor", "windsurf", "codex", "copilot"];
+      if (!validTargets.includes(val as CompileTarget)) {
+        console.error(`skillfold error: unknown target "${val}" (expected: ${validTargets.join(", ")})`);
         process.exit(1);
       }
-      target = val;
+      target = val as CompileTarget;
     } else if (argv[i] === "--template" && argv[i + 1]) {
       template = argv[++i];
     } else if (argv[i] === "--check") {
@@ -152,9 +153,16 @@ function parseArgs(argv: string[]): Args {
   if (!outDirExplicit) {
     if (target === "claude-code") {
       outDir = ".claude";
+    } else if (target === "cursor") {
+      outDir = ".cursor";
+    } else if (target === "windsurf") {
+      outDir = ".windsurf";
+    } else if (target === "copilot") {
+      outDir = ".github";
     } else if (command === "plugin") {
       outDir = "plugin";
     }
+    // codex defaults to "build" (same as skill)
   }
 
   return {

@@ -6,7 +6,7 @@ import { type Config, isComposed } from "./config.js";
 import { CompileError } from "./errors.js";
 import { generateOrchestrator } from "./orchestrator.js";
 
-export type CompileTarget = "skill" | "claude-code";
+export type CompileTarget = "skill" | "claude-code" | "cursor" | "windsurf" | "codex" | "copilot";
 
 function expand(
   name: string,
@@ -242,6 +242,242 @@ export function generateClaudeCode(
   return results;
 }
 
+/**
+ * Generate output for cursor target: .cursor/rules/*.mdc files.
+ */
+export function generateCursor(
+  config: Config,
+  bodies: Map<string, string>,
+  outDir: string,
+  version: string,
+  configFile: string,
+): GenerateResult[] {
+  const results: GenerateResult[] = [];
+  const composedBodies = expandComposedBodies(config, bodies);
+  const provenance = formatProvenance(config.name, version, configFile);
+
+  for (const [name, skill] of Object.entries(config.skills)) {
+    if (!isComposed(skill)) continue;
+
+    let body = composedBodies.get(name) ?? "";
+
+    // Append orchestrator plan if this is the orchestrator
+    if (config.team && name === config.team.orchestrator) {
+      const orchestratorPlan = generateOrchestrator(config, true);
+      body = body ? body + "\n\n" + orchestratorPlan : orchestratorPlan;
+    }
+
+    const frontmatter = [
+      "---",
+      `description: "${skill.description}"`,
+      "alwaysApply: true",
+      "---",
+    ].join("\n");
+
+    const content = provenance + frontmatter + "\n\n" + body + "\n";
+    results.push({
+      name,
+      path: join(outDir, "rules", `${name}.mdc`),
+      content,
+    });
+  }
+
+  // If team exists but no orchestrator skill, generate standalone orchestrator rule
+  if (config.team && !config.team.orchestrator) {
+    const orchestratorMd = generateOrchestrator(config);
+    const frontmatter = [
+      "---",
+      `description: "Pipeline orchestrator for ${config.name}"`,
+      "alwaysApply: true",
+      "---",
+    ].join("\n");
+
+    const content = provenance + frontmatter + "\n\n" + orchestratorMd + "\n";
+    results.push({
+      name: "orchestrator",
+      path: join(outDir, "rules", "orchestrator.mdc"),
+      content,
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Generate output for windsurf target: .windsurf/rules/*.md files.
+ */
+export function generateWindsurf(
+  config: Config,
+  bodies: Map<string, string>,
+  outDir: string,
+  version: string,
+  configFile: string,
+): GenerateResult[] {
+  const results: GenerateResult[] = [];
+  const composedBodies = expandComposedBodies(config, bodies);
+  const provenance = formatProvenance(config.name, version, configFile);
+
+  for (const [name, skill] of Object.entries(config.skills)) {
+    if (!isComposed(skill)) continue;
+
+    let body = composedBodies.get(name) ?? "";
+
+    if (config.team && name === config.team.orchestrator) {
+      const orchestratorPlan = generateOrchestrator(config, true);
+      body = body ? body + "\n\n" + orchestratorPlan : orchestratorPlan;
+    }
+
+    const frontmatter = [
+      "---",
+      "trigger: always_on",
+      `description: "${skill.description}"`,
+      "---",
+    ].join("\n");
+
+    const content = provenance + frontmatter + "\n\n" + body + "\n";
+    results.push({
+      name,
+      path: join(outDir, "rules", `${name}.md`),
+      content,
+    });
+  }
+
+  if (config.team && !config.team.orchestrator) {
+    const orchestratorMd = generateOrchestrator(config);
+    const frontmatter = [
+      "---",
+      "trigger: always_on",
+      `description: "Pipeline orchestrator for ${config.name}"`,
+      "---",
+    ].join("\n");
+
+    const content = provenance + frontmatter + "\n\n" + orchestratorMd + "\n";
+    results.push({
+      name: "orchestrator",
+      path: join(outDir, "rules", "orchestrator.md"),
+      content,
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Generate output for codex target: single AGENTS.md file.
+ */
+export function generateCodex(
+  config: Config,
+  bodies: Map<string, string>,
+  outDir: string,
+  version: string,
+  configFile: string,
+): GenerateResult[] {
+  const composedBodies = expandComposedBodies(config, bodies);
+  const provenance = formatProvenance(config.name, version, configFile);
+  const sections: string[] = [];
+
+  sections.push(`# ${config.name}`);
+
+  // If team flow exists, add orchestrator plan first
+  if (config.team) {
+    const orchestratorMd = generateOrchestrator(config, true);
+    sections.push("");
+    sections.push(orchestratorMd);
+  }
+
+  // Add each composed skill as a section
+  for (const [name, skill] of Object.entries(config.skills)) {
+    if (!isComposed(skill)) continue;
+    if (config.team && name === config.team.orchestrator) continue; // already included above
+
+    const body = composedBodies.get(name) ?? "";
+    sections.push("");
+    sections.push(`## ${name}`);
+    sections.push("");
+    sections.push(`${skill.description}`);
+    if (body) {
+      sections.push("");
+      sections.push(body);
+    }
+  }
+
+  const content = provenance + sections.join("\n") + "\n";
+
+  return [{
+    name: "AGENTS",
+    path: join(outDir, "AGENTS.md"),
+    content,
+  }];
+}
+
+/**
+ * Generate output for copilot target: copilot-instructions.md and per-agent instruction files.
+ */
+export function generateCopilot(
+  config: Config,
+  bodies: Map<string, string>,
+  outDir: string,
+  version: string,
+  configFile: string,
+): GenerateResult[] {
+  const results: GenerateResult[] = [];
+  const composedBodies = expandComposedBodies(config, bodies);
+  const provenance = formatProvenance(config.name, version, configFile);
+
+  // Generate root copilot-instructions.md
+  const rootSections: string[] = [];
+  rootSections.push(`# ${config.name}`);
+
+  if (config.team) {
+    const orchestratorMd = generateOrchestrator(config, true);
+    rootSections.push("");
+    rootSections.push(orchestratorMd);
+  } else {
+    // No team - combine all agent descriptions
+    for (const [name, skill] of Object.entries(config.skills)) {
+      if (!isComposed(skill)) continue;
+      rootSections.push("");
+      rootSections.push(`## ${name}`);
+      rootSections.push("");
+      rootSections.push(skill.description);
+    }
+  }
+
+  results.push({
+    name: "copilot-instructions",
+    path: join(outDir, "copilot-instructions.md"),
+    content: provenance + rootSections.join("\n") + "\n",
+  });
+
+  // Generate per-agent instruction files
+  for (const [name, skill] of Object.entries(config.skills)) {
+    if (!isComposed(skill)) continue;
+
+    let body = composedBodies.get(name) ?? "";
+
+    if (config.team && name === config.team.orchestrator) {
+      const orchestratorPlan = generateOrchestrator(config, true);
+      body = body ? body + "\n\n" + orchestratorPlan : orchestratorPlan;
+    }
+
+    const frontmatter = [
+      "---",
+      `applyTo: "**/*"`,
+      `description: "${skill.description}"`,
+      "---",
+    ].join("\n");
+
+    const content = provenance + frontmatter + "\n\n" + body + "\n";
+    results.push({
+      name,
+      path: join(outDir, "instructions", `${name}.instructions.md`),
+      content,
+    });
+  }
+
+  return results;
+}
+
 function writeResults(results: GenerateResult[]): void {
   for (const result of results) {
     mkdirSync(dirname(result.path), { recursive: true });
@@ -259,10 +495,26 @@ export function compile(
 ): CompileResult[] {
   mkdirSync(outDir, { recursive: true });
 
-  const generated =
-    target === "claude-code"
-      ? generateClaudeCode(config, bodies, outDir, version, configFile)
-      : generate(config, bodies, outDir, version, configFile);
+  let generated: GenerateResult[];
+  switch (target) {
+    case "claude-code":
+      generated = generateClaudeCode(config, bodies, outDir, version, configFile);
+      break;
+    case "cursor":
+      generated = generateCursor(config, bodies, outDir, version, configFile);
+      break;
+    case "windsurf":
+      generated = generateWindsurf(config, bodies, outDir, version, configFile);
+      break;
+    case "codex":
+      generated = generateCodex(config, bodies, outDir, version, configFile);
+      break;
+    case "copilot":
+      generated = generateCopilot(config, bodies, outDir, version, configFile);
+      break;
+    default:
+      generated = generate(config, bodies, outDir, version, configFile);
+  }
 
   writeResults(generated);
 
@@ -277,10 +529,26 @@ export function check(
   configFile: string,
   target: CompileTarget = "skill",
 ): CheckResult[] {
-  const generated =
-    target === "claude-code"
-      ? generateClaudeCode(config, bodies, outDir, version, configFile)
-      : generate(config, bodies, outDir, version, configFile);
+  let generated: GenerateResult[];
+  switch (target) {
+    case "claude-code":
+      generated = generateClaudeCode(config, bodies, outDir, version, configFile);
+      break;
+    case "cursor":
+      generated = generateCursor(config, bodies, outDir, version, configFile);
+      break;
+    case "windsurf":
+      generated = generateWindsurf(config, bodies, outDir, version, configFile);
+      break;
+    case "codex":
+      generated = generateCodex(config, bodies, outDir, version, configFile);
+      break;
+    case "copilot":
+      generated = generateCopilot(config, bodies, outDir, version, configFile);
+      break;
+    default:
+      generated = generate(config, bodies, outDir, version, configFile);
+  }
   const results: CheckResult[] = [];
 
   for (const result of generated) {
