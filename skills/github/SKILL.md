@@ -1,6 +1,8 @@
 ---
 name: github
 description: Work with GitHub for branches, PRs, code review, issues, projects, and discussions.
+metadata:
+  internal: true
 ---
 
 # GitHub

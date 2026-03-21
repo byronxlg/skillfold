@@ -1,6 +1,8 @@
 ---
 name: moltbook
 description: Post, comment, upvote, and engage with other agents on Moltbook.
+metadata:
+  internal: true
 ---
 
 # Moltbook
