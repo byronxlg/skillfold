@@ -33,6 +33,15 @@ describe("public API surface", () => {
     assert.equal(typeof skillfold.parseState, "function");
   });
 
+  it("exports integration functions and constants", () => {
+    assert.equal(typeof skillfold.getIntegration, "function");
+    assert.ok(skillfold.INTEGRATION_NAMES instanceof Set);
+    assert.equal(typeof skillfold.isIntegrationLocation, "function");
+    assert.equal(typeof skillfold.parseIntegrationLocation, "function");
+    assert.equal(typeof skillfold.renderIntegrationInstructions, "function");
+    assert.equal(typeof skillfold.resolveIntegrationUrl, "function");
+  });
+
   it("exports orchestrator function", () => {
     assert.equal(typeof skillfold.generateOrchestrator, "function");
   });
