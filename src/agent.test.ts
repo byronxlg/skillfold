@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import type { Config } from "./config.js";
 import type { Graph } from "./graph.js";
 import type { StateSchema } from "./state.js";
-import { assignColor, generateAgents } from "./agent.js";
+import { assignColor, generateAgents, generateRunCommand } from "./agent.js";
 
 function makeConfig(overrides?: Partial<Config>): Config {
   const state: StateSchema = {
@@ -314,5 +314,161 @@ describe("generateAgents", () => {
     assert.ok(colorIdx >= 0);
     assert.ok(effortIdx >= 0);
     assert.ok(effortIdx > colorIdx, "extra frontmatter should follow core fields");
+  });
+});
+
+describe("generateAgents with claude-code target", () => {
+  it("orchestrator frontmatter includes tools with worker agent names", () => {
+    const config = makeConfig();
+    const bodies = new Map<string, string>();
+    bodies.set("orchestrator", "Orchestrate.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml", "claude-code");
+    const orch = results.find((r) => r.name === "orchestrator");
+    assert.ok(orch);
+
+    // Tools should list Agent with worker names
+    assert.ok(orch.content.includes("tools:"));
+    assert.ok(orch.content.includes("Agent(planner, engineer, reviewer)"));
+    assert.ok(orch.content.includes("- Read"));
+    assert.ok(orch.content.includes("- Write"));
+    assert.ok(orch.content.includes("- Bash"));
+    assert.ok(orch.content.includes("- Grep"));
+    assert.ok(orch.content.includes("- Glob"));
+  });
+
+  it("non-orchestrator agents do not get automatic tools frontmatter", () => {
+    const config = makeConfig();
+    const bodies = new Map<string, string>();
+    bodies.set("engineer", "Write code.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml", "claude-code");
+    const engineer = results.find((r) => r.name === "engineer");
+    assert.ok(engineer);
+
+    // Engineer should not have tools frontmatter (unless user-configured)
+    assert.ok(!engineer.content.includes("tools:"));
+  });
+
+  it("orchestrator execution plan uses Agent tool language", () => {
+    const config = makeConfig();
+    const bodies = new Map<string, string>();
+    bodies.set("orchestrator", "Orchestrate.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml", "claude-code");
+    const orch = results.find((r) => r.name === "orchestrator");
+    assert.ok(orch);
+
+    // Execution plan should use Agent tool phrasing
+    assert.ok(orch.content.includes("Invoke **planner** using the Agent tool."));
+    assert.ok(orch.content.includes("Invoke **engineer** using the Agent tool."));
+    assert.ok(orch.content.includes("Invoke **reviewer** using the Agent tool."));
+  });
+
+  it("orchestrator includes Agent Invocation section with Agent tool guidance", () => {
+    const config = makeConfig();
+    const bodies = new Map<string, string>();
+    bodies.set("orchestrator", "Orchestrate.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml", "claude-code");
+    const orch = results.find((r) => r.name === "orchestrator");
+    assert.ok(orch);
+
+    assert.ok(orch.content.includes("## Agent Invocation"));
+    assert.ok(orch.content.includes("Use the Agent tool to spawn each agent by name"));
+  });
+
+  it("orchestrator includes state table with locations", () => {
+    const config = makeConfig({
+      state: {
+        types: {},
+        fields: {
+          plan: {
+            type: { kind: "primitive", value: "string" },
+            location: { skill: "planner", path: "docs/plan.md" },
+          },
+          code: { type: { kind: "primitive", value: "string" } },
+          review: { type: { kind: "primitive", value: "string" } },
+        },
+      },
+    });
+    const bodies = new Map<string, string>();
+    bodies.set("orchestrator", "Orchestrate.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml", "claude-code");
+    const orch = results.find((r) => r.name === "orchestrator");
+    assert.ok(orch);
+
+    // State table should be in the body
+    assert.ok(orch.content.includes("## State"));
+    assert.ok(orch.content.includes("| plan | string | planner: docs/plan.md |"));
+  });
+
+  it("orchestrator in skill target does not get tools frontmatter", () => {
+    const config = makeConfig();
+    const bodies = new Map<string, string>();
+    bodies.set("orchestrator", "Orchestrate.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml", "skill");
+    const orch = results.find((r) => r.name === "orchestrator");
+    assert.ok(orch);
+
+    // Skill target should not add tools
+    assert.ok(!orch.content.includes("tools:"));
+    assert.ok(!orch.content.includes("Agent("));
+  });
+
+  it("preserves user-configured frontmatter alongside generated tools", () => {
+    const config = makeConfig({
+      skills: {
+        ...makeConfig().skills,
+        orchestrator: {
+          compose: ["planning"],
+          description: "Coordinates.",
+          frontmatter: { permissionMode: "default" },
+        },
+      },
+    });
+    const bodies = new Map<string, string>();
+    bodies.set("orchestrator", "Orchestrate.");
+
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml", "claude-code");
+    const orch = results.find((r) => r.name === "orchestrator");
+    assert.ok(orch);
+
+    // Both user frontmatter and generated tools should be present
+    assert.ok(orch.content.includes("permissionMode: default"));
+    assert.ok(orch.content.includes("tools:"));
+    assert.ok(orch.content.includes("Agent(planner, engineer, reviewer)"));
+  });
+});
+
+describe("generateRunCommand with orchestrator", () => {
+  it("delegates to orchestrator agent when one is configured", () => {
+    const config = makeConfig();
+    const cmd = generateRunCommand(config, "1.0.0", "test.yaml");
+    assert.ok(cmd);
+
+    // Should reference the orchestrator agent, not embed a full plan
+    assert.ok(cmd.content.includes("spawning the **orchestrator** orchestrator agent"));
+    assert.ok(cmd.content.includes(".claude/agents/orchestrator.md"));
+    // Should not contain the full execution plan
+    assert.ok(!cmd.content.includes("## Execution Plan"));
+  });
+
+  it("embeds full plan when no orchestrator is configured", () => {
+    const config = makeConfig({ team: { flow: makeConfig().team!.flow } });
+    const cmd = generateRunCommand(config, "1.0.0", "test.yaml");
+    assert.ok(cmd);
+
+    // Should contain the full execution plan with Agent tool language
+    assert.ok(cmd.content.includes("## Execution Plan"));
+    assert.ok(cmd.content.includes("Invoke **planner** using the Agent tool."));
+  });
+
+  it("returns null when config has no team flow", () => {
+    const config = makeConfig({ team: undefined });
+    const cmd = generateRunCommand(config, "1.0.0", "test.yaml");
+    assert.equal(cmd, null);
   });
 });

@@ -226,6 +226,7 @@ export function generateClaudeCode(
     outDir,
     version,
     configFile,
+    "claude-code",
   );
   for (const agent of agentResults) {
     results.push(agent);

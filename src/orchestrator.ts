@@ -93,7 +93,8 @@ export function renderNodes(
   nodes: GraphNode[],
   stepMap: StepMapping[],
   prefix: string,
-  headingLevel: string
+  headingLevel: string,
+  useAgentTool = false,
 ): string[] {
   const sections: string[] = [];
 
@@ -119,7 +120,8 @@ export function renderNodes(
         node.graph,
         subMap,
         stepNum,
-        subHeading
+        subHeading,
+        useAgentTool,
       );
       lines.push(...subSections);
 
@@ -134,7 +136,11 @@ export function renderNodes(
       const lines: string[] = [];
       lines.push(`${headingLevel} Step ${stepNum}: ${node.skill}`);
       lines.push("");
-      lines.push(`Invoke **${node.skill}**.`);
+      lines.push(
+        useAgentTool
+          ? `Invoke **${node.skill}** using the Agent tool.`
+          : `Invoke **${node.skill}**.`,
+      );
 
       if (node.reads.length > 0) {
         lines.push("");
@@ -173,7 +179,10 @@ export function renderNodes(
   return sections;
 }
 
-export function generateOrchestrator(config: Config): string {
+export function generateOrchestrator(
+  config: Config,
+  useAgentTool = false,
+): string {
   const lines: string[] = [];
 
   lines.push(`# Orchestrator: ${config.name}`);
@@ -201,13 +210,19 @@ export function generateOrchestrator(config: Config): string {
   lines.push("");
   lines.push("## Agent Invocation");
   lines.push("");
-  lines.push(
-    "To invoke an agent, read its compiled skill from `build/{name}/SKILL.md` and spawn a subagent with that content as its instructions. Give each agent the inputs the plan says it reads, and collect the outputs it writes."
-  );
-  lines.push("");
-  lines.push(
-    "Agents that write code or modify files should run in isolation (e.g., a git worktree) to prevent conflicts with the orchestrator's working directory."
-  );
+  if (useAgentTool) {
+    lines.push(
+      "Use the Agent tool to spawn each agent by name. The Agent tool accepts a `prompt` and optional `isolation: worktree` for agents that modify files."
+    );
+  } else {
+    lines.push(
+      "To invoke an agent, read its compiled skill from `build/{name}/SKILL.md` and spawn a subagent with that content as its instructions. Give each agent the inputs the plan says it reads, and collect the outputs it writes."
+    );
+    lines.push("");
+    lines.push(
+      "Agents that write code or modify files should run in isolation (e.g., a git worktree) to prevent conflicts with the orchestrator's working directory."
+    );
+  }
 
   // State management guidance when locations are defined
   const hasLocations = config.state &&
@@ -215,7 +230,9 @@ export function generateOrchestrator(config: Config): string {
   if (hasLocations) {
     lines.push("");
     lines.push(
-      "State fields have external locations (see the state table above). The orchestrator is responsible for reading inputs from and writing outputs to those locations between agent invocations."
+      useAgentTool
+        ? "State fields have external locations (see the state table above). Read inputs from and write outputs to those locations between agent invocations."
+        : "State fields have external locations (see the state table above). The orchestrator is responsible for reading inputs from and writing outputs to those locations between agent invocations."
     );
   }
 
@@ -229,7 +246,8 @@ export function generateOrchestrator(config: Config): string {
       config.team.flow.nodes,
       stepMap,
       "",
-      "###"
+      "###",
+      useAgentTool,
     );
 
     for (const section of sections) {
