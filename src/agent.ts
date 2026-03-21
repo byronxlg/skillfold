@@ -120,15 +120,12 @@ export function assignColor(
 
 /** Serialize extra frontmatter fields to YAML lines (without the --- delimiters). */
 function serializeExtraFrontmatter(extra: Record<string, unknown>): string[] {
-  // Use the yaml stringify to produce proper YAML, then split into lines
-  // and trim the trailing newline
   const yamlStr = stringify(extra, { lineWidth: 0 }).trimEnd();
   return yamlStr.split("\n");
 }
 
 /** Format agent markdown with frontmatter. */
 function formatAgentMarkdown(agent: AgentDefinition): string {
-  // Use model from extra frontmatter if provided, otherwise default to inherit
   const model = agent.frontmatter?.model ?? "inherit";
 
   const frontmatter: string[] = [
@@ -140,7 +137,6 @@ function formatAgentMarkdown(agent: AgentDefinition): string {
   ];
 
   if (agent.frontmatter) {
-    // Filter out model since it's already emitted as a core field
     const { model: _model, ...rest } = agent.frontmatter;
     if (Object.keys(rest).length > 0) {
       frontmatter.push(...serializeExtraFrontmatter(rest));
@@ -192,7 +188,7 @@ function formatAgentMarkdown(agent: AgentDefinition): string {
   return sections.join("\n") + "\n";
 }
 
-/** Collect non-orchestrator agent names from the team flow. */
+/** Collect non-orchestrator agent names from the team flow. Skips async nodes. */
 function collectWorkerNames(config: Config): string[] {
   if (!config.team) return [];
   const orchestratorName = config.team.orchestrator;
@@ -208,12 +204,6 @@ function collectWorkerNames(config: Config): string[] {
   return names;
 }
 
-/**
- * Generate agent markdown files from a compiled pipeline config.
- * Each composed skill that appears in the team flow becomes an agent.
- * When target is "claude-code", the orchestrator gets Agent tool frontmatter
- * and an execution plan with Agent tool-specific language.
- */
 export function generateAgents(
   config: Config,
   composedBodies: Map<string, string>,
@@ -236,12 +226,10 @@ export function generateAgents(
     const isOrchestrator = name === orchestratorName;
     const color = assignColor(name, writes, isOrchestrator, config);
 
-    // Build frontmatter, starting with any legacy passthrough fields
     const frontmatter: Record<string, unknown> = skill.frontmatter
       ? { ...skill.frontmatter }
       : {};
 
-    // Layer named agentConfig fields on top (overrides legacy frontmatter)
     if (isClaudeCode && skill.agentConfig) {
       for (const [key, val] of Object.entries(skill.agentConfig)) {
         if (val !== undefined) {
@@ -250,10 +238,7 @@ export function generateAgents(
       }
     }
 
-    // In claude-code mode, orchestrator gets Agent tool in frontmatter and
-    // the execution plan appended to its body
     if (isClaudeCode && isOrchestrator && config.team) {
-      // Only set tools if the user hasn't explicitly configured them
       if (!frontmatter.tools) {
         const workerNames = collectWorkerNames(config);
         const agentList = workerNames.length > 0
@@ -262,7 +247,6 @@ export function generateAgents(
         frontmatter.tools = [agentList, "Read", "Write", "Bash", "Grep", "Glob"];
       }
 
-      // Append the execution plan with Agent tool language
       const orchestratorPlan = generateOrchestrator(config, true);
       body = body ? body + "\n\n" + orchestratorPlan : orchestratorPlan;
     }
@@ -291,12 +275,6 @@ export function generateAgents(
   return results;
 }
 
-/**
- * Generate a run-pipeline slash command for Claude Code.
- * Returns null if the config has no team flow.
- * When the config has an orchestrator agent, the command delegates to it
- * instead of embedding the full execution plan.
- */
 export function generateRunCommand(
   config: Config,
   version: string,
@@ -306,7 +284,6 @@ export function generateRunCommand(
 
   const lines: string[] = [];
 
-  // When an orchestrator agent exists, delegate to it
   if (config.team.orchestrator) {
     lines.push(
       `Execute the **${config.name}** pipeline by spawning the **${config.team.orchestrator}** orchestrator agent.`,
@@ -321,7 +298,7 @@ export function generateRunCommand(
 
     return {
       name: "run-pipeline",
-      path: "", // path is set by the caller
+      path: "",
       content,
     };
   }
@@ -330,7 +307,6 @@ export function generateRunCommand(
     `Execute the **${config.name}** pipeline by orchestrating the compiled agents.`,
   );
 
-  // Agent Invocation section
   lines.push("");
   lines.push("## Agent Invocation");
   lines.push("");
@@ -342,7 +318,6 @@ export function generateRunCommand(
     "Agent files are located at `.claude/agents/{name}.md`. Agents that write code or modify files should be spawned with `isolation: \"worktree\"` to prevent conflicts with your working directory.",
   );
 
-  // State management guidance when locations are defined
   const hasLocations = config.state &&
     Object.values(config.state.fields).some((f) => f.location);
   if (hasLocations) {
@@ -352,7 +327,6 @@ export function generateRunCommand(
     );
   }
 
-  // State section
   if (config.state) {
     lines.push("");
     lines.push("## State");
@@ -367,7 +341,6 @@ export function generateRunCommand(
     }
   }
 
-  // Execution Plan section
   lines.push("");
   lines.push("## Execution Plan");
 
@@ -377,7 +350,7 @@ export function generateRunCommand(
     stepMap,
     "",
     "###",
-    true, // use Agent tool language in run-pipeline command
+    true,
   );
 
   for (const section of sections) {
@@ -390,7 +363,7 @@ export function generateRunCommand(
 
   return {
     name: "run-pipeline",
-    path: "", // path is set by the caller
+    path: "",
     content,
   };
 }

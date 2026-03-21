@@ -1,6 +1,6 @@
 import type { Config } from "./config.js";
-import { isConditionalThen, isMapNode } from "./graph.js";
-import type { GraphNode, Then } from "./graph.js";
+import { isAsyncNode, isConditionalThen, isMapNode } from "./graph.js";
+import type { AsyncNode, GraphNode, Then } from "./graph.js";
 import type { StateField, StateType } from "./state.js";
 
 export interface StepMapping {
@@ -29,7 +29,7 @@ export function formatLocation(field: StateField): string {
 }
 
 /**
- * Build a flat map from skill name (or "map") to step number string,
+ * Build a flat map from skill name (or "map" or async name) to step number string,
  * for a given list of nodes at a given prefix.
  */
 export function buildStepMap(
@@ -40,7 +40,14 @@ export function buildStepMap(
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];
     const stepNum = prefix ? `${prefix}.${i + 1}` : `${i + 1}`;
-    const label = isMapNode(node) ? "map" : node.skill;
+    let label: string;
+    if (isMapNode(node)) {
+      label = "map";
+    } else if (isAsyncNode(node)) {
+      label = node.name;
+    } else {
+      label = node.skill;
+    }
     mappings.push({ label, number: stepNum });
   }
   return mappings;
@@ -89,6 +96,17 @@ export function renderThen(
   return lines.join("\n");
 }
 
+function renderPolicyText(policy: AsyncNode["policy"]): string {
+  switch (policy) {
+    case "block":
+      return "If the value is not yet available, wait for the external agent to provide it before proceeding.";
+    case "skip":
+      return "If the value is not yet available, skip this step and proceed.";
+    case "use-latest":
+      return "If no new value is available, use the most recent value and proceed.";
+  }
+}
+
 export function renderNodes(
   nodes: GraphNode[],
   stepMap: StepMapping[],
@@ -129,6 +147,54 @@ export function renderNodes(
       if (node.then !== undefined) {
         lines.push("");
         lines.push(renderThen(node.then, stepMap, isLast));
+      }
+
+      sections.push(lines.join("\n"));
+    } else if (isAsyncNode(node)) {
+      const lines: string[] = [];
+      lines.push(`${headingLevel} Step ${stepNum}: ${node.name} (async)`);
+      lines.push("");
+
+      // Async nodes check external locations instead of invoking agents
+      const writeFields = node.writes
+        .filter((w) => w.startsWith("state."))
+        .map((w) => `\`${w}\``);
+      if (writeFields.length > 0) {
+        lines.push(
+          `Check ${writeFields.join(", ")} at its external location.`
+        );
+      } else {
+        lines.push(`Check state at its external location.`);
+      }
+
+      lines.push("");
+      lines.push(renderPolicyText(node.policy));
+
+      if (node.reads.length > 0) {
+        lines.push("");
+        lines.push(`Reads: ${node.reads.map((r) => `\`${r}\``).join(", ")}`);
+      }
+
+      if (node.writes.length > 0) {
+        lines.push("");
+        lines.push(
+          `Writes: ${node.writes.map((w) => `\`${w}\``).join(", ")}`
+        );
+      }
+
+      lines.push("");
+
+      if (node.then !== undefined) {
+        lines.push(renderThen(node.then, stepMap, isLast));
+      } else if (isLast) {
+        lines.push(renderThen(undefined, stepMap, true));
+      } else {
+        const nextStep = stepMap[i + 1];
+        if (nextStep) {
+          lines.push(`Then: proceed to step ${nextStep.number}.`);
+        } else {
+          lines.push("Then: end");
+        }
       }
 
       sections.push(lines.join("\n"));

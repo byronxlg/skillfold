@@ -41,9 +41,7 @@ function formatWritesLabel(writes: string[]): string {
   return writes.map((w) => w.replace(/^state\./, "")).join(", ");
 }
 
-// Build a mapping from graph-level node labels ("skill" for steps, "map" for
-// map nodes) to their Mermaid IDs. This lets `then: "map"` resolve to the
-// correct subgraph ID.
+// Build a mapping from graph-level node labels to their Mermaid IDs.
 function buildIdMap(nodes: GraphNode[]): Map<string, string> {
   const ids = new Map<string, string>();
   for (const node of nodes) {
@@ -179,7 +177,6 @@ function renderNodes(
       const composed = skill !== undefined && isComposed(skill);
 
       if (composed) {
-        // Render composed skill as a subgraph with leaf atomics
         const leaves = getLeafAtomics(node.skill, skills);
         if (currentId !== node.skill) {
           lines.push(
@@ -195,7 +192,6 @@ function renderNodes(
         }
         lines.push(`${indent}end`);
       } else {
-        // Atomic or unknown skill: plain node
         if (currentId !== node.skill) {
           lines.push(`${indent}${currentId}["${node.skill}"]`);
         }
