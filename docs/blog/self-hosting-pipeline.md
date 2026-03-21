@@ -1,6 +1,7 @@
 ---
 title: My Dev Team Is a YAML File
 description: How skillfold manages its own development with a multi-agent pipeline defined in 128 lines of YAML.
+date: 2025-03-15
 ---
 
 # My Dev Team Is a YAML File

@@ -39,6 +39,10 @@ features:
     details: "Compile to 12 targets: Claude Code, Agent Teams, Cursor, Windsurf, VS Code Copilot, OpenAI Codex, Gemini CLI, Goose, Roo Code, Kiro, Junie, or standard SKILL.md files."
 ---
 
+<script setup>
+import { withBase } from 'vitepress'
+</script>
+
 <div class="install-banner">
 <div class="install-inner">
 
@@ -206,18 +210,18 @@ Skillfold validates your pipeline at compile time and emits plain files that age
 One config, 12 platform targets. Write your pipeline in YAML and compile to whichever agent platform your team uses.
 
 <div class="targets-grid">
-  <div class="target"><span class="target-icon claude">C</span>Claude Code</div>
-  <div class="target"><span class="target-icon agent-teams">A</span>Agent Teams</div>
-  <div class="target"><span class="target-icon cursor">C</span>Cursor</div>
-  <div class="target"><span class="target-icon windsurf">W</span>Windsurf</div>
-  <div class="target"><span class="target-icon copilot">C</span>VS Code Copilot</div>
-  <div class="target"><span class="target-icon codex">O</span>OpenAI Codex</div>
-  <div class="target"><span class="target-icon gemini">G</span>Gemini CLI</div>
-  <div class="target"><span class="target-icon goose">G</span>Goose</div>
-  <div class="target"><span class="target-icon roo">R</span>Roo Code</div>
-  <div class="target"><span class="target-icon kiro">K</span>Kiro</div>
-  <div class="target"><span class="target-icon junie">J</span>Junie</div>
-  <div class="target"><span class="target-icon skill">S</span>SKILL.md</div>
+  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/claude.svg')" alt="" />Claude Code</div>
+  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/agent-teams.svg')" alt="" />Agent Teams</div>
+  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/cursor.svg')" alt="" />Cursor</div>
+  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/windsurf.svg')" alt="" />Windsurf</div>
+  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/copilot.svg')" alt="" />VS Code Copilot</div>
+  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/codex.svg')" alt="" />OpenAI Codex</div>
+  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/gemini.svg')" alt="" />Gemini CLI</div>
+  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/goose.svg')" alt="" />Goose</div>
+  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/roo.svg')" alt="" />Roo Code</div>
+  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/kiro.svg')" alt="" />Kiro</div>
+  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/junie.svg')" alt="" />Junie</div>
+  <div class="target"><img class="target-icon" :src="withBase('/icons/targets/skill.svg')" alt="" />SKILL.md</div>
 </div>
 
 [See platform integration details ->](/integrations)

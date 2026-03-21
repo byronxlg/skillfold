@@ -2,6 +2,23 @@
 
 Skillfold compiles your pipeline config into `build/<agent>/SKILL.md` files. To use them with your platform, compile to the directory your platform reads from.
 
+## Quick Reference
+
+| Target | Command | Output |
+|--------|---------|--------|
+| Claude Code | `--target claude-code` | `.claude/agents/*.md` + `.claude/skills/*/SKILL.md` |
+| Agent Teams | `--target agent-teams` | `.claude/agents/*.md` + `.claude/commands/start-team.md` |
+| Cursor | `--target cursor` | `.cursor/rules/*.mdc` |
+| Windsurf | `--target windsurf` | `.windsurf/rules/*.md` |
+| VS Code Copilot | `--target copilot` | `.github/copilot-instructions.md` + `.github/instructions/*.md` |
+| OpenAI Codex | `--target codex` | `AGENTS.md` |
+| Gemini CLI | `--target gemini` | `.gemini/agents/*.md` + `.gemini/skills/*/SKILL.md` |
+| Goose | `--target goose` | `.goosehints` |
+| Roo Code | `--target roo-code` | `.roo/skills/` + `.roo/rules-*/` + `.roomodes` |
+| Kiro | `--target kiro` | `.kiro/skills/` + `.kiro/steering/` |
+| Junie | `--target junie` | `.junie/skills/` + `.junie/AGENTS.md` |
+| Cross-platform | `--out-dir .agents/skills` | `.agents/skills/*/SKILL.md` |
+
 ## Cross-Platform
 
 The `.agents/skills/` directory is scanned by VS Code Copilot, OpenAI Codex, and Gemini CLI alongside their native paths.

@@ -7,6 +7,40 @@ export default defineConfig({
   // GitHub Pages: https://byronxlg.github.io/skillfold/
   base: "/skillfold/",
 
+  head: [
+    [
+      "link",
+      { rel: "icon", type: "image/svg+xml", href: "/skillfold/favicon.svg" },
+    ],
+    ["meta", { property: "og:title", content: "Skillfold" }],
+    [
+      "meta",
+      {
+        property: "og:description",
+        content:
+          "Typed coordination for multi-agent pipelines. Compile YAML configs into agent skills for 12 platforms.",
+      },
+    ],
+    ["meta", { property: "og:type", content: "website" }],
+    [
+      "meta",
+      {
+        property: "og:url",
+        content: "https://byronxlg.github.io/skillfold/",
+      },
+    ],
+    ["meta", { name: "twitter:card", content: "summary" }],
+    ["meta", { name: "twitter:title", content: "Skillfold" }],
+    [
+      "meta",
+      {
+        name: "twitter:description",
+        content:
+          "Typed coordination for multi-agent pipelines. Compile YAML configs into agent skills for 12 platforms.",
+      },
+    ],
+  ],
+
   themeConfig: {
     nav: [
       { text: "Guide", link: "/getting-started" },
