@@ -1,6 +1,6 @@
 {
   "name": "skillfold",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Compiler for multi-agent AI pipelines. Compose skills, wire team flows, generate orchestrators.",
   "type": "module",
   "main": "./dist/index.js",
@@ -14,21 +14,73 @@
   "bin": {
     "skillfold": "./dist/cli.js"
   },
-  "files": ["dist", "library", "plugin", "skillfold.schema.json"],
-  "keywords": ["agent", "skills", "pipeline", "compiler", "multi-agent", "orchestrator", "skill-composition", "claude-code", "cursor", "codex", "gemini-cli", "agentskills", "skill-md"],
+  "files": [
+    "dist",
+    "library",
+    "plugin",
+    "skillfold.schema.json"
+  ],
+  "keywords": [
+    "agent",
+    "skills",
+    "pipeline",
+    "compiler",
+    "multi-agent",
+    "orchestrator",
+    "skill-composition",
+    "claude-code",
+    "cursor",
+    "codex",
+    "gemini-cli",
+    "agentskills",
+    "skill-md"
+  ],
   "agentskills": {
     "skills": [
-      { "name": "planning", "path": "./library/skills/planning" },
-      { "name": "research", "path": "./library/skills/research" },
-      { "name": "decision-making", "path": "./library/skills/decision-making" },
-      { "name": "code-writing", "path": "./library/skills/code-writing" },
-      { "name": "code-review", "path": "./library/skills/code-review" },
-      { "name": "testing", "path": "./library/skills/testing" },
-      { "name": "writing", "path": "./library/skills/writing" },
-      { "name": "summarization", "path": "./library/skills/summarization" },
-      { "name": "github-workflow", "path": "./library/skills/github-workflow" },
-      { "name": "file-management", "path": "./library/skills/file-management" },
-      { "name": "skillfold-cli", "path": "./library/skills/skillfold-cli" }
+      {
+        "name": "planning",
+        "path": "./library/skills/planning"
+      },
+      {
+        "name": "research",
+        "path": "./library/skills/research"
+      },
+      {
+        "name": "decision-making",
+        "path": "./library/skills/decision-making"
+      },
+      {
+        "name": "code-writing",
+        "path": "./library/skills/code-writing"
+      },
+      {
+        "name": "code-review",
+        "path": "./library/skills/code-review"
+      },
+      {
+        "name": "testing",
+        "path": "./library/skills/testing"
+      },
+      {
+        "name": "writing",
+        "path": "./library/skills/writing"
+      },
+      {
+        "name": "summarization",
+        "path": "./library/skills/summarization"
+      },
+      {
+        "name": "github-workflow",
+        "path": "./library/skills/github-workflow"
+      },
+      {
+        "name": "file-management",
+        "path": "./library/skills/file-management"
+      },
+      {
+        "name": "skillfold-cli",
+        "path": "./library/skills/skillfold-cli"
+      }
     ]
   },
   "homepage": "https://github.com/byronxlg/skillfold",
