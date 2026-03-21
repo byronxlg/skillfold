@@ -4,7 +4,9 @@ import assert from "node:assert/strict";
 import { SkillEntry } from "./config.js";
 import { GraphError } from "./errors.js";
 import {
+  AsyncNode,
   Graph,
+  isAsyncNode,
   isConditionalThen,
   isMapNode,
   parseGraph,
@@ -1531,5 +1533,337 @@ describe("error message improvements", () => {
         return true;
       },
     );
+  });
+});
+
+describe("parseGraph: async nodes", () => {
+  it("parses an async node with async: true", () => {
+    const raw = [
+      {
+        "external-review": {
+          async: true,
+          reads: ["state.code"],
+          writes: ["state.review"],
+        },
+        then: "end",
+      },
+    ];
+    const graph = parseGraph(raw);
+    assert.equal(graph.nodes.length, 1);
+    const node = graph.nodes[0];
+    assert.ok(isAsyncNode(node));
+    assert.equal(node.name, "external-review");
+    assert.equal(node.async, true);
+    assert.deepEqual(node.reads, ["state.code"]);
+    assert.deepEqual(node.writes, ["state.review"]);
+    assert.equal(node.policy, "block"); // default policy
+    assert.equal(node.then, "end");
+  });
+
+  it("parses an async node with explicit policy", () => {
+    const raw = [
+      {
+        "ci-check": {
+          async: true,
+          writes: ["state.ci_status"],
+          policy: "skip",
+        },
+      },
+    ];
+    const graph = parseGraph(raw);
+    const node = graph.nodes[0] as AsyncNode;
+    assert.ok(isAsyncNode(node));
+    assert.equal(node.policy, "skip");
+  });
+
+  it("parses async node with use-latest policy", () => {
+    const raw = [
+      {
+        "metrics": {
+          async: true,
+          writes: ["state.metrics"],
+          policy: "use-latest",
+        },
+      },
+    ];
+    const graph = parseGraph(raw);
+    const node = graph.nodes[0] as AsyncNode;
+    assert.ok(isAsyncNode(node));
+    assert.equal(node.policy, "use-latest");
+  });
+
+  it("rejects invalid policy value", () => {
+    const raw = [
+      {
+        "check": {
+          async: true,
+          writes: ["state.result"],
+          policy: "invalid",
+        },
+      },
+    ];
+    assert.throws(
+      () => parseGraph(raw),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /policy must be "block", "skip", or "use-latest"/);
+        return true;
+      },
+    );
+  });
+
+  it("rejects async nodes inside map subgraphs", () => {
+    const raw = [
+      {
+        map: {
+          over: "state.items",
+          as: "item",
+          graph: [
+            {
+              "async-worker": {
+                async: true,
+                writes: ["item.result"],
+              },
+            },
+          ],
+        },
+      },
+    ];
+    assert.throws(
+      () => parseGraph(raw),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /async nodes are not allowed inside map subgraphs/);
+        return true;
+      },
+    );
+  });
+
+  it("isAsyncNode returns true for AsyncNode", () => {
+    const node: AsyncNode = {
+      name: "test",
+      async: true,
+      reads: [],
+      writes: [],
+      policy: "block",
+    };
+    assert.equal(isAsyncNode(node), true);
+  });
+
+  it("isAsyncNode returns false for StepNode", () => {
+    assert.equal(isAsyncNode({ skill: "a", reads: [], writes: [] }), false);
+  });
+
+  it("isAsyncNode returns false for MapNode", () => {
+    assert.equal(isAsyncNode({ over: "state.tasks", as: "task", graph: [] }), false);
+  });
+
+  it("async node in a chain with step nodes", () => {
+    const raw = [
+      { engineer: { writes: ["state.code"] }, then: "ci-check" },
+      {
+        "ci-check": {
+          async: true,
+          reads: ["state.code"],
+          writes: ["state.ci_status"],
+          policy: "block",
+        },
+        then: "reviewer",
+      },
+      { reviewer: { reads: ["state.ci_status"] } },
+    ];
+    const graph = parseGraph(raw);
+    assert.equal(graph.nodes.length, 3);
+    assert.ok(!isAsyncNode(graph.nodes[0]));
+    assert.ok(isAsyncNode(graph.nodes[1]));
+    assert.ok(!isAsyncNode(graph.nodes[2]));
+  });
+});
+
+describe("validateGraph: async nodes", () => {
+  it("async nodes skip skill reference check", () => {
+    const graph: Graph = {
+      nodes: [
+        {
+          name: "external-check",
+          async: true,
+          reads: [],
+          writes: ["state.result"],
+          policy: "block",
+        },
+      ],
+    };
+    // "external-check" is not in skills, but should not error because it's async
+    const skills = makeSkills("engineer");
+    const state = makeState({ result: { kind: "primitive", value: "string" } });
+    assert.doesNotThrow(() => validateGraph(graph, skills, state));
+  });
+
+  it("async nodes validate state paths in reads", () => {
+    const graph: Graph = {
+      nodes: [
+        {
+          name: "external-check",
+          async: true,
+          reads: ["state.missing"],
+          writes: [],
+          policy: "block",
+        },
+      ],
+    };
+    const skills = makeSkills("engineer");
+    const state = makeState({ result: { kind: "primitive", value: "string" } });
+    assert.throws(
+      () => validateGraph(graph, skills, state),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /reads state field "state.missing" which is not declared/);
+        return true;
+      },
+    );
+  });
+
+  it("async nodes validate state paths in writes", () => {
+    const graph: Graph = {
+      nodes: [
+        {
+          name: "external-check",
+          async: true,
+          reads: [],
+          writes: ["state.missing"],
+          policy: "block",
+        },
+      ],
+    };
+    const skills = makeSkills("engineer");
+    const state = makeState({ result: { kind: "primitive", value: "string" } });
+    assert.throws(
+      () => validateGraph(graph, skills, state),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /writes state field "state.missing" which is not declared/);
+        return true;
+      },
+    );
+  });
+
+  it("async nodes participate in transition targets", () => {
+    const graph: Graph = {
+      nodes: [
+        { skill: "engineer", reads: [], writes: [], then: "ci-check" },
+        {
+          name: "ci-check",
+          async: true,
+          reads: [],
+          writes: ["state.ci"],
+          policy: "block",
+          then: "end",
+        },
+      ],
+    };
+    const skills = makeSkills("engineer");
+    const state = makeState({ ci: { kind: "primitive", value: "string" } });
+    assert.doesNotThrow(() => validateGraph(graph, skills, state));
+  });
+
+  it("transition to unknown async node errors", () => {
+    const graph: Graph = {
+      nodes: [
+        { skill: "engineer", reads: [], writes: [], then: "nonexistent-async" },
+      ],
+    };
+    const skills = makeSkills("engineer");
+    assert.throws(
+      () => validateGraph(graph, skills, undefined),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /transition target "nonexistent-async"/);
+        return true;
+      },
+    );
+  });
+
+  it("two non-async nodes writing same field errors", () => {
+    const graph: Graph = {
+      nodes: [
+        { skill: "a", reads: [], writes: ["state.out"], then: "b" },
+        { skill: "b", reads: [], writes: ["state.out"] },
+      ],
+    };
+    const skills = makeSkills("a", "b");
+    const state = makeState({ out: { kind: "primitive", value: "string" } });
+    assert.throws(
+      () => validateGraph(graph, skills, state),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /Write conflict/);
+        return true;
+      },
+    );
+  });
+
+  it("async + non-async writing same field warns but does not error", () => {
+    const graph: Graph = {
+      nodes: [
+        { skill: "engineer", reads: [], writes: ["state.result"], then: "external" },
+        {
+          name: "external",
+          async: true,
+          reads: [],
+          writes: ["state.result"],
+          policy: "block",
+        },
+      ],
+    };
+    const skills = makeSkills("engineer");
+    const state = makeState({ result: { kind: "primitive", value: "string" } });
+    // Should not throw - just warn to stderr
+    assert.doesNotThrow(() => validateGraph(graph, skills, state));
+  });
+
+  it("async node reachability works correctly", () => {
+    const graph: Graph = {
+      nodes: [
+        { skill: "a", reads: [], writes: [], then: "end" },
+        {
+          name: "async-b",
+          async: true,
+          reads: [],
+          writes: [],
+          policy: "block",
+        },
+      ],
+    };
+    const skills = makeSkills("a");
+    assert.throws(
+      () => validateGraph(graph, skills, undefined),
+      (err: unknown) => {
+        assert.ok(err instanceof GraphError);
+        assert.match(err.message, /Graph node "async-b" is unreachable/);
+        return true;
+      },
+    );
+  });
+
+  it("async node with conditional then participates in cycle exit check", () => {
+    const graph: Graph = {
+      nodes: [
+        { skill: "engineer", reads: [], writes: [], then: "ci-check" },
+        {
+          name: "ci-check",
+          async: true,
+          reads: [],
+          writes: [],
+          policy: "block",
+          then: [
+            { when: "state.ok == false", to: "engineer" },
+            { when: "state.ok == true", to: "end" },
+          ],
+        },
+      ],
+    };
+    const skills = makeSkills("engineer");
+    const state = makeState({ ok: { kind: "primitive", value: "bool" } });
+    assert.doesNotThrow(() => validateGraph(graph, skills, state));
   });
 });

@@ -526,3 +526,214 @@ describe("generateOrchestrator", () => {
     assert.ok(output.includes("Writes: `state.b`, `state.c`"));
   });
 });
+
+describe("generateOrchestrator: async nodes", () => {
+  it("renders async node with (async) label", () => {
+    const config: Config = {
+      name: "async-test",
+      skills: {
+        engineer: { path: "./skills/engineer" },
+      },
+      state: {
+        types: {},
+        fields: {
+          direction: { type: { kind: "primitive", value: "string" } },
+          code: { type: { kind: "primitive", value: "string" } },
+        },
+      },
+      team: {
+        flow: {
+          nodes: [
+            {
+              name: "owner",
+              async: true,
+              reads: [],
+              writes: ["state.direction"],
+              policy: "block" as const,
+              then: "engineer",
+            },
+            {
+              skill: "engineer",
+              reads: ["state.direction"],
+              writes: ["state.code"],
+            },
+          ],
+        },
+      },
+    };
+
+    const output = generateOrchestrator(config);
+    assert.ok(output.includes("### Step 1: owner (async)"));
+    assert.ok(output.includes("Check `state.direction` at its external location."));
+    assert.ok(output.includes("wait for the external agent to provide it"));
+    assert.ok(output.includes("### Step 2: engineer"));
+    assert.ok(output.includes("Invoke **engineer**."));
+  });
+
+  it("renders skip policy text", () => {
+    const config: Config = {
+      name: "skip-test",
+      skills: {},
+      state: {
+        types: {},
+        fields: {
+          data: { type: { kind: "primitive", value: "string" } },
+        },
+      },
+      team: {
+        flow: {
+          nodes: [
+            {
+              name: "external",
+              async: true,
+              reads: [],
+              writes: ["state.data"],
+              policy: "skip" as const,
+            },
+          ],
+        },
+      },
+    };
+
+    const output = generateOrchestrator(config);
+    assert.ok(output.includes("skip this step and proceed"));
+  });
+
+  it("renders use-latest policy text", () => {
+    const config: Config = {
+      name: "latest-test",
+      skills: {},
+      state: {
+        types: {},
+        fields: {
+          metrics: { type: { kind: "primitive", value: "string" } },
+        },
+      },
+      team: {
+        flow: {
+          nodes: [
+            {
+              name: "monitor",
+              async: true,
+              reads: [],
+              writes: ["state.metrics"],
+              policy: "use-latest" as const,
+            },
+          ],
+        },
+      },
+    };
+
+    const output = generateOrchestrator(config);
+    assert.ok(output.includes("use the most recent value and proceed"));
+  });
+
+  it("renders async node reads and writes", () => {
+    const config: Config = {
+      name: "rw-test",
+      skills: {},
+      state: {
+        types: {},
+        fields: {
+          input: { type: { kind: "primitive", value: "string" } },
+          output: { type: { kind: "primitive", value: "string" } },
+        },
+      },
+      team: {
+        flow: {
+          nodes: [
+            {
+              name: "checker",
+              async: true,
+              reads: ["state.input"],
+              writes: ["state.output"],
+              policy: "block" as const,
+            },
+          ],
+        },
+      },
+    };
+
+    const output = generateOrchestrator(config);
+    assert.ok(output.includes("Reads: `state.input`"));
+    assert.ok(output.includes("Writes: `state.output`"));
+  });
+
+  it("renders async node transitions correctly", () => {
+    const config: Config = {
+      name: "transition-test",
+      skills: {
+        worker: { path: "./skills/worker" },
+      },
+      state: {
+        types: {},
+        fields: {
+          result: { type: { kind: "primitive", value: "string" } },
+        },
+      },
+      team: {
+        flow: {
+          nodes: [
+            {
+              name: "external",
+              async: true,
+              reads: [],
+              writes: ["state.result"],
+              policy: "block" as const,
+              then: "worker",
+            },
+            {
+              skill: "worker",
+              reads: ["state.result"],
+              writes: [],
+            },
+          ],
+        },
+      },
+    };
+
+    const output = generateOrchestrator(config);
+    assert.ok(output.includes("Then: proceed to step 2."));
+  });
+
+  it("async node does not reference Agent tool in agent-tool mode", () => {
+    const config: Config = {
+      name: "agent-mode-test",
+      skills: {
+        worker: { path: "./skills/worker" },
+      },
+      state: {
+        types: {},
+        fields: {
+          data: { type: { kind: "primitive", value: "string" } },
+        },
+      },
+      team: {
+        flow: {
+          nodes: [
+            {
+              name: "external",
+              async: true,
+              reads: [],
+              writes: ["state.data"],
+              policy: "block" as const,
+              then: "worker",
+            },
+            {
+              skill: "worker",
+              reads: ["state.data"],
+              writes: [],
+            },
+          ],
+        },
+      },
+    };
+
+    const output = generateOrchestrator(config, true);
+    // The async node section should NOT mention Agent tool
+    const asyncSection = output.split("### Step 1: external (async)")[1]?.split("### Step 2")[0] ?? "";
+    assert.ok(!asyncSection.includes("Agent tool"));
+    // But the step node should
+    assert.ok(output.includes("Invoke **worker** using the Agent tool."));
+  });
+});

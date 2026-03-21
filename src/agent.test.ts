@@ -642,3 +642,102 @@ describe("generateRunCommand with orchestrator", () => {
     assert.equal(cmd, null);
   });
 });
+
+describe("generateAgents: async nodes", () => {
+  it("excludes async nodes from agent reads/writes aggregation", () => {
+    const config: Config = {
+      name: "async-test",
+      skills: {
+        planning: { path: "./skills/planning" },
+        coding: { path: "./skills/coding" },
+        engineer: { compose: ["planning", "coding"], description: "Writes code." },
+      },
+      state: {
+        types: {},
+        fields: {
+          direction: { type: { kind: "primitive", value: "string" } },
+          code: { type: { kind: "primitive", value: "string" } },
+        },
+      },
+      team: {
+        flow: {
+          nodes: [
+            {
+              name: "owner",
+              async: true,
+              reads: [],
+              writes: ["state.direction"],
+              policy: "block" as const,
+              then: "engineer",
+            },
+            {
+              skill: "engineer",
+              reads: ["state.direction"],
+              writes: ["state.code"],
+            },
+          ],
+        },
+      },
+    };
+
+    const bodies = new Map([["engineer", "Engineer body."]]);
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml");
+
+    // Only engineer should produce an agent file (async "owner" should not)
+    assert.equal(results.length, 1);
+    assert.equal(results[0].name, "engineer");
+  });
+
+  it("excludes async nodes from collectWorkerNames in orchestrator tools", () => {
+    const config: Config = {
+      name: "async-workers-test",
+      skills: {
+        planning: { path: "./skills/planning" },
+        coding: { path: "./skills/coding" },
+        engineer: { compose: ["planning", "coding"], description: "Writes code." },
+        orchestrator: { compose: ["planning"], description: "Coordinates." },
+      },
+      state: {
+        types: {},
+        fields: {
+          direction: { type: { kind: "primitive", value: "string" } },
+          code: { type: { kind: "primitive", value: "string" } },
+        },
+      },
+      team: {
+        orchestrator: "orchestrator",
+        flow: {
+          nodes: [
+            {
+              name: "owner",
+              async: true,
+              reads: [],
+              writes: ["state.direction"],
+              policy: "block" as const,
+              then: "engineer",
+            },
+            {
+              skill: "engineer",
+              reads: ["state.direction"],
+              writes: ["state.code"],
+            },
+          ],
+        },
+      },
+    };
+
+    const bodies = new Map([
+      ["engineer", "Engineer body."],
+      ["orchestrator", "Orchestrator body."],
+    ]);
+    const results = generateAgents(config, bodies, "/out", "1.0.0", "test.yaml", "claude-code");
+
+    const orchestratorAgent = results.find((r) => r.name === "orchestrator");
+    assert.ok(orchestratorAgent);
+    // The tools should reference engineer but NOT owner (async node)
+    assert.ok(orchestratorAgent.content.includes("Agent(engineer)"));
+    // "owner" should not appear in the Agent(...) tool list
+    assert.ok(!orchestratorAgent.content.includes("Agent(owner"));
+    assert.ok(!orchestratorAgent.content.includes("Agent(engineer, owner"));
+  });
+});

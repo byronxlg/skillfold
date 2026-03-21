@@ -1,0 +1,49 @@
+name: async-pipeline
+
+skills:
+  atomic:
+    coding: ./skills/coding
+    review: ./skills/review
+
+  composed:
+    engineer:
+      compose: [coding]
+      description: "Writes code."
+
+    reviewer:
+      compose: [review]
+      description: "Reviews code."
+
+    orchestrator:
+      compose: [coding]
+      description: "Coordinates the pipeline."
+
+state:
+  direction:
+    type: string
+
+  code:
+    type: string
+
+  feedback:
+    type: string
+
+team:
+  orchestrator: orchestrator
+
+  flow:
+    - owner:
+        async: true
+        writes: [state.direction]
+        policy: block
+      then: engineer
+
+    - engineer:
+        reads: [state.direction]
+        writes: [state.code]
+      then: reviewer
+
+    - reviewer:
+        reads: [state.code]
+        writes: [state.feedback]
+      then: end

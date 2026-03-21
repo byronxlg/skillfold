@@ -5,8 +5,10 @@ import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
 
-import { readConfig } from "./config.js";
+import { parseRawConfig, readConfig, validateAndBuild } from "./config.js";
 import { compile } from "./compiler.js";
+import { listPipeline } from "./list.js";
+import { generateOrchestrator } from "./orchestrator.js";
 import { resolveSkills } from "./resolver.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -278,5 +280,103 @@ describe("e2e: dev-pipeline", () => {
       content.includes("- If `task.approved == false`: go to step 3.1")
     );
     assert.ok(content.includes("- If `task.approved == true`: end"));
+  });
+});
+
+const asyncFixtureDir = join(__dirname, "..", "test", "fixtures", "async-pipeline");
+const asyncConfigPath = join(asyncFixtureDir, "skillfold.yaml");
+
+describe("e2e: async-pipeline", () => {
+  let asyncTmpDir: string | undefined;
+
+  afterEach(() => {
+    if (asyncTmpDir) {
+      rmSync(asyncTmpDir, { recursive: true, force: true });
+      asyncTmpDir = undefined;
+    }
+  });
+
+  it("config round-trips through readConfig with async nodes", () => {
+    const config = readConfig(asyncConfigPath);
+    assert.equal(config.name, "async-pipeline");
+    assert.ok(config.team);
+    assert.equal(config.team.flow.nodes.length, 3);
+  });
+
+  it("inline config with async node parses and validates", () => {
+    const raw = parseRawConfig(`
+name: async-inline
+skills:
+  atomic:
+    coding: ./skills/coding
+  composed:
+    engineer:
+      compose: [coding]
+      description: "Writes code."
+state:
+  direction:
+    type: string
+  code:
+    type: string
+team:
+  flow:
+    - owner:
+        async: true
+        writes: [state.direction]
+        policy: block
+      then: engineer
+    - engineer:
+        reads: [state.direction]
+        writes: [state.code]
+      then: end
+`);
+    const config = validateAndBuild(raw);
+
+    const output = generateOrchestrator(config);
+    assert.ok(output.includes("### Step 1: owner (async)"));
+    assert.ok(output.includes("Check `state.direction` at its external location."));
+    assert.ok(output.includes("wait for the external agent to provide it"));
+    assert.ok(output.includes("### Step 2: engineer"));
+    assert.ok(output.includes("Invoke **engineer**."));
+
+    const listOutput = listPipeline(config);
+    assert.ok(listOutput.includes("owner (async) -> engineer"));
+    assert.ok(listOutput.includes("engineer -> end"));
+  });
+
+  it("reads config, resolves skills, and compiles without errors", async () => {
+    asyncTmpDir = makeTmpDir();
+    const outDir = join(asyncTmpDir, "dist");
+
+    const config = readConfig(asyncConfigPath);
+    const bodies = await resolveSkills(config, asyncFixtureDir);
+    const results = compile(config, bodies, outDir, "0.0.0", "skillfold.yaml");
+
+    assert.ok(results.length > 0);
+
+    // Async "owner" should NOT produce its own SKILL.md
+    assert.ok(!existsSync(join(outDir, "owner", "SKILL.md")));
+
+    // Engineer and reviewer should have SKILL.md files
+    assert.ok(existsSync(join(outDir, "engineer", "SKILL.md")));
+    assert.ok(existsSync(join(outDir, "reviewer", "SKILL.md")));
+  });
+
+  it("orchestrator includes async step in execution plan", async () => {
+    asyncTmpDir = makeTmpDir();
+    const outDir = join(asyncTmpDir, "dist");
+
+    const config = readConfig(asyncConfigPath);
+    const bodies = await resolveSkills(config, asyncFixtureDir);
+    compile(config, bodies, outDir, "0.0.0", "skillfold.yaml");
+
+    const content = readFileSync(join(outDir, "orchestrator", "SKILL.md"), "utf-8");
+
+    assert.ok(content.includes("### Step 1: owner (async)"));
+    assert.ok(content.includes("Check `state.direction` at its external location."));
+    assert.ok(content.includes("wait for the external agent to provide it before proceeding"));
+    assert.ok(content.includes("### Step 2: engineer"));
+    assert.ok(content.includes("Invoke **engineer**."));
+    assert.ok(content.includes("### Step 3: reviewer"));
   });
 });

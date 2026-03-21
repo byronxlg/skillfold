@@ -22,6 +22,15 @@ export interface StepNode {
   then?: Then;
 }
 
+export interface AsyncNode {
+  name: string;
+  async: true;
+  reads: string[];
+  writes: string[];
+  policy: "block" | "skip" | "use-latest";
+  then?: Then;
+}
+
 export interface MapNode {
   over: string;
   as: string;
@@ -29,10 +38,14 @@ export interface MapNode {
   then?: Then;
 }
 
-export type GraphNode = StepNode | MapNode;
+export type GraphNode = StepNode | AsyncNode | MapNode;
 
 export interface Graph {
   nodes: GraphNode[];
+}
+
+export function isAsyncNode(node: GraphNode): node is AsyncNode {
+  return "async" in node && (node as AsyncNode).async === true;
 }
 
 export function isMapNode(node: GraphNode): node is MapNode {
@@ -120,7 +133,9 @@ function parseThen(raw: unknown, context: string): Then | undefined {
   throw new GraphError(`${context}: then must be a string or array of {when, to}`);
 }
 
-function parseGraphNodes(raw: unknown[]): GraphNode[] {
+const VALID_POLICIES = new Set(["block", "skip", "use-latest"]);
+
+function parseGraphNodes(raw: unknown[], insideMap = false): GraphNode[] {
   const nodes: GraphNode[] = [];
 
   for (let i = 0; i < raw.length; i++) {
@@ -163,7 +178,7 @@ function parseGraphNodes(raw: unknown[]): GraphNode[] {
         throw new GraphError(`Graph element "map": must have "graph" (array)`);
       }
 
-      const subNodes = parseGraphNodes(mapObj.graph);
+      const subNodes = parseGraphNodes(mapObj.graph, true);
 
       nodes.push({
         over: mapObj.over,
@@ -174,6 +189,8 @@ function parseGraphNodes(raw: unknown[]): GraphNode[] {
     } else {
       const reads: string[] = [];
       const writes: string[] = [];
+      let isAsync = false;
+      let policy: "block" | "skip" | "use-latest" = "block";
 
       if (typeof value === "object" && value !== null && !Array.isArray(value)) {
         const stepObj = value as Record<string, unknown>;
@@ -195,18 +212,47 @@ function parseGraphNodes(raw: unknown[]): GraphNode[] {
           }
           writes.push(...(stepObj.writes as string[]));
         }
+
+        if (stepObj.async === true) {
+          isAsync = true;
+          if (insideMap) {
+            throw new GraphError(
+              `Graph element "${primaryKey}": async nodes are not allowed inside map subgraphs`
+            );
+          }
+        }
+
+        if (stepObj.policy !== undefined) {
+          if (typeof stepObj.policy !== "string" || !VALID_POLICIES.has(stepObj.policy)) {
+            throw new GraphError(
+              `Graph element "${primaryKey}": policy must be "block", "skip", or "use-latest"`
+            );
+          }
+          policy = stepObj.policy as "block" | "skip" | "use-latest";
+        }
       } else if (value !== null && value !== undefined) {
         throw new GraphError(
           `Graph element "${primaryKey}": value must be an object or omitted`
         );
       }
 
-      nodes.push({
-        skill: primaryKey,
-        reads,
-        writes,
-        ...(then !== undefined ? { then } : {}),
-      });
+      if (isAsync) {
+        nodes.push({
+          name: primaryKey,
+          async: true,
+          reads,
+          writes,
+          policy,
+          ...(then !== undefined ? { then } : {}),
+        });
+      } else {
+        nodes.push({
+          skill: primaryKey,
+          reads,
+          writes,
+          ...(then !== undefined ? { then } : {}),
+        });
+      }
     }
   }
 
@@ -226,9 +272,13 @@ export function parseGraph(raw: unknown): Graph {
   return { nodes };
 }
 
-// Collect all node labels (skill names for steps, "map" for map nodes)
+// Collect all node labels (skill names for steps, async node names, "map" for map nodes)
 function collectNodeLabels(nodes: GraphNode[]): string[] {
-  return nodes.map((node) => isMapNode(node) ? "map" : node.skill);
+  return nodes.map((node) => {
+    if (isMapNode(node)) return "map";
+    if (isAsyncNode(node)) return node.name;
+    return node.skill;
+  });
 }
 
 // Get all "to" targets from a Then value
@@ -238,9 +288,11 @@ function getThenTargets(then: Then | undefined): string[] {
   return then.map((b) => b.to);
 }
 
-// Get a label for a node (skill name or "map")
+// Get a label for a node (skill name, async name, or "map")
 function nodeLabel(node: GraphNode): string {
-  return isMapNode(node) ? "map" : node.skill;
+  if (isMapNode(node)) return "map";
+  if (isAsyncNode(node)) return node.name;
+  return node.skill;
 }
 
 // Context for validating paths inside a map subgraph
@@ -258,10 +310,10 @@ function validateNodes(
 ): void {
   const nodeLabels = new Set(collectNodeLabels(nodes));
 
-  // Rule 1: Skill references
+  // Rule 1: Skill references (async nodes skip this check)
   const skillNames = Object.keys(skills);
   for (const node of nodes) {
-    if (!isMapNode(node)) {
+    if (!isMapNode(node) && !isAsyncNode(node)) {
       if (!(node.skill in skills)) {
         const hint = didYouMean(node.skill, skillNames);
         throw new GraphError(
@@ -286,11 +338,11 @@ function validateNodes(
     }
   }
 
-  // Rule 3: State path validation
+  // Rule 3: State path validation (applies identically to step and async nodes)
   const stateFieldNames = state ? Object.keys(state.fields) : [];
   for (const node of nodes) {
     if (isMapNode(node)) continue;
-    const label = node.skill;
+    const label = isAsyncNode(node) ? node.name : node.skill;
 
     for (const path of node.reads) {
       if (path.startsWith("state.")) {
@@ -401,18 +453,29 @@ function validateNodes(
   }
 
   // Rule 4: Write conflicts (same graph level)
-  const writeOwners = new Map<string, string>();
+  // Track whether each write owner is async for mixed-conflict warnings
+  const writeOwners = new Map<string, { label: string; isAsync: boolean }>();
   for (const node of nodes) {
     if (isMapNode(node)) continue;
+    const label = isAsyncNode(node) ? node.name : node.skill;
+    const nodeIsAsync = isAsyncNode(node);
     for (const path of node.writes) {
       if (!path.startsWith("state.")) continue;
       const existing = writeOwners.get(path);
-      if (existing !== undefined && existing !== node.skill) {
-        throw new GraphError(
-          `Write conflict: nodes "${existing}" and "${node.skill}" both write "${path}"`
-        );
+      if (existing !== undefined && existing.label !== label) {
+        if (!existing.isAsync && !nodeIsAsync) {
+          // Both non-async: hard error
+          throw new GraphError(
+            `Write conflict: nodes "${existing.label}" and "${label}" both write "${path}"`
+          );
+        } else {
+          // One is async: warning to stderr
+          process.stderr.write(
+            `Warning: nodes "${existing.label}" and "${label}" both write "${path}" (async conflict)\n`
+          );
+        }
       }
-      writeOwners.set(path, node.skill);
+      writeOwners.set(path, { label, isAsync: nodeIsAsync });
     }
   }
 
@@ -465,7 +528,6 @@ function validateNodes(
   }
 
   // Build index: node label -> position in this level's node list
-  // Step nodes use their skill name; map nodes use "map"
   const nodeIndex = new Map<string, number>();
   for (let i = 0; i < nodes.length; i++) {
     const node = nodes[i];

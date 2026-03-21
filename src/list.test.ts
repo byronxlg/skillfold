@@ -235,4 +235,39 @@ team:
     assert.ok(output.includes("first -> second"));
     assert.ok(output.includes("second -> end"));
   });
+
+  it("renders async nodes with (async) annotation", () => {
+    const raw = parseRawConfig(`
+name: async-list-test
+skills:
+  atomic:
+    coding: ./skills/coding
+  composed:
+    engineer:
+      compose: [coding]
+      description: "Writes code."
+state:
+  direction:
+    type: string
+  code:
+    type: string
+team:
+  flow:
+    - owner:
+        async: true
+        writes: [state.direction]
+        policy: block
+      then: engineer
+    - engineer:
+        reads: [state.direction]
+        writes: [state.code]
+      then: end
+`);
+    const config = validateAndBuild(raw);
+    const output = listPipeline(config);
+
+    assert.ok(output.includes("Team Flow:"));
+    assert.ok(output.includes("owner (async) -> engineer"));
+    assert.ok(output.includes("engineer -> end"));
+  });
 });

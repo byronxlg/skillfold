@@ -245,7 +245,7 @@
     },
     "stepBody": {
       "type": ["object", "null"],
-      "description": "Step node body with optional reads and writes.",
+      "description": "Step node body with optional reads, writes, async flag, and policy.",
       "additionalProperties": false,
       "properties": {
         "reads": {
@@ -257,6 +257,15 @@
           "type": "array",
           "description": "State fields this step writes.",
           "items": { "type": "string" }
+        },
+        "async": {
+          "type": "boolean",
+          "description": "When true, marks this node as an async checkpoint that waits for an external agent to provide state rather than invoking a composed skill."
+        },
+        "policy": {
+          "type": "string",
+          "description": "How to handle unavailable async data. Only valid when async is true.",
+          "enum": ["block", "skip", "use-latest"]
         }
       }
     },
