@@ -29,6 +29,7 @@ Commands:
   graph             Output Mermaid flowchart of the team flow
   watch             Compile and watch for changes
   plugin            Package compiled output as a Claude Code plugin
+  run               Execute a linear pipeline flow
   search [query]    Search npm for skillfold skill packages
   (default)         Compile the pipeline config
 
@@ -39,6 +40,7 @@ Options:
   --target <mode>      Output mode: skill, claude-code, cursor, windsurf, codex, copilot
   --template <name>    Start from a library template (init only)
   --check              Verify compiled output is up-to-date (exit 1 if stale)
+  --dry-run            Print execution plan without running (run only)
   --html               Output interactive HTML instead of Mermaid (graph only)
   --help               Show this help
   --version            Show version
@@ -46,7 +48,7 @@ Options:
 Templates: ${TEMPLATES.join(", ")}`);
 }
 
-type Command = "init" | "adopt" | "compile" | "graph" | "list" | "validate" | "watch" | "plugin" | "search";
+type Command = "init" | "adopt" | "compile" | "graph" | "list" | "validate" | "watch" | "plugin" | "run" | "search";
 
 interface Args {
   command: Command;
@@ -58,6 +60,7 @@ interface Args {
   template: string | undefined;
   query: string | undefined;
   check: boolean;
+  dryRun: boolean;
   html: boolean;
   help: boolean;
   version: boolean;
@@ -73,6 +76,7 @@ function parseArgs(argv: string[]): Args {
   let template: string | undefined;
   let query: string | undefined;
   let checkMode = false;
+  let dryRun = false;
   let html = false;
   let help = false;
   let version = false;
@@ -105,6 +109,9 @@ function parseArgs(argv: string[]): Args {
     i = 1;
   } else if (argv.length > 0 && argv[0] === "plugin") {
     command = "plugin";
+    i = 1;
+  } else if (argv.length > 0 && argv[0] === "run") {
+    command = "run";
     i = 1;
   } else if (argv.length > 0 && argv[0] === "search") {
     command = "search";
@@ -140,6 +147,8 @@ function parseArgs(argv: string[]): Args {
       template = argv[++i];
     } else if (argv[i] === "--check") {
       checkMode = true;
+    } else if (argv[i] === "--dry-run") {
+      dryRun = true;
     } else if (argv[i] === "--html") {
       html = true;
     } else if (argv[i] === "--help") {
@@ -175,6 +184,7 @@ function parseArgs(argv: string[]): Args {
     template,
     query,
     check: checkMode,
+    dryRun,
     html,
     help,
     version,
@@ -325,6 +335,80 @@ async function main(): Promise<void> {
   if (args.command === "watch") {
     const { watchPipeline } = await import("./watch.js");
     await watchPipeline(args.configPath, args.outDir, pkg.version, args.target);
+    return;
+  }
+
+  if (args.command === "run") {
+    if (args.target === "skill") {
+      console.error("skillfold error: run requires a runtime target (e.g. --target claude-code)");
+      process.exit(1);
+    }
+    try {
+      const config = await loadConfig(args.configPath);
+      if (!config.team) {
+        console.error("skillfold error: No team flow defined in config. Add a team.flow section to run a pipeline.");
+        process.exit(1);
+      }
+
+      const baseDir = dirname(args.configPath);
+      const bodies = await resolveSkills(config, baseDir);
+
+      const { run } = await import("./run.js");
+      const nodeCount = config.team.flow.nodes.length;
+
+      if (args.dryRun) {
+        console.error(`skillfold: dry run for ${config.name} (${nodeCount} steps)`);
+      } else {
+        console.error(`skillfold: running ${config.name} (${nodeCount} steps)`);
+      }
+
+      const result = await run({
+        config,
+        bodies,
+        outDir: args.outDir,
+        dryRun: args.dryRun,
+      });
+
+      if (args.dryRun) {
+        for (const step of result.steps) {
+          const node = config.team!.flow.nodes[step.step - 1];
+          const reads = "reads" in node ? (node.reads as string[]).join(", ") : "";
+          const writes = "writes" in node ? (node.writes as string[]).join(", ") : "";
+          const parts: string[] = [];
+          if (reads) parts.push(`reads: ${reads}`);
+          if (writes) parts.push(`writes: ${writes}`);
+          const detail = parts.length > 0 ? ` (${parts.join(", ")})` : "";
+          console.error(`  [${step.step}/${nodeCount}] ${step.agent}${detail}`);
+        }
+      }
+
+      const errors = result.steps.filter((s) => s.status === "error");
+      if (errors.length > 0) {
+        console.error(`skillfold: pipeline failed at step ${errors[0].step} (${errors[0].agent})`);
+        if (errors[0].error) {
+          console.error(`  ${errors[0].error}`);
+        }
+        process.exit(1);
+      }
+
+      if (!args.dryRun) {
+        console.error("skillfold: pipeline complete");
+      }
+    } catch (err) {
+      if (
+        err instanceof ConfigError ||
+        err instanceof ResolveError ||
+        err instanceof GraphError
+      ) {
+        console.error(`skillfold error: ${err.message}`);
+        process.exit(1);
+      }
+      if (err instanceof Error) {
+        console.error(`skillfold error: ${err.message}`);
+        process.exit(1);
+      }
+      throw err;
+    }
     return;
   }
 
