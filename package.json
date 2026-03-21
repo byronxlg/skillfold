@@ -1,7 +1,7 @@
 {
   "name": "skillfold",
   "version": "1.21.0",
-  "description": "Compiler for multi-agent AI pipelines. Compose skills, wire team flows, generate orchestrators.",
+  "description": "Configuration language and compiler for multi-agent AI pipelines. Compiles YAML into agent skills for Claude Code, Cursor, Windsurf, Codex, Copilot, and Gemini.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -22,6 +22,7 @@
   ],
   "keywords": [
     "agent",
+    "ai",
     "skills",
     "pipeline",
     "compiler",
@@ -29,9 +30,15 @@
     "orchestrator",
     "skill-composition",
     "claude-code",
+    "agent-teams",
     "cursor",
+    "windsurf",
+    "copilot",
     "codex",
     "gemini-cli",
+    "typescript",
+    "yaml",
+    "devtool",
     "agentskills",
     "skillfold-skill",
     "skill-md"

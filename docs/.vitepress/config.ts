@@ -27,6 +27,7 @@ export default defineConfig({
           { text: "Pipeline Builder", link: "/builder" },
           { text: "Examples", link: "/examples" },
           { text: "Running Pipelines", link: "/running-pipelines" },
+          { text: "Agent Teams Bridge", link: "/agent-teams-bridge" },
           { text: "Platform Integration", link: "/integrations" },
           { text: "Publishing Skills", link: "/publishing" },
           { text: "Authoring Skills", link: "/authoring" },
