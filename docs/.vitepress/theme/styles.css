@@ -188,7 +188,8 @@ html {
 .vp-doc .before-after::before,
 .vp-doc .home-content::before,
 .vp-doc .templates-section::before,
-.vp-doc .dogfood-section::before {
+.vp-doc .dogfood-section::before,
+.vp-doc .github-cta::before {
   content: '';
   display: block;
   height: 1px;
@@ -254,6 +255,7 @@ html {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 13px;
   line-height: 1.8;
+  min-height: 145px;
 }
 
 .vp-doc .terminal-line {
@@ -274,6 +276,24 @@ html {
 
 .vp-doc .terminal-body > :last-child {
   margin-bottom: 0;
+}
+
+.vp-doc .terminal-cursor {
+  display: inline-block;
+  width: 8px;
+  color: #a6e3a1;
+  animation: blink-cursor 0.8s step-end infinite;
+}
+
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vp-doc .terminal-cursor {
+    animation: none;
+  }
 }
 
 /* ============================================
@@ -727,6 +747,57 @@ html {
   margin-top: 0;
 }
 
+/* Target tabs for platform output preview */
+.vp-doc .target-tabs {
+  display: flex;
+  gap: 2px;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--vp-c-divider);
+  padding-bottom: 0;
+}
+
+.vp-doc .target-tab {
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--vp-c-text-3);
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
+  font-family: var(--vp-font-family-base);
+  white-space: nowrap;
+}
+
+.vp-doc .target-tab:hover {
+  color: var(--vp-c-text-1);
+}
+
+.vp-doc .target-tab.active {
+  color: var(--vp-c-brand-1);
+  border-bottom-color: var(--vp-c-brand-1);
+}
+
+.vp-doc .target-panel {
+  animation: tab-fade 0.2s ease;
+}
+
+.vp-doc .target-panel div[class*="language-"] {
+  margin-top: 8px;
+}
+
+@keyframes tab-fade {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .vp-doc .target-panel {
+    animation: none;
+  }
+}
+
 /* ============================================
    Comparison section - full bleed background
    ============================================ */
@@ -961,6 +1032,77 @@ html {
 
   .vp-doc .dogfood-inner {
     padding: 24px 20px;
+  }
+}
+
+/* ============================================
+   GitHub star CTA
+   ============================================ */
+.vp-doc .github-cta {
+  padding: var(--section-gap) 24px 0;
+}
+
+.vp-doc .github-cta-inner {
+  max-width: 480px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.vp-doc .github-cta-icon {
+  color: var(--vp-c-text-3);
+  margin-bottom: 16px;
+}
+
+.vp-doc .github-cta-inner h3 {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin-bottom: 8px;
+}
+
+.vp-doc .github-cta-inner p {
+  font-size: 14px;
+  color: var(--vp-c-text-2);
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+
+.vp-doc .github-star-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  border-radius: 8px;
+  border: 1px solid var(--vp-c-divider);
+  background: var(--vp-c-bg-soft);
+  color: var(--vp-c-text-1);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.vp-doc .github-star-btn:hover {
+  border-color: var(--vp-c-brand-1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.1);
+}
+
+.dark .vp-doc .github-star-btn:hover {
+  box-shadow: 0 4px 12px rgba(52, 211, 153, 0.08);
+}
+
+.vp-doc .github-star-btn svg {
+  color: #f0883e;
+}
+
+.dark .vp-doc .github-star-btn svg {
+  color: #f9e2af;
+}
+
+@media (max-width: 639px) {
+  .vp-doc .github-cta {
+    padding-top: var(--section-gap-sm);
   }
 }
 

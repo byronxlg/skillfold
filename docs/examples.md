@@ -1,11 +1,11 @@
-# Examples
-
-Skillfold ships with three starter templates in the shared skills library. Each demonstrates a different pipeline pattern and can be scaffolded with a single command. All templates import the [11 built-in library skills](/library), so you can start composing agents immediately.
-
-<div class="stat-pills">
-  <span class="stat-pill"><strong>3</strong> templates</span>
-  <span class="stat-pill"><strong>11</strong> library skills</span>
-  <span class="stat-pill"><strong>0</strong> config needed</span>
+<div class="page-hero">
+  <h1>Examples</h1>
+  <p>Three starter templates ship with the library. Each demonstrates a different pipeline pattern and can be scaffolded with a single command.</p>
+  <div class="stat-pills">
+    <span class="stat-pill"><strong>3</strong> templates</span>
+    <span class="stat-pill"><strong>11</strong> library skills</span>
+    <span class="stat-pill"><strong>0</strong> config needed</span>
+  </div>
 </div>
 
 ::: tip Standalone installation

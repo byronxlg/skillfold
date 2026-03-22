@@ -1,6 +1,12 @@
-# Library Skills
-
-Skillfold ships with 11 generic, reusable skills that work with any coding agent. Each skill is a standalone `SKILL.md` file - you can use them with skillfold pipelines, install them individually via the [skills CLI](https://skills.sh), or read them directly.
+<div class="page-hero">
+  <h1>Library Skills</h1>
+  <p>11 generic, reusable skills that work with any coding agent. Use them with skillfold pipelines or install standalone.</p>
+  <div class="stat-pills">
+    <span class="stat-pill"><strong>11</strong> skills</span>
+    <span class="stat-pill"><strong>4</strong> categories</span>
+    <span class="stat-pill">Works standalone</span>
+  </div>
+</div>
 
 ## Install
 

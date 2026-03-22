@@ -41,7 +41,53 @@ features:
 
 <script setup>
 import { withBase } from 'vitepress'
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
+
+const terminalLines = ref([])
+const terminalVisible = ref(false)
+
+const lines = [
+  { type: 'cmd', text: 'npx skillfold init my-pipeline' },
+  { type: 'out', text: 'Created skillfold.yaml with 3 skills, 2 agents, review loop' },
+  { type: 'cmd', text: 'npx skillfold --target claude-code' },
+  { type: 'out', text: 'Compiled 2 agents to .claude/agents/ (0 errors, 0 warnings)' },
+  { type: 'cmd', text: 'npx skillfold --target cursor' },
+  { type: 'out', text: 'Compiled 2 agents to .cursor/rules/ (0 errors, 0 warnings)' },
+]
+
+function animateTerminal() {
+  let lineIdx = 0
+  let charIdx = 0
+  terminalLines.value = []
+
+  function typeNext() {
+    if (lineIdx >= lines.length) return
+
+    const line = lines[lineIdx]
+    if (line.type === 'out') {
+      terminalLines.value.push({ ...line, done: true })
+      lineIdx++
+      setTimeout(typeNext, 400)
+    } else {
+      if (charIdx === 0) {
+        terminalLines.value.push({ ...line, text: '', done: false })
+      }
+      const current = terminalLines.value[terminalLines.value.length - 1]
+      if (charIdx < line.text.length) {
+        current.text = line.text.slice(0, charIdx + 1)
+        charIdx++
+        setTimeout(typeNext, 25)
+      } else {
+        current.done = true
+        charIdx = 0
+        lineIdx++
+        setTimeout(typeNext, 300)
+      }
+    }
+  }
+
+  typeNext()
+}
 
 onMounted(() => {
   const observer = new IntersectionObserver((entries) => {
@@ -53,6 +99,20 @@ onMounted(() => {
   }, { threshold: 0.1 })
 
   document.querySelectorAll('.fade-in').forEach(el => observer.observe(el))
+
+  const terminalObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting && !terminalVisible.value) {
+        terminalVisible.value = true
+        entry.target.classList.add('visible')
+        animateTerminal()
+        terminalObserver.unobserve(entry.target)
+      }
+    })
+  }, { threshold: 0.3 })
+
+  const terminalEl = document.querySelector('.quick-start-terminal')
+  if (terminalEl) terminalObserver.observe(terminalEl)
 })
 </script>
 
@@ -67,12 +127,15 @@ onMounted(() => {
     <span class="terminal-title">terminal</span>
   </div>
   <div class="terminal-body">
-    <div class="terminal-line"><span class="terminal-prompt">$</span> npx skillfold init my-pipeline</div>
-    <div class="terminal-output">Created skillfold.yaml with 3 skills, 2 agents, review loop</div>
-    <div class="terminal-line"><span class="terminal-prompt">$</span> npx skillfold --target claude-code</div>
-    <div class="terminal-output">Compiled 2 agents to .claude/agents/ (0 errors, 0 warnings)</div>
-    <div class="terminal-line"><span class="terminal-prompt">$</span> npx skillfold --target cursor</div>
-    <div class="terminal-output">Compiled 2 agents to .cursor/rules/ (0 errors, 0 warnings)</div>
+    <template v-for="(line, i) in terminalLines" :key="i">
+      <div v-if="line.type === 'cmd'" class="terminal-line">
+        <span class="terminal-prompt">$</span> {{ line.text }}<span v-if="!line.done" class="terminal-cursor">|</span>
+      </div>
+      <div v-else class="terminal-output">{{ line.text }}</div>
+    </template>
+    <div v-if="terminalLines.length === 0" class="terminal-line">
+      <span class="terminal-prompt">$</span> <span class="terminal-cursor">|</span>
+    </div>
   </div>
 </div>
 </div>
@@ -240,23 +303,62 @@ team:
 <div class="pipeline-output">
 <div class="pipeline-label">Compile to any target</div>
 
-```sh
+<div class="target-tabs">
+  <button class="target-tab active" onclick="document.querySelectorAll('.target-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active');document.querySelectorAll('.target-panel').forEach(p=>p.style.display='none');document.getElementById('panel-claude').style.display='block'">Claude Code</button>
+  <button class="target-tab" onclick="document.querySelectorAll('.target-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active');document.querySelectorAll('.target-panel').forEach(p=>p.style.display='none');document.getElementById('panel-cursor').style.display='block'">Cursor</button>
+  <button class="target-tab" onclick="document.querySelectorAll('.target-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active');document.querySelectorAll('.target-panel').forEach(p=>p.style.display='none');document.getElementById('panel-codex').style.display='block'">Codex</button>
+  <button class="target-tab" onclick="document.querySelectorAll('.target-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active');document.querySelectorAll('.target-panel').forEach(p=>p.style.display='none');document.getElementById('panel-more').style.display='block'">+9 more</button>
+</div>
+
+<div id="panel-claude" class="target-panel" style="display:block">
+
+```
 npx skillfold --target claude-code
-# .claude/agents/planner.md
-# .claude/agents/engineer.md
-# .claude/skills/planning/SKILL.md
-# .claude/skills/code-writing/SKILL.md
 
+.claude/
+  agents/planner.md
+  agents/engineer.md
+  skills/planning/SKILL.md
+  skills/code-writing/SKILL.md
+  commands/run-pipeline.md
+```
+
+</div>
+<div id="panel-cursor" class="target-panel" style="display:none">
+
+```
 npx skillfold --target cursor
-# .cursor/rules/planner.mdc
-# .cursor/rules/engineer.mdc
+
+.cursor/
+  rules/planner.mdc
+  rules/engineer.mdc
 ```
 
-Or run the pipeline directly:
+</div>
+<div id="panel-codex" class="target-panel" style="display:none">
 
-```sh
-npx skillfold run --target claude-code
 ```
+npx skillfold --target codex
+
+AGENTS.md    # single file, all agents
+```
+
+</div>
+<div id="panel-more" class="target-panel" style="display:none">
+
+```
+--target windsurf     # .windsurf/rules/
+--target copilot      # .github/instructions/
+--target gemini       # .gemini/agents/
+--target goose        # .goosehints
+--target roo-code     # .roo/skills/
+--target kiro         # .kiro/skills/
+--target junie        # .junie/skills/
+--target agent-teams  # .claude/ (team mode)
+--target skill        # build/ (standard)
+```
+
+</div>
 
 </div>
 </div>
@@ -320,6 +422,20 @@ Three example pipelines ship with the library. Use them directly or as a startin
   <h2>Built with Skillfold</h2>
   <p>This project's own dev team - planner, engineer, reviewer, marketer, architect, designer - is defined in <code>skillfold.yaml</code> and compiled with the tool it ships. The pipeline manages its own issues, PRs, and releases.</p>
   <a class="dogfood-link" href="https://github.com/byronxlg/skillfold/blob/main/skillfold.yaml">See the pipeline config &#8594;</a>
+</div>
+</div>
+
+<div class="github-cta fade-in">
+<div class="github-cta-inner">
+  <div class="github-cta-icon">
+    <svg viewBox="0 0 24 24" width="32" height="32" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+  </div>
+  <h3>Open source, MIT licensed</h3>
+  <p>Star the repo to follow development. Contributions welcome.</p>
+  <a class="github-star-btn" href="https://github.com/byronxlg/skillfold">
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 .587l3.668 7.568L24 9.306l-6 5.848 1.417 8.259L12 19.446l-7.417 3.967L6 15.154 0 9.306l8.332-1.151z"/></svg>
+    Star on GitHub
+  </a>
 </div>
 </div>
 

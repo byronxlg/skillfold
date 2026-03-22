@@ -1,6 +1,7 @@
-# Comparisons
-
-Skillfold is a compile-time coordination tool for multi-agent pipelines. This page compares it against the alternatives you are most likely evaluating.
+<div class="page-hero">
+  <h1>Comparisons</h1>
+  <p>How skillfold compares to the alternatives you are most likely evaluating. Each tool makes different trade-offs.</p>
+</div>
 
 <div class="comparison-nav">
   <a href="#vs-claude-code-agent-teams">

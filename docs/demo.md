@@ -1,8 +1,7 @@
-# Live Demo
-
-## Interactive Pipeline Visualizer
-
-The graph below shows a `dev-team` pipeline compiled from `skillfold.yaml`. It renders the execution flow the compiler produces from YAML config.
+<div class="page-hero">
+  <h1>Live Demo</h1>
+  <p>See a compiled pipeline in action. This graph shows the execution flow the compiler produces from a <code>dev-team</code> config.</p>
+</div>
 
 <div class="demo-hints">
 
