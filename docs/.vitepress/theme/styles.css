@@ -184,6 +184,7 @@ html {
    Section divider (gradient line between sections)
    ============================================ */
 .vp-doc .how-it-works::before,
+.vp-doc .metrics-section::before,
 .vp-doc .before-after::before,
 .vp-doc .home-content::before,
 .vp-doc .templates-section::before,
@@ -487,6 +488,85 @@ html {
     height: 24px;
     margin-top: 0;
     margin-bottom: 0;
+  }
+}
+
+/* ============================================
+   Performance metrics - 4-card grid
+   ============================================ */
+.vp-doc .metrics-section {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: var(--section-gap) 24px 0;
+}
+
+.vp-doc .metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .vp-doc .metrics-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.vp-doc .metric-card {
+  text-align: center;
+  padding: 24px 16px;
+  border-radius: 12px;
+  background: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.vp-doc .metric-card:hover {
+  border-color: var(--vp-c-brand-1);
+  transform: translateY(-2px);
+}
+
+.vp-doc .metric-value {
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, #10b981, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+
+.dark .vp-doc .metric-value {
+  background: linear-gradient(135deg, #34d399, #22d3ee);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.vp-doc .metric-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--vp-c-text-1);
+  margin-bottom: 4px;
+}
+
+.vp-doc .metric-detail {
+  font-size: 12px;
+  color: var(--vp-c-text-3);
+  line-height: 1.4;
+}
+
+@media (max-width: 639px) {
+  .vp-doc .metrics-section {
+    padding-top: var(--section-gap-sm);
+  }
+
+  .vp-doc .metric-value {
+    font-size: 28px;
   }
 }
 
@@ -1153,6 +1233,13 @@ html {
   background: var(--vp-c-bg-mute);
   display: inline-block;
   word-break: break-all;
+}
+
+/* ============================================
+   Library skill category headers
+   ============================================ */
+.vp-doc .skill-grid + h2 {
+  margin-top: 40px;
 }
 
 /* ============================================

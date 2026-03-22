@@ -51,6 +51,15 @@ Skillfold is declarative. You define agents, typed state, and execution flow in 
 | **Team size** | Unlimited (constrained by flow definition) | 3-5 recommended, practical max around 10-16 |
 | **Maturity** | Stable | Experimental with known limitations |
 
+### Known trade-offs of Skillfold
+
+Skillfold has trade-offs inherent to a compile-time approach:
+
+- **Static topology** - the pipeline structure is fixed at compile time. Agents cannot spawn new teammates or reroute flow at runtime
+- **Extra build step** - changes to `skillfold.yaml` require recompiling before agents see them
+- **Config learning curve** - the YAML format has its own concepts (composed skills, state types, flow nodes) that need to be learned
+- **No runtime coordination** - agents cannot message each other directly; all handoffs go through the orchestrator and state
+
 ### How they complement each other
 
 Skillfold and Agent Teams are not competing tools - they solve different parts of the same problem. Skillfold handles the **definition and validation** layer (what agents exist, what state they share, how they connect). Agent Teams handles the **execution** layer (spawning teammates, routing messages, managing the task list).

@@ -78,15 +78,6 @@ onMounted(() => {
 </div>
 
 <div class="proof-bar fade-in">
-  <div class="proof-stats">
-    <span class="proof-stat"><strong>12</strong> platforms</span>
-    <span class="proof-sep"></span>
-    <span class="proof-stat"><strong>11</strong> library skills</span>
-    <span class="proof-sep"></span>
-    <span class="proof-stat"><strong>0</strong> runtime deps</span>
-    <span class="proof-sep"></span>
-    <span class="proof-stat"><strong>859+</strong> tests</span>
-  </div>
   <div class="proof-badges">
     <a href="https://www.npmjs.com/package/skillfold"><img src="https://img.shields.io/npm/v/skillfold?color=10b981&label=npm" alt="npm version" /></a>
     <a href="https://www.npmjs.com/package/skillfold"><img src="https://img.shields.io/npm/dw/skillfold?color=06b6d4&label=downloads" alt="npm downloads" /></a>
@@ -137,6 +128,31 @@ onMounted(() => {
   </div>
 </div>
 
+</div>
+
+<div class="metrics-section fade-in">
+<div class="metrics-grid">
+  <div class="metric-card">
+    <div class="metric-value">&lt;1s</div>
+    <div class="metric-label">Compilation time</div>
+    <div class="metric-detail">7 agents, 12 skills, full validation</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value">0</div>
+    <div class="metric-label">Runtime dependencies</div>
+    <div class="metric-detail">Compile-time only, nothing ships</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value">859+</div>
+    <div class="metric-label">Tests passing</div>
+    <div class="metric-detail">168 suites, zero external deps</div>
+  </div>
+  <div class="metric-card">
+    <div class="metric-value">12</div>
+    <div class="metric-label">Platform targets</div>
+    <div class="metric-detail">One config, every major agent tool</div>
+  </div>
+</div>
 </div>
 
 <div class="before-after fade-in">
@@ -252,7 +268,7 @@ npx skillfold run --target claude-code
 
 ## Compiler vs. Runtime Orchestration
 
-Skillfold validates at compile time and produces standard files with zero runtime overhead. Runtime frameworks validate during execution and require their SDK at runtime.
+Skillfold validates at compile time and produces standard files with zero runtime overhead. Runtime frameworks validate during execution and require their SDK at runtime. Each approach has trade-offs.
 
 <div class="comparison-table-wrap">
 
@@ -262,7 +278,8 @@ Skillfold validates at compile time and produces standard files with zero runtim
 | **Lock-in** | None - delete the tool, keep the files | Tied to the framework SDK |
 | **Validation** | Compile-time type checking | Runtime errors during execution |
 | **Overhead** | Zero at runtime | Framework process alongside agents |
-| **Best for** | Known topology with typed state | Dynamic workflows that adapt mid-run |
+| **Adaptability** | Fixed topology, defined ahead of time | Dynamic workflows that adapt mid-run |
+| **Best for** | Known pipelines with typed state | Exploratory workflows with evolving structure |
 
 </div>
 

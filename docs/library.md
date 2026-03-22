@@ -20,62 +20,77 @@ No skillfold config or compilation needed. Each skill installs as a standard `SK
 
 ---
 
-## Available Skills
+## Engineering
 
 <div class="skill-grid">
   <div class="skill-card">
-    <div class="skill-name">planning</div>
-    <div class="skill-desc">Break problems into steps, identify dependencies, and estimate scope.</div>
-    <code class="skill-install">npx skills add byronxlg/skillfold -s planning</code>
-  </div>
-  <div class="skill-card">
-    <div class="skill-name">research</div>
-    <div class="skill-desc">Gather information, evaluate sources, and synthesize findings.</div>
-    <code class="skill-install">npx skills add byronxlg/skillfold -s research</code>
-  </div>
-  <div class="skill-card">
-    <div class="skill-name">decision-making</div>
-    <div class="skill-desc">Evaluate trade-offs, document options, and justify recommendations.</div>
-    <code class="skill-install">npx skills add byronxlg/skillfold -s decision-making</code>
-  </div>
-  <div class="skill-card">
     <div class="skill-name">code-writing</div>
-    <div class="skill-desc">Write clean, correct, production-quality code.</div>
+    <div class="skill-desc">Write clean, correct, production-quality code. Prioritizes correctness, then clarity, then performance. Follows project conventions, handles errors explicitly, keeps functions small and focused.</div>
     <code class="skill-install">npx skills add byronxlg/skillfold -s code-writing</code>
   </div>
   <div class="skill-card">
     <div class="skill-name">code-review</div>
-    <div class="skill-desc">Review code for correctness, clarity, and security.</div>
+    <div class="skill-desc">Review code for correctness, clarity, and security. Checks edge cases, null/undefined risks, race conditions, resource leaks, naming, and test coverage.</div>
     <code class="skill-install">npx skills add byronxlg/skillfold -s code-review</code>
   </div>
   <div class="skill-card">
     <div class="skill-name">testing</div>
-    <div class="skill-desc">Write and reason about tests, covering behavior, edge cases, and errors.</div>
+    <div class="skill-desc">Write and reason about tests covering behavior, edge cases, and errors. Each test verifies one thing with a descriptive name. Treats tests as documentation.</div>
     <code class="skill-install">npx skills add byronxlg/skillfold -s testing</code>
   </div>
+</div>
+
+## Thinking
+
+<div class="skill-grid">
+  <div class="skill-card">
+    <div class="skill-name">planning</div>
+    <div class="skill-desc">Break problems into steps, identify dependencies, and estimate scope. Works backward from desired outcomes, ensures steps have clear deliverables, prefers smaller validatable steps.</div>
+    <code class="skill-install">npx skills add byronxlg/skillfold -s planning</code>
+  </div>
+  <div class="skill-card">
+    <div class="skill-name">research</div>
+    <div class="skill-desc">Gather information, evaluate sources, and synthesize findings. Searches broadly first, evaluates source quality, distinguishes facts from opinions, synthesizes into actionable conclusions.</div>
+    <code class="skill-install">npx skills add byronxlg/skillfold -s research</code>
+  </div>
+  <div class="skill-card">
+    <div class="skill-name">decision-making</div>
+    <div class="skill-desc">Evaluate trade-offs, document options, and justify recommendations. Makes criteria explicit, separates reversible from irreversible decisions, documents what was rejected and why.</div>
+    <code class="skill-install">npx skills add byronxlg/skillfold -s decision-making</code>
+  </div>
+</div>
+
+## Communication
+
+<div class="skill-grid">
   <div class="skill-card">
     <div class="skill-name">writing</div>
-    <div class="skill-desc">Produce clear, structured prose and documentation.</div>
+    <div class="skill-desc">Produce clear, structured prose and documentation. Uses headings, lists, and paragraphs for structure. Writes for the audience, stays concise with active voice.</div>
     <code class="skill-install">npx skills add byronxlg/skillfold -s writing</code>
   </div>
   <div class="skill-card">
     <div class="skill-name">summarization</div>
-    <div class="skill-desc">Condense information with audience-appropriate detail levels.</div>
+    <div class="skill-desc">Condense information with audience-appropriate detail levels. Preserves accuracy and key points, cuts supporting detail and repetition, maintains original tone.</div>
     <code class="skill-install">npx skills add byronxlg/skillfold -s summarization</code>
   </div>
+</div>
+
+## Tooling
+
+<div class="skill-grid">
   <div class="skill-card">
     <div class="skill-name">github-workflow</div>
-    <div class="skill-desc">Work with GitHub branches, PRs, issues, and reviews via the gh CLI.</div>
+    <div class="skill-desc">Work with GitHub branches, PRs, issues, and reviews via the <code>gh</code> CLI. Creates feature branches, opens PRs, views diffs, checks CI status, and merges.</div>
     <code class="skill-install">npx skills add byronxlg/skillfold -s github-workflow</code>
   </div>
   <div class="skill-card">
     <div class="skill-name">file-management</div>
-    <div class="skill-desc">Read, create, edit, and organize files and directories.</div>
+    <div class="skill-desc">Read, create, edit, and organize files and directories. Verifies existence before operations, creates parent directories, backs up before destructive changes.</div>
     <code class="skill-install">npx skills add byronxlg/skillfold -s file-management</code>
   </div>
   <div class="skill-card">
     <div class="skill-name">skillfold-cli</div>
-    <div class="skill-desc">Use the skillfold compiler to manage multi-agent pipeline configs.</div>
+    <div class="skill-desc">Use the skillfold compiler to manage multi-agent pipeline configs. Compiles YAML into SKILL.md files, validates configs, and manages the four config sections.</div>
     <code class="skill-install">npx skills add byronxlg/skillfold -s skillfold-cli</code>
   </div>
 </div>

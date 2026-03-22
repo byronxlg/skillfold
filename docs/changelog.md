@@ -4,7 +4,7 @@ For the full release history with detailed notes, see [GitHub Releases](https://
 
 <div class="changelog-timeline">
 
-## v1.23.0
+## v1.23.0 <Badge type="tip" text="March 21, 2026" />
 
 **New compilation targets** - Four more platforms:
 
@@ -14,7 +14,7 @@ For the full release history with detailed notes, see [GitHub Releases](https://
 - `--target junie` for JetBrains Junie (`.junie/skills/`, `.junie/AGENTS.md`)
 - Expanded SECURITY.md to cover `skillfold run`, backends, and search commands
 
-## v1.22.0
+## v1.22.0 <Badge type="tip" text="March 21, 2026" />
 
 **Agent Teams target** - Full Claude Code Agent Teams support:
 
@@ -22,12 +22,12 @@ For the full release history with detailed notes, see [GitHub Releases](https://
 - End-to-end Agent Teams tutorial and bridge guide
 - Agent Teams comparison updated
 
-## v1.21.0
+## v1.21.0 <Badge type="tip" text="March 21, 2026" />
 
 - Initial `--target agent-teams` compilation output
 - Updated Agent Teams comparison with latest features
 
-## v1.20.0
+## v1.20.0 <Badge type="tip" text="March 21, 2026" />
 
 **Docs overhaul** - VitePress site launch:
 
@@ -36,99 +36,99 @@ For the full release history with detailed notes, see [GitHub Releases](https://
 - VitePress landing page with YAML config example
 - Changelog and blog sections added
 
-## v1.19.0
+## v1.19.0 <Badge type="tip" text="March 21, 2026" />
 
 **Pipeline execution** - Agent SDK and state backends:
 
 - Agent SDK spawner for `skillfold run` (`--spawner sdk`) with full tool access via `@anthropic-ai/claude-agent-sdk`
 - State backend integration reads/writes from GitHub issues, discussions, and pull requests
 
-## v1.18.0
+## v1.18.0 <Badge type="tip" text="March 21, 2026" />
 
 - `skillfold run` guide and CLI reference documentation
 
-## v1.17.0
+## v1.17.0 <Badge type="tip" text="March 21, 2026" />
 
 - Pipeline execution state persistence and checkpoint-based resume (`--resume`)
 
-## v1.16.0
+## v1.16.0 <Badge type="tip" text="March 21, 2026" />
 
 - Error handling and recovery modes (`--on-error abort|skip|retry`)
 - Step timing and execution summary
 
-## v1.15.0
+## v1.15.0 <Badge type="tip" text="March 21, 2026" />
 
 - `--target gemini` for Gemini CLI
 - `mcpServers` and `skills` fields in `agentConfig` for Claude Code agent frontmatter
 
-## v1.14.0
+## v1.14.0 <Badge type="tip" text="March 21, 2026" />
 
 - `skillfold init --template` for scaffolding from library example configs
 - `skillfold run` with conditional routing, loops, and `--max-iterations` guard
 
-## v1.13.0
+## v1.13.0 <Badge type="tip" text="March 21, 2026" />
 
 - Parallel map execution for `skillfold run` (concurrent subgraph per list item)
 
-## v1.12.0
+## v1.12.0 <Badge type="tip" text="March 21, 2026" />
 
 - `skillfold run` command with dry-run mode
 
-## v1.11.0
+## v1.11.0 <Badge type="tip" text="March 21, 2026" />
 
 - `@ref` version pinning for GitHub URL skill references (tags and commit SHAs)
 - `skills:` prefix support for Vercel skills CLI interop
 
-## v1.10.0
+## v1.10.0 <Badge type="tip" text="March 21, 2026" />
 
 - `skillfold search` for discovering pipeline configs on npm
 - `npm:` prefix support for skill references and imports
 
-## v1.9.0
+## v1.9.0 <Badge type="tip" text="March 21, 2026" />
 
 - Sub-flow imports: flow nodes can reference external pipeline configs
 - Async flow nodes for external agents with `async: true`
 
-## v1.8.0
+## v1.8.0 <Badge type="tip" text="March 21, 2026" />
 
 - Top-level `resources` section for namespace declarations
 - Built-in state integrations (github-issues, github-discussions, github-pull-requests)
 
-## v1.7.0
+## v1.7.0 <Badge type="tip" text="March 21, 2026" />
 
 - `skillfold adopt` for importing existing Claude Code agents
 - `--target copilot` compilation output
 
-## v1.6.0
+## v1.6.0 <Badge type="tip" text="March 21, 2026" />
 
 - `--target codex` compilation output (single `AGENTS.md`)
 - `--target windsurf` compilation output
 
-## v1.5.0
+## v1.5.0 <Badge type="tip" text="March 21, 2026" />
 
 - `--target cursor` compilation output (`.cursor/rules/*.mdc`)
 
-## v1.4.0
+## v1.4.0 <Badge type="tip" text="March 20, 2026" />
 
 - `skillfold plugin` for Claude Code plugin packaging
 - `--target claude-code` compilation output
 
-## v1.3.0
+## v1.3.0 <Badge type="tip" text="March 20, 2026" />
 
 - Shared skills library with 11 generic atomic skills
 - `skillfold.local.yaml` support for local config overrides
 
-## v1.2.0
+## v1.2.0 <Badge type="tip" text="March 20, 2026" />
 
 - `skillfold watch` for auto-recompile on changes
 - `--check` flag for CI integration
 
-## v1.1.0
+## v1.1.0 <Badge type="tip" text="March 20, 2026" />
 
 - `skillfold validate` and `skillfold list` commands
 - JSON Schema for IDE autocompletion
 
-## v1.0.0
+## v1.0.0 <Badge type="tip" text="March 20, 2026" />
 
 **Initial stable release:**
 

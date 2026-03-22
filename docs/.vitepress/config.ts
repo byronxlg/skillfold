@@ -109,6 +109,10 @@ export default withMermaid(defineConfig({
         items: [
           { text: "All Posts", link: "/blog/" },
           {
+            text: "One Config, Twelve Platforms",
+            link: "/blog/twelve-platforms",
+          },
+          {
             text: "My Dev Team Is a YAML File",
             link: "/blog/self-hosting-pipeline",
           },

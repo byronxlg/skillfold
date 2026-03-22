@@ -16,6 +16,19 @@ The graph below shows a `dev-team` pipeline compiled from `skillfold.yaml`. It r
 
 <iframe src="/skillfold/demo-graph.html" width="100%" height="500" style="border: 1px solid var(--vp-c-divider); border-radius: 8px;" allow="clipboard-write"></iframe>
 
+<details>
+<summary>Can't see the graph? Here's the static flow diagram:</summary>
+
+```mermaid
+graph LR
+    planner["planner<br/><small>planning + decision-making</small>"] --> engineer["engineer<br/><small>planning + code-writing + testing</small>"]
+    engineer --> reviewer["reviewer<br/><small>code-review + testing</small>"]
+    reviewer -->|"review.approved == true"| END([end])
+    reviewer -->|"review.approved == false"| engineer
+```
+
+</details>
+
 ::: tip Generate this for your own pipeline
 ```bash
 npx skillfold graph --html > pipeline.html
