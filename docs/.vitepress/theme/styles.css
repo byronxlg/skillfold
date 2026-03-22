@@ -392,31 +392,38 @@ html {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .vp-doc .works-with-item {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: 8px;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 10px;
   background: var(--vp-c-bg-soft);
   border: 1px solid var(--vp-c-divider);
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--vp-c-text-2);
-  transition: border-color 0.2s, color 0.2s;
+  text-decoration: none;
+  transition: border-color 0.25s, color 0.25s, transform 0.2s, box-shadow 0.25s;
 }
 
 .vp-doc .works-with-item:hover {
   border-color: var(--vp-c-brand-1);
   color: var(--vp-c-text-1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.08);
+}
+
+.dark .vp-doc .works-with-item:hover {
+  box-shadow: 0 4px 12px rgba(52, 211, 153, 0.06);
 }
 
 .vp-doc .works-with-item img {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
 }
 
 /* ============================================
@@ -826,23 +833,116 @@ html {
   margin-right: auto;
 }
 
-.vp-doc .comparison-table-wrap {
-  max-width: 720px;
+/* Visual comparison (card-style rows) */
+.vp-doc .comparison-visual {
+  max-width: 800px;
   margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.vp-doc .comparison-table-wrap table {
-  width: 100%;
+.vp-doc .comparison-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.vp-doc .comparison-row.comparison-header {
+  margin-bottom: 8px;
+}
+
+.vp-doc .comparison-cell {
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  border-radius: 8px;
+}
+
+.vp-doc .comparison-label-cell {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--vp-c-text-2);
+  padding-left: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.vp-doc .comparison-header .comparison-label-cell {
+  padding: 0;
+}
+
+.vp-doc .comparison-brand {
+  font-weight: 700;
+  background: linear-gradient(120deg, #10b981 30%, #06b6d4);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   font-size: 14px;
 }
 
-.vp-doc .comparison-table-wrap th:nth-child(2) {
-  color: var(--vp-c-brand-1);
+.dark .vp-doc .comparison-brand {
+  background: linear-gradient(120deg, #34d399 30%, #22d3ee);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.vp-doc .comparison-table-wrap td:nth-child(2) {
+.vp-doc .comparison-header .comparison-sf,
+.vp-doc .comparison-header .comparison-rt {
+  font-weight: 600;
+  font-size: 14px;
   color: var(--vp-c-text-1);
-  font-weight: 500;
+  padding: 8px 14px;
+}
+
+.vp-doc .comparison-sf {
+  background: rgba(16, 185, 129, 0.06);
+  color: var(--vp-c-text-1);
+}
+
+.dark .vp-doc .comparison-sf {
+  background: rgba(52, 211, 153, 0.06);
+}
+
+.vp-doc .comparison-rt {
+  background: var(--vp-c-bg);
+  color: var(--vp-c-text-2);
+}
+
+.vp-doc .check-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  font-size: 11px;
+  font-weight: 700;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+.dark .vp-doc .check-icon {
+  background: rgba(52, 211, 153, 0.15);
+  color: #34d399;
+}
+
+.vp-doc .neutral-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--vp-c-text-3);
+  font-size: 14px;
+  margin-right: 6px;
+  flex-shrink: 0;
 }
 
 .vp-doc .comparison-link {
@@ -866,15 +966,51 @@ html {
     margin-top: var(--section-gap-sm);
   }
 
-  .vp-doc .comparison-table-wrap {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+  .vp-doc .comparison-row {
+    grid-template-columns: 1fr;
+    gap: 2px;
   }
 
-  .vp-doc .comparison-table-wrap table {
-    font-size: 13px;
-    min-width: 480px;
+  .vp-doc .comparison-label-cell {
+    padding: 8px 0 2px;
+    font-size: 11px;
   }
+
+  .vp-doc .comparison-row.comparison-header {
+    display: none;
+  }
+
+  .vp-doc .comparison-sf::before {
+    content: 'Skillfold: ';
+    font-weight: 600;
+    color: var(--vp-c-brand-1);
+  }
+
+  .vp-doc .comparison-rt::before {
+    content: 'Runtime: ';
+    font-weight: 600;
+    color: var(--vp-c-text-3);
+  }
+}
+
+/* Legacy table wrap (keep for comparisons page) */
+.vp-doc .comparison-table-wrap {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.vp-doc .comparison-table-wrap table {
+  width: 100%;
+  font-size: 14px;
+}
+
+.vp-doc .comparison-table-wrap th:nth-child(2) {
+  color: var(--vp-c-brand-1);
+}
+
+.vp-doc .comparison-table-wrap td:nth-child(2) {
+  color: var(--vp-c-text-1);
+  font-weight: 500;
 }
 
 /* ============================================
@@ -931,6 +1067,19 @@ html {
   box-shadow: 0 8px 24px rgba(52, 211, 153, 0.06);
 }
 
+.vp-doc .template-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--vp-c-brand-soft);
+  color: var(--vp-c-brand-1);
+  margin-bottom: 4px;
+  flex-shrink: 0;
+}
+
 .vp-doc .template-name {
   font-size: 15px;
   font-weight: 600;
@@ -977,9 +1126,17 @@ html {
   text-align: center;
   padding: 32px;
   border-radius: 16px;
-  border: 1px solid var(--vp-c-divider);
-  background: var(--vp-c-bg-soft);
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--vp-c-bg-soft), var(--vp-c-bg-soft)) padding-box,
+    linear-gradient(135deg, rgba(16, 185, 129, 0.3), rgba(6, 182, 212, 0.3)) border-box;
   position: relative;
+}
+
+.dark .vp-doc .dogfood-inner {
+  background:
+    linear-gradient(var(--vp-c-bg-soft), var(--vp-c-bg-soft)) padding-box,
+    linear-gradient(135deg, rgba(52, 211, 153, 0.2), rgba(34, 211, 238, 0.2)) border-box;
 }
 
 .vp-doc .dogfood-badge {
@@ -1120,13 +1277,8 @@ html {
 }
 
 .vp-doc .cta-install {
-  max-width: 520px;
-  margin: 0 auto 24px;
-}
-
-.vp-doc .cta-install div[class*="language-"] {
-  border-color: var(--vp-c-brand-1);
-  border-width: 1.5px;
+  max-width: 580px;
+  margin: 0 auto;
 }
 
 .vp-doc .cta-links {
@@ -1593,4 +1745,54 @@ html {
 .vp-doc .builder-intro p {
   color: var(--vp-c-text-2);
   font-size: 15px;
+}
+
+/* ============================================
+   Copy-to-clipboard button
+   ============================================ */
+.vp-doc .cta-install-wrap {
+  position: relative;
+  max-width: 520px;
+  margin: 0 auto 24px;
+}
+
+.vp-doc .cta-install-wrap div[class*="language-"] {
+  border-color: var(--vp-c-brand-1);
+  border-width: 1.5px;
+}
+
+.vp-doc .copy-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.06);
+  color: #a1a1aa;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+  z-index: 5;
+  padding: 0;
+}
+
+.vp-doc .copy-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #e4e4e7;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.vp-doc .copy-btn.copied {
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.3);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.vp-doc .copy-btn svg {
+  width: 14px;
+  height: 14px;
 }

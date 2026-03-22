@@ -41,10 +41,27 @@ features:
 
 <script setup>
 import { withBase } from 'vitepress'
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, computed } from 'vue'
 
 const terminalLines = ref([])
 const terminalVisible = ref(false)
+const activeTab = ref('claude')
+const installCopied = ref(false)
+
+const metrics = ref([
+  { value: 0, target: 1, prefix: '<', suffix: 's', label: 'Compilation time', detail: '7 agents, 12 skills, full validation' },
+  { value: 0, target: 0, prefix: '', suffix: '', label: 'Runtime dependencies', detail: 'Compile-time only, nothing ships' },
+  { value: 0, target: 859, prefix: '', suffix: '+', label: 'Tests passing', detail: '168 suites, zero external deps' },
+  { value: 0, target: 12, prefix: '', suffix: '', label: 'Platform targets', detail: 'One config, every major agent tool' },
+])
+const metricsAnimated = ref(false)
+
+const tabs = [
+  { id: 'claude', label: 'Claude Code' },
+  { id: 'cursor', label: 'Cursor' },
+  { id: 'codex', label: 'Codex' },
+  { id: 'more', label: '+9 more' },
+]
 
 const lines = [
   { type: 'cmd', text: 'npx skillfold init my-pipeline' },
@@ -89,6 +106,42 @@ function animateTerminal() {
   typeNext()
 }
 
+function animateMetrics() {
+  if (metricsAnimated.value) return
+  metricsAnimated.value = true
+  const duration = 1200
+  const steps = 40
+  const interval = duration / steps
+
+  metrics.value.forEach((m, i) => {
+    let step = 0
+    const timer = setInterval(() => {
+      step++
+      const progress = step / steps
+      const eased = 1 - Math.pow(1 - progress, 3)
+      m.value = Math.round(m.target * eased)
+      if (step >= steps) {
+        m.value = m.target
+        clearInterval(timer)
+      }
+    }, interval)
+  })
+}
+
+function formatMetric(m) {
+  return m.prefix + m.value + m.suffix
+}
+
+function selectTab(id) {
+  activeTab.value = id
+}
+
+function copyInstall() {
+  navigator.clipboard.writeText('npm install skillfold && npx skillfold init my-pipeline')
+  installCopied.value = true
+  setTimeout(() => { installCopied.value = false }, 2000)
+}
+
 onMounted(() => {
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
@@ -113,6 +166,18 @@ onMounted(() => {
 
   const terminalEl = document.querySelector('.quick-start-terminal')
   if (terminalEl) terminalObserver.observe(terminalEl)
+
+  const metricsObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        animateMetrics()
+        metricsObserver.unobserve(entry.target)
+      }
+    })
+  }, { threshold: 0.3 })
+
+  const metricsEl = document.querySelector('.metrics-section')
+  if (metricsEl) metricsObserver.observe(metricsEl)
 })
 </script>
 
@@ -150,20 +215,20 @@ onMounted(() => {
 </div>
 
 <div class="works-with fade-in">
-<div class="works-with-label">Works with</div>
+<div class="works-with-label">Works with every major agent platform</div>
 <div class="works-with-grid">
-  <div class="works-with-item"><img :src="withBase('/icons/targets/claude.svg')" alt="" />Claude Code</div>
-  <div class="works-with-item"><img :src="withBase('/icons/targets/agent-teams.svg')" alt="" />Agent Teams</div>
-  <div class="works-with-item"><img :src="withBase('/icons/targets/cursor.svg')" alt="" />Cursor</div>
-  <div class="works-with-item"><img :src="withBase('/icons/targets/windsurf.svg')" alt="" />Windsurf</div>
-  <div class="works-with-item"><img :src="withBase('/icons/targets/copilot.svg')" alt="" />Copilot</div>
-  <div class="works-with-item"><img :src="withBase('/icons/targets/codex.svg')" alt="" />Codex</div>
-  <div class="works-with-item"><img :src="withBase('/icons/targets/gemini.svg')" alt="" />Gemini</div>
-  <div class="works-with-item"><img :src="withBase('/icons/targets/goose.svg')" alt="" />Goose</div>
-  <div class="works-with-item"><img :src="withBase('/icons/targets/roo.svg')" alt="" />Roo Code</div>
-  <div class="works-with-item"><img :src="withBase('/icons/targets/kiro.svg')" alt="" />Kiro</div>
-  <div class="works-with-item"><img :src="withBase('/icons/targets/junie.svg')" alt="" />Junie</div>
-  <div class="works-with-item"><img :src="withBase('/icons/targets/skill.svg')" alt="" />SKILL.md</div>
+  <a class="works-with-item" :href="withBase('/integrations#claude-code')"><img :src="withBase('/icons/targets/claude.svg')" alt="" /><span>Claude Code</span></a>
+  <a class="works-with-item" :href="withBase('/integrations#claude-code')"><img :src="withBase('/icons/targets/agent-teams.svg')" alt="" /><span>Agent Teams</span></a>
+  <a class="works-with-item" :href="withBase('/integrations#cursor')"><img :src="withBase('/icons/targets/cursor.svg')" alt="" /><span>Cursor</span></a>
+  <a class="works-with-item" :href="withBase('/integrations#windsurf')"><img :src="withBase('/icons/targets/windsurf.svg')" alt="" /><span>Windsurf</span></a>
+  <a class="works-with-item" :href="withBase('/integrations#vs-code-github-copilot')"><img :src="withBase('/icons/targets/copilot.svg')" alt="" /><span>Copilot</span></a>
+  <a class="works-with-item" :href="withBase('/integrations#openai-codex')"><img :src="withBase('/icons/targets/codex.svg')" alt="" /><span>Codex</span></a>
+  <a class="works-with-item" :href="withBase('/integrations#gemini-cli')"><img :src="withBase('/icons/targets/gemini.svg')" alt="" /><span>Gemini</span></a>
+  <a class="works-with-item" :href="withBase('/integrations#goose')"><img :src="withBase('/icons/targets/goose.svg')" alt="" /><span>Goose</span></a>
+  <a class="works-with-item" :href="withBase('/integrations#roo-code')"><img :src="withBase('/icons/targets/roo.svg')" alt="" /><span>Roo Code</span></a>
+  <a class="works-with-item" :href="withBase('/integrations#kiro')"><img :src="withBase('/icons/targets/kiro.svg')" alt="" /><span>Kiro</span></a>
+  <a class="works-with-item" :href="withBase('/integrations#junie')"><img :src="withBase('/icons/targets/junie.svg')" alt="" /><span>Junie</span></a>
+  <a class="works-with-item" :href="withBase('/integrations#cross-platform')"><img :src="withBase('/icons/targets/skill.svg')" alt="" /><span>SKILL.md</span></a>
 </div>
 </div>
 
@@ -195,25 +260,10 @@ onMounted(() => {
 
 <div class="metrics-section fade-in">
 <div class="metrics-grid">
-  <div class="metric-card">
-    <div class="metric-value">&lt;1s</div>
-    <div class="metric-label">Compilation time</div>
-    <div class="metric-detail">7 agents, 12 skills, full validation</div>
-  </div>
-  <div class="metric-card">
-    <div class="metric-value">0</div>
-    <div class="metric-label">Runtime dependencies</div>
-    <div class="metric-detail">Compile-time only, nothing ships</div>
-  </div>
-  <div class="metric-card">
-    <div class="metric-value">859+</div>
-    <div class="metric-label">Tests passing</div>
-    <div class="metric-detail">168 suites, zero external deps</div>
-  </div>
-  <div class="metric-card">
-    <div class="metric-value">12</div>
-    <div class="metric-label">Platform targets</div>
-    <div class="metric-detail">One config, every major agent tool</div>
+  <div class="metric-card" v-for="(m, i) in metrics" :key="i">
+    <div class="metric-value">{{ formatMetric(m) }}</div>
+    <div class="metric-label">{{ m.label }}</div>
+    <div class="metric-detail">{{ m.detail }}</div>
   </div>
 </div>
 </div>
@@ -304,13 +354,10 @@ team:
 <div class="pipeline-label">Compile to any target</div>
 
 <div class="target-tabs">
-  <button class="target-tab active" onclick="document.querySelectorAll('.target-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active');document.querySelectorAll('.target-panel').forEach(p=>p.style.display='none');document.getElementById('panel-claude').style.display='block'">Claude Code</button>
-  <button class="target-tab" onclick="document.querySelectorAll('.target-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active');document.querySelectorAll('.target-panel').forEach(p=>p.style.display='none');document.getElementById('panel-cursor').style.display='block'">Cursor</button>
-  <button class="target-tab" onclick="document.querySelectorAll('.target-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active');document.querySelectorAll('.target-panel').forEach(p=>p.style.display='none');document.getElementById('panel-codex').style.display='block'">Codex</button>
-  <button class="target-tab" onclick="document.querySelectorAll('.target-tab').forEach(t=>t.classList.remove('active'));this.classList.add('active');document.querySelectorAll('.target-panel').forEach(p=>p.style.display='none');document.getElementById('panel-more').style.display='block'">+9 more</button>
+  <button v-for="tab in tabs" :key="tab.id" class="target-tab" :class="{ active: activeTab === tab.id }" @click="selectTab(tab.id)">{{ tab.label }}</button>
 </div>
 
-<div id="panel-claude" class="target-panel" style="display:block">
+<div v-show="activeTab === 'claude'" class="target-panel">
 
 ```
 npx skillfold --target claude-code
@@ -324,7 +371,7 @@ npx skillfold --target claude-code
 ```
 
 </div>
-<div id="panel-cursor" class="target-panel" style="display:none">
+<div v-show="activeTab === 'cursor'" class="target-panel">
 
 ```
 npx skillfold --target cursor
@@ -335,7 +382,7 @@ npx skillfold --target cursor
 ```
 
 </div>
-<div id="panel-codex" class="target-panel" style="display:none">
+<div v-show="activeTab === 'codex'" class="target-panel">
 
 ```
 npx skillfold --target codex
@@ -344,7 +391,7 @@ AGENTS.md    # single file, all agents
 ```
 
 </div>
-<div id="panel-more" class="target-panel" style="display:none">
+<div v-show="activeTab === 'more'" class="target-panel">
 
 ```
 --target windsurf     # .windsurf/rules/
@@ -372,17 +419,42 @@ AGENTS.md    # single file, all agents
 
 Skillfold validates at compile time and produces standard files with zero runtime overhead. Runtime frameworks validate during execution and require their SDK at runtime. Each approach has trade-offs.
 
-<div class="comparison-table-wrap">
-
-| | **Skillfold** | **Runtime frameworks** |
-|---|---|---|
-| **Output** | Standard files any tool reads | Proprietary runtime objects |
-| **Lock-in** | None - delete the tool, keep the files | Tied to the framework SDK |
-| **Validation** | Compile-time type checking | Runtime errors during execution |
-| **Overhead** | Zero at runtime | Framework process alongside agents |
-| **Adaptability** | Fixed topology, defined ahead of time | Dynamic workflows that adapt mid-run |
-| **Best for** | Known pipelines with typed state | Exploratory workflows with evolving structure |
-
+<div class="comparison-visual">
+  <div class="comparison-row comparison-header">
+    <div class="comparison-cell comparison-label-cell"></div>
+    <div class="comparison-cell comparison-sf"><span class="comparison-brand">Skillfold</span></div>
+    <div class="comparison-cell comparison-rt">Runtime frameworks</div>
+  </div>
+  <div class="comparison-row">
+    <div class="comparison-cell comparison-label-cell">Output</div>
+    <div class="comparison-cell comparison-sf"><span class="check-icon">&#10003;</span> Standard files any tool reads</div>
+    <div class="comparison-cell comparison-rt"><span class="neutral-icon">&#8226;</span> Proprietary runtime objects</div>
+  </div>
+  <div class="comparison-row">
+    <div class="comparison-cell comparison-label-cell">Lock-in</div>
+    <div class="comparison-cell comparison-sf"><span class="check-icon">&#10003;</span> None - delete the tool, keep the files</div>
+    <div class="comparison-cell comparison-rt"><span class="neutral-icon">&#8226;</span> Tied to the framework SDK</div>
+  </div>
+  <div class="comparison-row">
+    <div class="comparison-cell comparison-label-cell">Validation</div>
+    <div class="comparison-cell comparison-sf"><span class="check-icon">&#10003;</span> Compile-time type checking</div>
+    <div class="comparison-cell comparison-rt"><span class="neutral-icon">&#8226;</span> Runtime errors during execution</div>
+  </div>
+  <div class="comparison-row">
+    <div class="comparison-cell comparison-label-cell">Overhead</div>
+    <div class="comparison-cell comparison-sf"><span class="check-icon">&#10003;</span> Zero at runtime</div>
+    <div class="comparison-cell comparison-rt"><span class="neutral-icon">&#8226;</span> Framework process alongside agents</div>
+  </div>
+  <div class="comparison-row">
+    <div class="comparison-cell comparison-label-cell">Adaptability</div>
+    <div class="comparison-cell comparison-sf"><span class="neutral-icon">&#8226;</span> Fixed topology, defined ahead of time</div>
+    <div class="comparison-cell comparison-rt"><span class="check-icon">&#10003;</span> Dynamic workflows that adapt mid-run</div>
+  </div>
+  <div class="comparison-row">
+    <div class="comparison-cell comparison-label-cell">Best for</div>
+    <div class="comparison-cell comparison-sf">Known pipelines with typed state</div>
+    <div class="comparison-cell comparison-rt">Exploratory workflows with evolving structure</div>
+  </div>
 </div>
 
 <a class="comparison-link" :href="withBase('/comparisons')">Detailed comparisons &#8594;</a>
@@ -398,16 +470,25 @@ Three example pipelines ship with the library. Use them directly or as a startin
 
 <div class="templates-grid">
   <a class="template-card" :href="withBase('/examples')">
+    <div class="template-icon">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+    </div>
     <div class="template-name">dev-team</div>
     <div class="template-desc">Planner, engineer, reviewer with a review loop. The default <code>skillfold init</code> template.</div>
     <div class="template-flow">planner &#8594; engineer &#8594; reviewer &#8594; (loop)</div>
   </a>
   <a class="template-card" :href="withBase('/examples')">
+    <div class="template-icon">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+    </div>
     <div class="template-name">content-pipeline</div>
     <div class="template-desc">Parallel map over topics. Researcher, writer, and editor run concurrently per item.</div>
     <div class="template-flow">researcher &#8594; map(writer, editor)</div>
   </a>
   <a class="template-card" :href="withBase('/examples')">
+    <div class="template-icon">
+      <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    </div>
     <div class="template-name">code-review-bot</div>
     <div class="template-desc">Minimal two-agent flow. Analyzer scans code, reporter writes the review.</div>
     <div class="template-flow">analyzer &#8594; reporter</div>
@@ -444,11 +525,17 @@ Three example pipelines ship with the library. Use them directly or as a startin
 ## Get started in 60 seconds
 
 <div class="cta-install">
+<div class="cta-install-wrap">
 
 ```sh
 npm install skillfold && npx skillfold init my-pipeline
 ```
 
+<button class="copy-btn" @click="copyInstall" :class="{ copied: installCopied }">
+  <svg v-if="!installCopied" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+  <svg v-else viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+</button>
+</div>
 </div>
 
 <div class="cta-links">
