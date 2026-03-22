@@ -1,6 +1,7 @@
-# Authoring Skills
-
-An atomic skill is the smallest unit of reusable instruction in a skillfold pipeline. It is a directory containing a single `SKILL.md` file that tells an agent how to perform a specific task. Skills are composed into agents, shared across projects, and published to npm.
+<div class="page-hero">
+<h1>Authoring Skills</h1>
+<p>Create atomic skills - the smallest unit of reusable instruction in a skillfold pipeline. Each skill is a directory with a single SKILL.md that tells an agent how to perform a specific task.</p>
+</div>
 
 This guide walks through creating an atomic skill from scratch.
 

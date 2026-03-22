@@ -1,6 +1,7 @@
-# Platform Integration
-
-Skillfold compiles your pipeline config into `build/<agent>/SKILL.md` files. To use them with your platform, compile to the directory your platform reads from.
+<div class="page-hero">
+<h1>Platform Integration</h1>
+<p>Compile your pipeline to the directory structure your platform reads from. One config, every major agent tool.</p>
+</div>
 
 ## Quick Reference
 

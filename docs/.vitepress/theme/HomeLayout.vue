@@ -10,9 +10,9 @@ const route = useRoute();
   <Layout>
     <template #layout-top>
       <div v-if="route.path === '/' || route.path === '/skillfold/'" class="announcement-bar">
-        <a href="/skillfold/changelog">
+        <a href="/skillfold/running-pipelines">
           <span class="announcement-badge">New</span>
-          <span class="announcement-text">Now compiles to 12 platforms including Kiro, Junie, Roo Code, and Goose</span>
+          <span class="announcement-text">Run pipelines directly with skillfold run - conditional routing, parallel map, and checkpoint resume</span>
           <span class="announcement-arrow">&rarr;</span>
         </a>
       </div>

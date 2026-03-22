@@ -1,6 +1,7 @@
-# Running Pipelines
-
-Skillfold can execute your pipeline directly, spawning agents in sequence and managing state between steps.
+<div class="page-hero">
+<h1>Running Pipelines</h1>
+<p>Execute your pipeline directly, spawning agents in sequence and managing state between steps.</p>
+</div>
 
 ## Basic Usage
 

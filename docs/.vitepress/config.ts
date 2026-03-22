@@ -154,6 +154,13 @@ export default withMermaid(defineConfig({
     "dev-to-tutorial-draft.md",
   ],
 
+  vite: {
+    build: {
+      // Mermaid plugin contributes ~400 kB; splitting it breaks the plugin.
+      chunkSizeWarningLimit: 600,
+    },
+  },
+
   mermaid: {
     theme: "neutral",
   },

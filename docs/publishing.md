@@ -1,6 +1,7 @@
-# Publishing Skills to npm
-
-Skillfold uses npm as its package registry. Any skill or pipeline config can be published as a standard npm package - no separate registry or tooling required.
+<div class="page-hero">
+<h1>Publishing Skills to npm</h1>
+<p>Share skills and pipeline configs as standard npm packages. No separate registry or tooling required.</p>
+</div>
 
 ## Package Structure
 
