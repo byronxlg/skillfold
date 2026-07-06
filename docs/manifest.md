@@ -104,6 +104,8 @@ Everything outside the markers is yours and is never touched. The block is added
 
 `skillsDir` / `rulesDir` override the claude locations only; Codex scans fixed conventional paths.
 
+The lockfile records which targets it has installed for. A newly added target starts with nothing managed: files already sitting in its locations are treated as hand-authored (identical content is adopted silently; different content needs `--force`). Rules synced into AGENTS.md must be UTF-8 text and must not contain skillfold marker lines; install rejects them with a clear error otherwise.
+
 ## `skillsDir`
 
 Where skills are installed, relative to the manifest. Defaults to `.claude/skills` (or `skills` for the global `~/.claude` manifest).

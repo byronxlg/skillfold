@@ -32,6 +32,8 @@ src/
   npm.ts      - npm skill resolution: node_modules first, then registry via npm pack into cache
   cache.ts    - shared content cache (~/.cache/skillfold), keyed by SHA / exact version
   compose.ts  - composed skill generation (body concatenation, topological ordering)
+  targets.ts  - install-target layouts (claude, codex) mapping targets to locations
+  agentsmd.ts - managed rules block in AGENTS.md for the codex target
   install.ts  - sync into skillsDir (managed-dir safety, pruning) and offline check
   init.ts     - skillfold init scaffolding
   list.ts     - status table (ok / modified / not installed / not locked)

@@ -342,7 +342,7 @@ function checkAgentsMdRules(
       );
       continue;
     }
-    const problem = ruleProblem(name, sourceString, content, lock, baseDir, "AGENTS.md");
+    const problem = ruleProblem(name, sourceString, content, lock, baseDir, agentsMdPath);
     if (problem) problems.push(label + problem);
   }
   for (const rule of block) {

@@ -33,6 +33,7 @@ function sampleLock(): Lockfile {
       both: { use: ["remote", "local"], integrity: "sha256-def=" },
     },
     rules: {},
+    targets: ["claude"],
   };
 }
 
@@ -163,5 +164,33 @@ describe("lockfile rules section", () => {
     lock.rules.style = { source: "./other/style.md" };
     const changed = lockfileProblems(manifest, lock).filter((p) => p.includes("rule"));
     assert.match(changed[0], /changed source/);
+  });
+});
+
+describe("lockfile targets", () => {
+  it("roundtrips non-default targets and omits the default", () => {
+    const lock = sampleLock();
+    lock.targets = ["claude", "codex"];
+    const path = join(tmp.path, "targets.lock");
+    writeLockfile(path, lock);
+    assert.deepEqual(readLockfile(path)!.targets, ["claude", "codex"]);
+    assert.ok(!serializeLockfile(sampleLock()).includes("targets:"));
+  });
+
+  it("defaults absent targets to claude", () => {
+    const path = join(tmp.path, "pre-targets.lock");
+    writeLockfile(path, sampleLock());
+    assert.deepEqual(readLockfile(path)!.targets, ["claude"]);
+  });
+
+  it("reports a targets change as a problem", () => {
+    const manifest = parseManifest(
+      "targets: [claude, codex]\nskills:\n  remote: github:o/r/skills/remote@v1\n  local: ./skills/local\ncompose:\n  both:\n    use: [remote, local]",
+      "t.yaml"
+    );
+    const problems = lockfileProblems(manifest, sampleLock());
+    assert.deepEqual(problems, [
+      "targets changed (manifest: claude, codex; lockfile: claude)",
+    ]);
   });
 });

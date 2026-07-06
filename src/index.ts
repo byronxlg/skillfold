@@ -95,7 +95,7 @@ export {
   extractRulesBlock,
   syncAgentsMd,
   upsertRulesBlock,
-  type AgentsMdSyncStatus,
+  type AgentsMdSyncResult,
   type RuleContent,
 } from "./agentsmd.js";
 export {

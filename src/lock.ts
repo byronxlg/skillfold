@@ -54,10 +54,16 @@ export interface Lockfile {
   compose: Record<string, LockComposeEntry>;
   /** Rule entries share the skill entry shape. */
   rules: Record<string, LockSkillEntry>;
+  /**
+   * Targets this lockfile has installed for. A layout not listed here has
+   * never been synced, so nothing in it is managed yet. Absent in the file
+   * means ["claude"] (pre-targets lockfiles).
+   */
+  targets: string[];
 }
 
 export function emptyLockfile(): Lockfile {
-  return { lockfileVersion: 1, skills: {}, compose: {}, rules: {} };
+  return { lockfileVersion: 1, skills: {}, compose: {}, rules: {}, targets: ["claude"] };
 }
 
 export function readLockfile(lockPath: string): Lockfile | null {
@@ -97,6 +103,9 @@ export function readLockfile(lockPath: string): Lockfile | null {
       lock[section][name] = skillEntry;
     }
   }
+  if (Array.isArray(top.targets) && top.targets.every((t) => typeof t === "string")) {
+    lock.targets = top.targets as string[];
+  }
   if (top.compose && typeof top.compose === "object" && !Array.isArray(top.compose)) {
     for (const [name, value] of Object.entries(top.compose as Record<string, unknown>)) {
       if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -129,6 +138,10 @@ export function serializeLockfile(lock: Lockfile): string {
       compose: sortedRecord(lock.compose),
       // Omitted when empty so pre-rules lockfiles do not churn.
       ...(Object.keys(lock.rules).length > 0 ? { rules: sortedRecord(lock.rules) } : {}),
+      // Omitted for the default so pre-targets lockfiles do not churn.
+      ...(lock.targets.length === 1 && lock.targets[0] === "claude"
+        ? {}
+        : { targets: lock.targets }),
     },
     { lineWidth: 0 }
   );
@@ -188,6 +201,13 @@ export function lockfileProblems(manifest: Manifest, lock: Lockfile | null): str
     if (!manifest.rules[name]) {
       problems.push(`rule "${name}" is in the lockfile but not the manifest`);
     }
+  }
+  const manifestTargets = manifest.targets ?? ["claude"];
+  if (manifestTargets.join(",") !== lock.targets.join(",")) {
+    problems.push(
+      `targets changed (manifest: ${manifestTargets.join(", ")}; ` +
+        `lockfile: ${lock.targets.join(", ")})`
+    );
   }
   return problems;
 }

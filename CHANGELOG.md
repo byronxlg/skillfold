@@ -8,6 +8,7 @@ For the full release history with detailed notes, see [GitHub Releases](https://
 - The codex target syncs rules into a marker-fenced managed block in `AGENTS.md` (Codex's instructions file); content outside the markers is never touched, and `check` verifies the block offline
 - Global mode maps the codex target to `~/.agents/skills` and `~/.codex/AGENTS.md` (honoring `CODEX_HOME`)
 - `check`/`list` verify every target layout and label problems with the drifted target
+- The lockfile records installed targets; a newly added target treats pre-existing files as hand-authored (no silent overwrites without `--force`)
 - API: `checkProject` and `skillRows` now take target layouts (from `targetLayouts()`) instead of skillsDir/rulesDir paths
 
 ## v2.1.0

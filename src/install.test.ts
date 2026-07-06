@@ -387,7 +387,7 @@ describe("checkProject with a codex layout", () => {
     writeFile(baseDir, "AGENTS.md", readFileSync(path, "utf-8").replace("Rule body.", "Edited."));
     const problems = checkProject(manifest, lock, baseDir, layouts);
     assert.equal(problems.length, 1);
-    assert.match(problems[0], /\[codex\] rule "style" in AGENTS.md is out of date/);
+    assert.match(problems[0], /\[codex\] rule "style" in .*AGENTS\.md is out of date/);
   });
 
   it("flags a lingering block when rules leave the manifest", async () => {

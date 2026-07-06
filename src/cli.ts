@@ -4,9 +4,9 @@ import { homedir } from "node:os";
 import { join, relative, resolve as resolvePath } from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { syncAgentsMd } from "./agentsmd.js";
 import { SkillfoldError } from "./errors.js";
 import { initProject } from "./init.js";
-import { syncAgentsMd, type AgentsMdSyncStatus } from "./agentsmd.js";
 import {
   checkProject,
   ruleFile,
@@ -14,7 +14,7 @@ import {
   syncSkillsDir,
   type SyncResult,
 } from "./install.js";
-import { targetLayouts, type TargetLayout } from "./targets.js";
+import { renderRows, skillRows } from "./list.js";
 import { LOCK_FILENAME, readLockfile, writeLockfile, type Lockfile } from "./lock.js";
 import {
   addSkillToManifest,
@@ -23,7 +23,6 @@ import {
   removeSkillFromManifest,
   validateSkillName,
 } from "./manifest.js";
-import { renderRows, skillRows } from "./list.js";
 import {
   resolveManifest,
   resolveSingle,
@@ -32,6 +31,7 @@ import {
 } from "./resolve.js";
 import { renderSearchHits, searchSkills } from "./search.js";
 import { defaultSkillName, parseSource } from "./source.js";
+import { targetLayouts, type TargetLayout } from "./targets.js";
 
 const HELP = `skillfold - declarative skill manager for Claude config
 
@@ -184,7 +184,10 @@ function mergeSyncs(syncs: SyncResult[]): SyncResult {
     for (const name of sync.pruned) pruned.add(name);
     for (const name of sync.unchanged) unchanged.add(name);
   }
-  for (const name of installed) unchanged.delete(name);
+  for (const name of installed) {
+    unchanged.delete(name);
+    pruned.delete(name);
+  }
   return { installed: [...installed], unchanged: [...unchanged], pruned: [...pruned] };
 }
 
@@ -249,11 +252,14 @@ async function runInstall(paths: Paths, options: InstallRunOptions = {}): Promis
   const skillSyncs: SyncResult[] = [];
   const ruleSyncs: SyncResult[] = [];
   for (const layout of layouts) {
+    // A layout the lockfile has never installed for has no managed names:
+    // whatever already sits there is hand-authored until skillfold owns it.
+    const layoutLock = lock?.targets.includes(layout.target) ? lock : null;
     skillSyncs.push(
       syncSkillsDir({
         skillsDir: layout.skillsDir,
         resolved,
-        previousLock: lock,
+        previousLock: layoutLock,
         force: options.force,
       })
     );
@@ -262,13 +268,13 @@ async function runInstall(paths: Paths, options: InstallRunOptions = {}): Promis
         syncRulesDir({
           rulesDir: layout.rulesDir,
           rules,
-          previousLock: lock,
+          previousLock: layoutLock,
           force: options.force,
         })
       );
     }
     if (layout.agentsMdPath) {
-      ruleSyncs.push(agentsMdSyncResult(syncAgentsMd(layout.agentsMdPath, rules), rules, lock));
+      ruleSyncs.push(syncAgentsMd(layout.agentsMdPath, rules));
     }
   }
   printSync(resolved, mergeSyncs(skillSyncs), rules, mergeSyncs(ruleSyncs), layouts, paths.root);
@@ -278,19 +284,6 @@ async function runInstall(paths: Paths, options: InstallRunOptions = {}): Promis
   }
 }
 
-/** Express an AGENTS.md block sync as a per-rule SyncResult for printing. */
-function agentsMdSyncResult(
-  status: AgentsMdSyncStatus,
-  rules: ResolvedRule[],
-  previousLock: Lockfile | null
-): SyncResult {
-  const names = rules.map((rule) => rule.name);
-  if (status === "installed") return { installed: names, unchanged: [], pruned: [] };
-  if (status === "removed") {
-    return { installed: [], unchanged: [], pruned: Object.keys(previousLock?.rules ?? {}) };
-  }
-  return { installed: [], unchanged: names, pruned: [] };
-}
 
 /** Turn a frontmatter name into a valid skill directory name, or undefined. */
 function sanitizeName(raw: string): string | undefined {

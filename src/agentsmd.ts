@@ -35,11 +35,35 @@ function ruleMarker(name: string): string {
   return `<!-- skillfold:rule:${name} -->`;
 }
 
+/** Any skillfold marker on its own line, anywhere in a rule's content. */
+const EMBEDDED_MARKER_RE = /^<!-- skillfold:(rules:start|rules:end|rule:[^ ]+) -->\r?$/m;
+
+/**
+ * Reject content the block format cannot carry: marker-shaped lines would
+ * corrupt parsing, and non-UTF-8 bytes would not survive the text round-trip.
+ */
+function validateRuleContent(rule: RuleContent): string {
+  const text = rule.content.toString("utf-8");
+  if (!Buffer.from(text, "utf-8").equals(rule.content)) {
+    throw new InstallError(
+      `rule "${rule.name}" is not valid UTF-8 text; the AGENTS.md rules block only carries text rules`
+    );
+  }
+  const marker = EMBEDDED_MARKER_RE.exec(text);
+  if (marker) {
+    throw new InstallError(
+      `rule "${rule.name}" contains a skillfold marker line (${marker[0].trim()}); ` +
+        `remove it, it would corrupt the AGENTS.md rules block`
+    );
+  }
+  return text;
+}
+
 /** The full managed block for a set of rules (no surrounding blank lines). */
 export function buildRulesBlock(rules: RuleContent[]): string {
   let out = `${RULES_BLOCK_START}\n${RULES_BLOCK_NOTE}\n`;
   for (const rule of rules) {
-    out += `${ruleMarker(rule.name)}\n${rule.content.toString("utf-8")}\n`;
+    out += `${ruleMarker(rule.name)}\n${validateRuleContent(rule)}\n`;
   }
   return out + RULES_BLOCK_END;
 }
@@ -77,8 +101,13 @@ export function extractRulesBlock(content: string, path: string): RuleContent[] 
 /**
  * Insert, replace, or (with an empty rule set) remove the managed block in
  * an AGENTS.md body, leaving everything outside the markers untouched.
+ * `path` is used in error messages only.
  */
-export function upsertRulesBlock(existing: string, rules: RuleContent[]): string {
+export function upsertRulesBlock(
+  existing: string,
+  rules: RuleContent[],
+  path = "AGENTS.md"
+): string {
   const start = existing.indexOf(RULES_BLOCK_START);
   const end = existing.indexOf(RULES_BLOCK_END);
   const block = rules.length > 0 ? buildRulesBlock(rules) : null;
@@ -89,7 +118,7 @@ export function upsertRulesBlock(existing: string, rules: RuleContent[]): string
   }
   if (start === -1 || end === -1 || end < start) {
     throw new InstallError(
-      "AGENTS.md has unpaired skillfold rules markers; restore both markers or remove the block"
+      `${path}: unpaired skillfold rules markers; restore both markers or remove the block`
     );
   }
   const before = existing.slice(0, start);
@@ -101,32 +130,45 @@ export function upsertRulesBlock(existing: string, rules: RuleContent[]): string
   return `${before}${block}${after}`;
 }
 
-export type AgentsMdSyncStatus = "installed" | "unchanged" | "removed" | "skipped";
+export interface AgentsMdSyncResult {
+  /** Rules newly added to or changed inside the block. */
+  installed: string[];
+  /** Rules whose block section was already up to date. */
+  unchanged: string[];
+  /** Rules removed from the block because they left the manifest. */
+  pruned: string[];
+}
 
 /**
- * Sync the managed rules block in the AGENTS.md at `path`. Creates the file
- * when rules exist and it does not; deletes it again if removal of the
- * block leaves it empty. Returns what happened.
+ * Sync the managed rules block in the AGENTS.md at `path`, reporting what
+ * happened per rule (by diffing the previous block). Creates the file when
+ * rules exist and it does not; deletes it again if removal of the block
+ * leaves it empty.
  */
-export function syncAgentsMd(path: string, rules: RuleContent[]): AgentsMdSyncStatus {
+export function syncAgentsMd(path: string, rules: RuleContent[]): AgentsMdSyncResult {
+  const result: AgentsMdSyncResult = { installed: [], unchanged: [], pruned: [] };
   const exists = existsSync(path);
-  if (!exists && rules.length === 0) return "skipped";
+  if (!exists && rules.length === 0) return result;
   const existing = exists ? readFileSync(path, "utf-8") : "";
-  let updated: string;
-  try {
-    updated = upsertRulesBlock(existing, rules);
-  } catch (err) {
-    if (err instanceof InstallError) {
-      throw new InstallError(err.message.replace("AGENTS.md has", `${path} has`));
-    }
-    throw err;
+  const previous = new Map(
+    (extractRulesBlock(existing, path) ?? []).map((rule) => [rule.name, rule.content])
+  );
+  const current = new Set(rules.map((rule) => rule.name));
+  for (const rule of rules) {
+    const before = previous.get(rule.name);
+    if (before && before.equals(rule.content)) result.unchanged.push(rule.name);
+    else result.installed.push(rule.name);
   }
-  if (updated === existing) return "unchanged";
+  for (const name of previous.keys()) {
+    if (!current.has(name)) result.pruned.push(name);
+  }
+  const updated = upsertRulesBlock(existing, rules, path);
+  if (updated === existing) return result;
   if (!updated.trim() && exists) {
     rmSync(path, { force: true });
-    return "removed";
+    return result;
   }
   mkdirSync(dirname(path), { recursive: true });
   writeFileSync(path, updated);
-  return rules.length > 0 ? "installed" : "removed";
+  return result;
 }

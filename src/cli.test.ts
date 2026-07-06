@@ -224,6 +224,34 @@ describe("cli", () => {
     assert.ok(existsSync(join(dir, ".agents", "skills", "alpha", "SKILL.md")));
   });
 
+  it("protects hand-authored files when a target is added later", async () => {
+    const dir = newProject();
+    writeSkill(dir, "skills/alpha", "alpha");
+    writeFile(dir, "skillfold.yaml", "skills:\n  alpha: ./skills/alpha");
+    await main(["install", "--dir", dir]);
+    // Hand-authored codex skill with the same name, then the codex target is added.
+    writeFile(dir, ".agents/skills/alpha/SKILL.md", "---\nname: alpha\n---\n\nHand-made.\n");
+    writeFile(
+      dir,
+      "skillfold.yaml",
+      "targets: [claude, codex]\nskills:\n  alpha: ./skills/alpha"
+    );
+    await assert.rejects(main(["install", "--dir", dir]), /was not installed by skillfold/);
+    assert.match(
+      readFileSync(join(dir, ".agents", "skills", "alpha", "SKILL.md"), "utf-8"),
+      /Hand-made/
+    );
+    // --force takes ownership; afterwards the layout is managed.
+    await main(["install", "--dir", dir, "--force"]);
+    assert.match(
+      readFileSync(join(dir, ".agents", "skills", "alpha", "SKILL.md"), "utf-8"),
+      /Test skill alpha/
+    );
+    logs = [];
+    await main(["check", "--dir", dir]);
+    assert.match(logs.join("\n"), /ok: 1 skill in sync/);
+  });
+
   it("install --frozen fails without a lockfile", async () => {
     const dir = newProject();
     await main(["init", "--dir", dir]);
