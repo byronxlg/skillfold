@@ -175,6 +175,15 @@ describe("normalizeSkillName", () => {
     assert.equal(normalizeSkillName(files, "anything"), files);
   });
 
+  it("preserves CRLF line endings", () => {
+    const files = skillMd("---\r\nname: old\r\ndescription: D.\r\n---\r\n\r\n# B\r\n");
+    const out = normalizeSkillName(files, "new-name");
+    assert.equal(
+      out[0].content.toString(),
+      "---\r\nname: new-name\r\ndescription: D.\r\n---\r\n\r\n# B\r\n"
+    );
+  });
+
   it("does not touch supporting files", () => {
     const files = [
       { path: "SKILL.md", content: Buffer.from("---\nname: a\n---\n\nx\n") },

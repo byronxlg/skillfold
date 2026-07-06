@@ -137,7 +137,7 @@ export function parseAllowedTools(attrs: Record<string, unknown>): string[] | un
   return tools.length > 0 ? tools : undefined;
 }
 
-const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)(\r?\n---\r?\n?)/;
+const FRONTMATTER_RE = /^---(\r?\n)([\s\S]*?)(\r?\n---\r?\n?)/;
 
 /**
  * Rewrite the frontmatter `name` in a SKILL.md so it matches the directory
@@ -157,12 +157,13 @@ export function normalizeSkillName(files: SkillFile[], name: string): SkillFile[
   if (attrs.name === name) return files;
   // Replace the top-level name line, or insert one after the opening ---.
   // Inside valid frontmatter YAML, only a top-level key can sit at column 0.
-  const block = match[1];
+  const eol = match[1];
+  const block = match[2];
   const newBlock = /^name:/m.test(block)
     ? block.replace(/^name:.*$/m, `name: ${name}`)
-    : `name: ${name}\n${block}`;
+    : `name: ${name}${eol}${block}`;
   const rest = stripped.slice(match[0].length);
-  const rewritten = `${bom}---\n${newBlock}${match[2]}${rest}`;
+  const rewritten = `${bom}---${eol}${newBlock}${match[3]}${rest}`;
   const updated = [...files];
   updated[index] = { path: SKILL_MD, content: Buffer.from(rewritten, "utf-8") };
   return updated;
