@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { after, describe, it } from "node:test";
 
@@ -114,6 +115,31 @@ describe("fetchGitHubSkill", () => {
       fetchGitHubSkill(source, SHA, "foo", { fetcher, env }),
       /no SKILL.md/
     );
+  });
+
+  it("leaves no cache entry when a download fails midway", async () => {
+    const env = { SKILLFOLD_CACHE: join(tmp.path, "cache5") };
+    const routes = githubRoutes();
+    delete (routes as Record<string, unknown>)[
+      "https://raw.test/skills/foo/references/notes.md"
+    ];
+    const broken = makeFetcher(routes); // second download 500s
+    await assert.rejects(fetchGitHubSkill(source, SHA, "foo", { fetcher: broken.fetcher, env }));
+    const cacheDir = join(tmp.path, "cache5", "github", "o", "r", SHA, "skills", "foo");
+    assert.ok(!existsSync(cacheDir), "partial cache entry must not exist");
+    const parent = join(tmp.path, "cache5", "github", "o", "r", SHA, "skills");
+    if (existsSync(parent)) {
+      assert.deepEqual(
+        readdirSync(parent).filter((n) => n.includes("partial")),
+        [],
+        "staging directory must be cleaned up"
+      );
+    }
+    // A retry with a working fetcher succeeds from scratch.
+    const good = makeFetcher(githubRoutes());
+    const result = await fetchGitHubSkill(source, SHA, "foo", { fetcher: good.fetcher, env });
+    assert.equal(result.fetched, true);
+    assert.equal(result.skill.files.length, 2);
   });
 
   it("errors clearly when the path is not a directory", async () => {

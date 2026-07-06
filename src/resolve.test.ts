@@ -6,7 +6,8 @@ import { LockError } from "./errors.js";
 import { emptyLockfile, type Lockfile } from "./lock.js";
 import { parseManifest } from "./manifest.js";
 import { resolveManifest, resolveSingle } from "./resolve.js";
-import { makeFetcher, makeTmpDir, writeSkill } from "./testutil.js";
+import { parseFrontmatter } from "./skill.js";
+import { makeFetcher, makeTmpDir, writeFile, writeSkill } from "./testutil.js";
 
 const tmp = makeTmpDir();
 after(() => tmp.cleanup());
@@ -211,5 +212,92 @@ describe("lockfile shape", () => {
       resolveManifest(manifest, { baseDir, lock: emptyLockfile(), fetcher, env }),
       /directory not found/
     );
+  });
+});
+
+describe("frontmatter name normalization", () => {
+  it("rewrites the frontmatter name to the manifest name", async () => {
+    const { baseDir } = project("norm1");
+    const manifest = parseManifest("skills:\n  renamed: ./skills/local-one", "t.yaml");
+    const { resolved } = await resolveManifest(manifest, { baseDir });
+    const skillMd = resolved[0].skill.files.find((f) => f.path === "SKILL.md")!;
+    const { attrs } = parseFrontmatter(skillMd.content.toString());
+    assert.equal(attrs.name, "renamed");
+    assert.equal(attrs.description, "Test skill local-one.");
+    assert.equal(resolved[0].skill.name, "renamed");
+  });
+
+  it("computes github integrity over the normalized files", async () => {
+    const { baseDir, env } = project("norm2");
+    const manifest = parseManifest(
+      "skills:\n  other-name: github:o/r/skills/remote@v1",
+      "t.yaml"
+    );
+    const { fetcher } = makeFetcher(githubRoutes(SHA));
+    const { resolved } = await resolveManifest(manifest, { baseDir, fetcher, env });
+    const { attrs } = parseFrontmatter(
+      resolved[0].skill.files[0].content.toString()
+    );
+    assert.equal(attrs.name, "other-name");
+    // The lock hash must match the files as installed, i.e. after the rename.
+    const { computeIntegrity } = await import("./skill.js");
+    assert.equal(resolved[0].integrity, computeIntegrity(resolved[0].skill.files));
+  });
+
+  it("resolveSingle keeps the original frontmatter name for `add`", async () => {
+    const { baseDir } = project("norm3");
+    writeFile(
+      baseDir,
+      "skills/dir-name/SKILL.md",
+      "---\nname: pretty-name\ndescription: D.\n---\n\nx\n"
+    );
+    const single = await resolveSingle("./skills/dir-name", baseDir);
+    assert.equal(single.skill.name, "pretty-name");
+  });
+});
+
+describe("composed skills with supporting files", () => {
+  it("carries dependency files into the composed skill", async () => {
+    const { baseDir } = project("files1");
+    writeFile(baseDir, "skills/local-one/references/notes.md", "shared notes");
+    const manifest = parseManifest(
+      [
+        "skills:",
+        "  local-one: ./skills/local-one",
+        "compose:",
+        "  combo:",
+        "    use: [local-one]",
+      ].join("\n"),
+      "t.yaml"
+    );
+    const { resolved } = await resolveManifest(manifest, { baseDir });
+    const combo = resolved.find((r) => r.name === "combo")!;
+    assert.deepEqual(
+      combo.skill.files.map((f) => f.path),
+      ["SKILL.md", "references/notes.md"]
+    );
+  });
+
+  it("unions allowed-tools across dependencies", async () => {
+    const { baseDir } = project("tools1");
+    writeFile(
+      baseDir,
+      "skills/tooled/SKILL.md",
+      "---\nname: tooled\ndescription: T.\nallowed-tools: Read, Grep\n---\n\nx\n"
+    );
+    const manifest = parseManifest(
+      [
+        "skills:",
+        "  tooled: ./skills/tooled",
+        "  local-one: ./skills/local-one",
+        "compose:",
+        "  combo:",
+        "    use: [tooled, local-one]",
+      ].join("\n"),
+      "t.yaml"
+    );
+    const { resolved } = await resolveManifest(manifest, { baseDir });
+    const combo = resolved.find((r) => r.name === "combo")!;
+    assert.equal(combo.skill.attrs["allowed-tools"], "Read, Grep");
   });
 });

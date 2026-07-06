@@ -215,3 +215,31 @@ describe("manifest editing", () => {
     assert.throws(() => removeSkillFromManifest(path, "ghost"), /not in the manifest/);
   });
 });
+
+describe("compose allowed-tools key", () => {
+  const base = "skills:\n  a: ./skills/a\ncompose:\n  combo:\n    use: [a]\n";
+
+  it("accepts a comma-separated string", () => {
+    const manifest = parseManifest(`${base}    allowed-tools: Read, Grep\n`, "t.yaml");
+    assert.deepEqual(manifest.compose.combo.allowedTools, ["Read", "Grep"]);
+  });
+
+  it("accepts a list of strings", () => {
+    const manifest = parseManifest(`${base}    allowed-tools: [Read, Grep]\n`, "t.yaml");
+    assert.deepEqual(manifest.compose.combo.allowedTools, ["Read", "Grep"]);
+  });
+
+  it("rejects non-string values", () => {
+    assert.throws(
+      () => parseManifest(`${base}    allowed-tools: 42\n`, "t.yaml"),
+      /allowed-tools/
+    );
+  });
+
+  it("rejects an empty list", () => {
+    assert.throws(
+      () => parseManifest(`${base}    allowed-tools: []\n`, "t.yaml"),
+      /is empty/
+    );
+  });
+});

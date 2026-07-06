@@ -30,6 +30,11 @@ export const DEFAULT_SKILLS_DIR = ".claude/skills";
 export interface ComposeEntry {
   description?: string;
   use: string[];
+  /**
+   * Explicit allowed-tools for the generated SKILL.md. Defaults to the
+   * union of the used skills' allowed-tools.
+   */
+  allowedTools?: string[];
 }
 
 export interface Manifest {
@@ -93,9 +98,9 @@ function normalizeComposeEntry(name: string, value: unknown): ComposeEntry {
   }
   const entry = value as Record<string, unknown>;
   for (const key of Object.keys(entry)) {
-    if (key !== "use" && key !== "description") {
+    if (key !== "use" && key !== "description" && key !== "allowed-tools") {
       throw new ManifestError(
-        `compose.${name}: unknown key "${key}" (expected use, description)`
+        `compose.${name}: unknown key "${key}" (expected use, description, allowed-tools)`
       );
     }
   }
@@ -122,7 +127,26 @@ function normalizeComposeEntry(name: string, value: unknown): ComposeEntry {
     }
     description = entry.description.trim();
   }
-  return { description, use };
+  let allowedTools: string[] | undefined;
+  const rawTools = entry["allowed-tools"];
+  if (rawTools !== undefined) {
+    if (typeof rawTools === "string") {
+      allowedTools = rawTools.split(",").map((t) => t.trim());
+    } else if (Array.isArray(rawTools) && rawTools.every((t) => typeof t === "string")) {
+      allowedTools = (rawTools as string[]).map((t) => t.trim());
+    } else {
+      throw new ManifestError(
+        `compose.${name}: "allowed-tools" must be a string or a list of strings`
+      );
+    }
+    allowedTools = allowedTools.filter(Boolean);
+    if (allowedTools.length === 0) {
+      throw new ManifestError(`compose.${name}: "allowed-tools" is empty`);
+    }
+  }
+  const normalized: ComposeEntry = { description, use };
+  if (allowedTools) normalized.allowedTools = allowedTools;
+  return normalized;
 }
 
 function detectComposeCycles(compose: Record<string, ComposeEntry>): void {

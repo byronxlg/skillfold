@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync } from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -125,6 +125,9 @@ export async function resolveNpmVersion(
 /** Download and extract a package tarball with `npm pack`. */
 function npmPackDownload(spec: string, destDir: string): void {
   const staging = mkdtempSync(join(tmpdir(), "skillfold-npm-"));
+  // Extract next to the destination and rename into place, so an
+  // interrupted extract never leaves a partial cache entry.
+  const extractDir = `${destDir}.partial-${process.pid}`;
   try {
     const output = execFileSync(
       "npm",
@@ -135,13 +138,16 @@ function npmPackDownload(spec: string, destDir: string): void {
     if (!tarball) {
       throw new Error(`npm pack produced no tarball for ${spec}`);
     }
-    mkdirSync(destDir, { recursive: true });
+    mkdirSync(extractDir, { recursive: true });
     // npm tarballs nest everything under "package/".
-    execFileSync("tar", ["-xzf", join(staging, tarball), "-C", destDir, "--strip-components", "1"], {
+    execFileSync("tar", ["-xzf", join(staging, tarball), "-C", extractDir, "--strip-components", "1"], {
       stdio: ["ignore", "ignore", "pipe"],
     });
+    rmSync(destDir, { recursive: true, force: true });
+    renameSync(extractDir, destDir);
   } finally {
     rmSync(staging, { recursive: true, force: true });
+    rmSync(extractDir, { recursive: true, force: true });
   }
 }
 

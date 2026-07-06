@@ -6,9 +6,12 @@ import { join } from "node:path";
 import { ResolveError } from "./errors.js";
 import {
   computeIntegrity,
+  normalizeSkillName,
+  parseAllowedTools,
   parseFrontmatter,
   readDirFiles,
   readSkillDir,
+  renameSkill,
 } from "./skill.js";
 import { makeTmpDir, writeFile, writeSkill } from "./testutil.js";
 
@@ -115,5 +118,91 @@ describe("computeIntegrity", () => {
   it("changes when a path changes", () => {
     const changed = [files[0], { path: "ref/b.md", content: Buffer.from("aaa") }];
     assert.notEqual(computeIntegrity(files), computeIntegrity(changed));
+  });
+});
+
+describe("parseAllowedTools", () => {
+  it("parses a comma-separated string", () => {
+    assert.deepEqual(
+      parseAllowedTools({ "allowed-tools": "Read, Grep,Bash(git:*)" }),
+      ["Read", "Grep", "Bash(git:*)"]
+    );
+  });
+
+  it("parses a list of strings", () => {
+    assert.deepEqual(parseAllowedTools({ "allowed-tools": ["Read", "Grep"] }), [
+      "Read",
+      "Grep",
+    ]);
+  });
+
+  it("returns undefined when absent, empty, or malformed", () => {
+    assert.equal(parseAllowedTools({}), undefined);
+    assert.equal(parseAllowedTools({ "allowed-tools": " , " }), undefined);
+    assert.equal(parseAllowedTools({ "allowed-tools": 42 }), undefined);
+  });
+});
+
+describe("normalizeSkillName", () => {
+  const skillMd = (text: string) => [{ path: "SKILL.md", content: Buffer.from(text) }];
+
+  it("rewrites only the name line", () => {
+    const files = skillMd(
+      "---\nname: old-name\ndescription: Desc.\nallowed-tools: Read\n---\n\n# Body\n"
+    );
+    const out = normalizeSkillName(files, "new-name");
+    assert.equal(
+      out[0].content.toString(),
+      "---\nname: new-name\ndescription: Desc.\nallowed-tools: Read\n---\n\n# Body\n"
+    );
+  });
+
+  it("inserts a name line when the frontmatter has none", () => {
+    const files = skillMd("---\ndescription: Desc.\n---\n\n# Body\n");
+    const out = normalizeSkillName(files, "fresh");
+    const { attrs } = parseFrontmatter(out[0].content.toString());
+    assert.equal(attrs.name, "fresh");
+    assert.equal(attrs.description, "Desc.");
+  });
+
+  it("returns the files untouched when the name already matches", () => {
+    const files = skillMd("---\nname: same\ndescription: D.\n---\n\n# B\n");
+    assert.equal(normalizeSkillName(files, "same"), files);
+  });
+
+  it("leaves files without frontmatter alone", () => {
+    const files = skillMd("# Just a body\n");
+    assert.equal(normalizeSkillName(files, "anything"), files);
+  });
+
+  it("does not touch supporting files", () => {
+    const files = [
+      { path: "SKILL.md", content: Buffer.from("---\nname: a\n---\n\nx\n") },
+      { path: "references/notes.md", content: Buffer.from("name: a\n") },
+    ];
+    const out = normalizeSkillName(files, "b");
+    assert.equal(out[1].content.toString(), "name: a\n");
+    const { attrs } = parseFrontmatter(out[0].content.toString());
+    assert.equal(attrs.name, "b");
+  });
+});
+
+describe("renameSkill", () => {
+  it("re-derives metadata from the rewritten SKILL.md", () => {
+    const dir = join(tmp.path, "rename-me");
+    writeFile(tmp.path, "rename-me/SKILL.md", "---\nname: old\ndescription: D.\n---\n\n# B\n");
+    const skill = readSkillDir(dir, "old");
+    const renamed = renameSkill(skill, "brand-new");
+    assert.equal(renamed.name, "brand-new");
+    assert.equal(renamed.attrs.name, "brand-new");
+    assert.equal(renamed.description, "D.");
+    assert.notEqual(computeIntegrity(renamed.files), computeIntegrity(skill.files));
+  });
+
+  it("is a no-op when the name matches", () => {
+    const dir = join(tmp.path, "keep-me");
+    writeFile(tmp.path, "keep-me/SKILL.md", "---\nname: keep-me\ndescription: D.\n---\n\nx\n");
+    const skill = readSkillDir(dir, "keep-me");
+    assert.equal(renameSkill(skill, "keep-me"), skill);
   });
 });

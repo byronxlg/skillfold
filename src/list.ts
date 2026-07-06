@@ -3,7 +3,7 @@ import { join, resolve as resolvePath } from "node:path";
 import type { Lockfile } from "./lock.js";
 import type { Manifest } from "./manifest.js";
 import { parseSource } from "./source.js";
-import { computeIntegrity, readDirFiles } from "./skill.js";
+import { computeIntegrity, normalizeSkillName, readDirFiles } from "./skill.js";
 
 /**
  * Status of one skill, computed offline from manifest + lockfile + disk.
@@ -52,7 +52,8 @@ export function skillRows(
       const sourceFiles = readDirFiles(resolvePath(baseDir, source.path));
       status =
         sourceFiles.length > 0 &&
-        computeIntegrity(sourceFiles) === computeIntegrity(installedFiles)
+        computeIntegrity(normalizeSkillName(sourceFiles, name)) ===
+          computeIntegrity(installedFiles)
           ? "ok"
           : "modified";
     } else if (!entry || entry.source !== sourceString) {

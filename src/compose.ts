@@ -2,19 +2,28 @@ import { Buffer } from "node:buffer";
 
 import { stringify as stringifyYaml } from "yaml";
 
+import { ResolveError } from "./errors.js";
 import type { ComposeEntry } from "./manifest.js";
-import type { SkillContent } from "./skill.js";
+import type { SkillContent, SkillFile } from "./skill.js";
 
 /**
  * Composition: a composed skill is a generated SKILL.md whose body is the
  * concatenation of the bodies of the skills it uses, in declared order.
  * Composed skills can use other composed skills; nesting inserts the
- * composed body, never the provenance header.
+ * composed body, never the provenance header. Supporting files of the used
+ * skills (references/, scripts/, ...) are carried into the composed skill
+ * so relative paths in the bodies keep working.
  */
 
 export interface ComposeInput {
+  /** Skill name, used in file-conflict error messages. */
+  name?: string;
   description: string;
   body: string;
+  /** Parsed allowed-tools of the input skill, if any. */
+  allowedTools?: string[];
+  /** Supporting files of the input skill, SKILL.md excluded. */
+  files?: SkillFile[];
 }
 
 const GENERATED_NOTE =
@@ -33,6 +42,50 @@ export function defaultComposeDescription(use: string[]): string {
 }
 
 /**
+ * allowed-tools of a composed skill: the entry's own list when set,
+ * otherwise the union of the inputs' lists in first-appearance order.
+ * Undefined when neither yields any tools (the frontmatter line is omitted).
+ */
+export function composeAllowedTools(
+  entry: ComposeEntry,
+  inputs: ComposeInput[]
+): string[] | undefined {
+  if (entry.allowedTools) return entry.allowedTools;
+  const union: string[] = [];
+  for (const input of inputs) {
+    for (const tool of input.allowedTools ?? []) {
+      if (!union.includes(tool)) union.push(tool);
+    }
+  }
+  return union.length > 0 ? union : undefined;
+}
+
+/**
+ * Merge the inputs' supporting files. Identical duplicates (e.g. via a
+ * shared dependency) collapse to one; same path with different contents is
+ * an error, since the composed body cannot reference both.
+ */
+function mergeSupportingFiles(name: string, inputs: ComposeInput[]): SkillFile[] {
+  const merged = new Map<string, { from: string; file: SkillFile }>();
+  for (const input of inputs) {
+    const from = input.name ?? "?";
+    for (const file of input.files ?? []) {
+      if (file.path === "SKILL.md") continue;
+      const existing = merged.get(file.path);
+      if (existing && !existing.file.content.equals(file.content)) {
+        throw new ResolveError(
+          name,
+          `composed skills "${existing.from}" and "${from}" both provide "${file.path}" ` +
+            `with different contents; rename one of the files`
+        );
+      }
+      if (!existing) merged.set(file.path, { from, file });
+    }
+  }
+  return [...merged.values()].map((entry) => entry.file);
+}
+
+/**
  * Generate the full SKILL.md and skill content for a composed skill.
  * `inputs` must be in the same order as `entry.use`.
  */
@@ -43,7 +96,10 @@ export function generateComposedSkill(
 ): SkillContent {
   const description = entry.description || defaultComposeDescription(entry.use);
   const body = composeBody(inputs.map((input) => input.body));
-  const frontmatter = stringifyYaml({ name, description }).trimEnd();
+  const allowedTools = composeAllowedTools(entry, inputs);
+  const attrs: Record<string, unknown> = { name, description };
+  if (allowedTools) attrs["allowed-tools"] = allowedTools.join(", ");
+  const frontmatter = stringifyYaml(attrs).trimEnd();
   const skillMd = [
     "---",
     frontmatter,
@@ -55,12 +111,12 @@ export function generateComposedSkill(
     body,
     "",
   ].join("\n");
-  return {
-    name,
-    description,
-    body,
-    files: [{ path: "SKILL.md", content: Buffer.from(skillMd, "utf-8") }],
-  };
+  const files: SkillFile[] = [
+    { path: "SKILL.md", content: Buffer.from(skillMd, "utf-8") },
+    ...mergeSupportingFiles(name, inputs),
+  ];
+  files.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  return { name, description, body, attrs, files };
 }
 
 /**

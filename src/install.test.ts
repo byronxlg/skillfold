@@ -212,3 +212,38 @@ describe("resolved skill shape", () => {
     assert.equal(kinds.get("both"), "compose");
   });
 });
+
+describe("checkProject with renamed and multi-file skills", () => {
+  it("passes when the manifest name differs from the source frontmatter name", async () => {
+    const { baseDir, skillsDir } = project("skills:\n  other: ./skills/alpha");
+    const manifest = parseManifest("skills:\n  other: ./skills/alpha", "t.yaml");
+    const { resolved, lock } = await resolveAll(manifest, baseDir);
+    syncSkillsDir({ skillsDir, resolved, previousLock: null });
+    assert.deepEqual(checkProject(manifest, lock, baseDir, skillsDir), []);
+  });
+
+  it("passes for composed skills with supporting files", async () => {
+    const { baseDir, skillsDir } = project(WITH_COMPOSE);
+    writeFile(baseDir, "skills/alpha/references/notes.md", "alpha notes");
+    const manifest = parseManifest(WITH_COMPOSE, "t.yaml");
+    const { resolved, lock } = await resolveAll(manifest, baseDir);
+    syncSkillsDir({ skillsDir, resolved, previousLock: null });
+    assert.deepEqual(checkProject(manifest, lock, baseDir, skillsDir), []);
+    // The composed skill carries the supporting file.
+    assert.ok(existsSync(join(skillsDir, "both", "references", "notes.md")));
+  });
+
+  it("reports a compose file conflict as a problem, not a crash", async () => {
+    const text = `${TWO_SKILLS}\ncompose:\n  both:\n    use: [alpha, beta]`;
+    const { baseDir, skillsDir } = project(text);
+    writeFile(baseDir, "skills/alpha/references/x.md", "from alpha");
+    const manifest = parseManifest(text, "t.yaml");
+    const { resolved, lock } = await resolveAll(manifest, baseDir);
+    syncSkillsDir({ skillsDir, resolved, previousLock: null });
+    // Introduce the conflict after install: beta now also ships x.md.
+    writeFile(baseDir, "skills/beta/references/x.md", "from beta");
+    writeFile(join(skillsDir, "beta"), "references/x.md", "from beta");
+    const problems = checkProject(manifest, lock, baseDir, skillsDir);
+    assert.ok(problems.some((p) => p.includes('both provide "references/x.md"')));
+  });
+});

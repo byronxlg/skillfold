@@ -17,7 +17,13 @@ import {
   parseSource,
   type Source,
 } from "./source.js";
-import { computeIntegrity, readSkillDir, type SkillContent } from "./skill.js";
+import {
+  computeIntegrity,
+  parseAllowedTools,
+  readSkillDir,
+  renameSkill,
+  type SkillContent,
+} from "./skill.js";
 
 /** A skill resolved to concrete files, ready to install. */
 export interface ResolvedSkill {
@@ -89,10 +95,15 @@ function pinnedNpmVersion(resolved: string, name: string): string {
 async function resolveOne(
   name: string,
   sourceString: string,
-  options: ResolveOptions
+  options: ResolveOptions,
+  keepName = false
 ): Promise<ResolvedSkill> {
   const source: Source = parseSource(sourceString);
   const { baseDir, lock, frozen, update, fetcher, env, npmOptions } = options;
+  // Installed skills live at <skillsDir>/<name>; the frontmatter name is
+  // rewritten to match so directory and frontmatter always agree.
+  const normalize = (skill: SkillContent): SkillContent =>
+    keepName ? skill : renameSkill(skill, name);
 
   if (source.kind === "local") {
     const dir = resolvePath(baseDir, source.path);
@@ -100,7 +111,7 @@ async function resolveOne(
       name,
       source: sourceString,
       kind: "local",
-      skill: readSkillDir(dir, name),
+      skill: normalize(readSkillDir(dir, name)),
       fetched: false,
     };
   }
@@ -120,7 +131,8 @@ async function resolveOne(
       ? pinnedGitHubSha(reused, name)
       : await resolveGitHubRef(source, name, { fetcher, env });
     const result = await fetchGitHubSkill(source, sha, name, { fetcher, env });
-    const integrity = computeIntegrity(result.skill.files);
+    const skill = normalize(result.skill);
+    const integrity = computeIntegrity(skill.files);
     if (frozen && lockEntry?.integrity && integrity !== lockEntry.integrity) {
       throw new LockError(
         `--frozen: "${name}" content hash does not match the lockfile ` +
@@ -133,7 +145,7 @@ async function resolveOne(
       kind: "github",
       resolved: formatSource({ ...source, ref: sha }),
       integrity,
-      skill: result.skill,
+      skill,
       fetched: result.fetched,
     };
   }
@@ -148,7 +160,8 @@ async function resolveOne(
     env,
     ...npmOptions,
   });
-  const integrity = computeIntegrity(result.skill.files);
+  const skill = normalize(result.skill);
+  const integrity = computeIntegrity(skill.files);
   if (frozen && lockEntry?.integrity && integrity !== lockEntry.integrity) {
     throw new LockError(
       `--frozen: "${name}" content hash does not match the lockfile ` +
@@ -161,7 +174,7 @@ async function resolveOne(
     kind: "npm",
     resolved: formatSource({ ...source, version: result.version }),
     integrity,
-    skill: result.skill,
+    skill,
     fetched: result.fetched,
   };
 }
@@ -196,6 +209,13 @@ export async function resolveManifest(
 
   // Composed skills, dependencies first.
   const composedBodies = new Map<string, ComposeInput>();
+  const toComposeInput = (dep: string, skill: SkillContent): ComposeInput => ({
+    name: dep,
+    description: skill.description,
+    body: skill.body,
+    allowedTools: parseAllowedTools(skill.attrs),
+    files: skill.files.filter((f) => f.path !== "SKILL.md"),
+  });
   for (const name of composeOrder(manifest.compose)) {
     const entry = manifest.compose[name];
     const inputs: ComposeInput[] = entry.use.map((dep) => {
@@ -206,10 +226,10 @@ export async function resolveManifest(
         // Unreachable after manifest validation; guard for safety.
         throw new ResolveError(name, `composed dependency "${dep}" was not resolved`);
       }
-      return { description: skillDep.skill.description, body: skillDep.skill.body };
+      return toComposeInput(dep, skillDep.skill);
     });
     const skill = generateComposedSkill(name, entry, inputs);
-    composedBodies.set(name, { description: skill.description, body: skill.body });
+    composedBodies.set(name, toComposeInput(name, skill));
     const integrity = computeIntegrity(skill.files);
     if (options.frozen) {
       const locked = options.lock?.compose[name];
@@ -261,5 +281,7 @@ export async function resolveSingle(
 ): Promise<ResolvedSkill> {
   const source = parseSource(sourceString);
   const tempName = defaultSkillName(source);
-  return resolveOne(tempName, formatSource(source), { ...options, baseDir, lock: null });
+  // keepName: the caller reads the original frontmatter name to pick the
+  // manifest name, so the skill must not be renamed to the placeholder.
+  return resolveOne(tempName, formatSource(source), { ...options, baseDir, lock: null }, true);
 }

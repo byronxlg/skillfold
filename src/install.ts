@@ -13,6 +13,8 @@ import { parseSource } from "./source.js";
 import type { ResolvedSkill } from "./resolve.js";
 import {
   computeIntegrity,
+  normalizeSkillName,
+  parseAllowedTools,
   parseFrontmatter,
   readDirFiles,
   type SkillFile,
@@ -130,7 +132,9 @@ export function checkProject(
         problems.push(`"${name}" source directory is missing: ${source.path}`);
         continue;
       }
-      if (computeIntegrity(sourceFiles) !== installedIntegrity) {
+      // Installs rewrite the frontmatter name to the manifest name; apply
+      // the same normalization before comparing against the source.
+      if (computeIntegrity(normalizeSkillName(sourceFiles, name)) !== installedIntegrity) {
         problems.push(
           `"${name}" is out of date with ${source.path} (run "skillfold install")`
         );
@@ -147,8 +151,11 @@ export function checkProject(
     if (skillMd) {
       const { attrs, body } = parseFrontmatter(skillMd.content.toString("utf-8"));
       bodies.set(name, {
+        name,
         description: typeof attrs.description === "string" ? attrs.description : "",
         body,
+        allowedTools: parseAllowedTools(attrs),
+        files: installedFiles.filter((f) => f.path !== "SKILL.md"),
       });
     }
   }
@@ -173,8 +180,20 @@ export function checkProject(
       inputs.push(input);
     }
     if (missingInput) continue; // the missing dep is already reported
-    const regenerated = generateComposedSkill(name, entry, inputs);
-    bodies.set(name, { description: regenerated.description, body: regenerated.body });
+    let regenerated;
+    try {
+      regenerated = generateComposedSkill(name, entry, inputs);
+    } catch (err) {
+      problems.push(err instanceof Error ? err.message : String(err));
+      continue;
+    }
+    bodies.set(name, {
+      name,
+      description: regenerated.description,
+      body: regenerated.body,
+      allowedTools: parseAllowedTools(regenerated.attrs),
+      files: regenerated.files.filter((f) => f.path !== "SKILL.md"),
+    });
     if (computeIntegrity(regenerated.files) !== computeIntegrity(installedFiles)) {
       problems.push(
         `composed skill "${name}" is out of date (run "skillfold install")`

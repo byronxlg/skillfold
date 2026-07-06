@@ -30,9 +30,12 @@ export {
 } from "./source.js";
 export {
   computeIntegrity,
+  normalizeSkillName,
+  parseAllowedTools,
   parseFrontmatter,
   readDirFiles,
   readSkillDir,
+  renameSkill,
   type SkillContent,
   type SkillFile,
 } from "./skill.js";
@@ -59,6 +62,7 @@ export {
   type LockSkillEntry,
 } from "./lock.js";
 export {
+  composeAllowedTools,
   composeBody,
   composeOrder,
   defaultComposeDescription,

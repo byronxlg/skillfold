@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 import { githubCacheDir } from "./cache.js";
@@ -172,16 +172,27 @@ export async function fetchGitHubSkill(
     );
   }
 
-  for (const entry of entries) {
-    const rel = source.path ? entry.path.slice(prefix.length) : entry.path;
-    const target = join(cacheDir, ...rel.split("/"));
-    // download_url is null for large files; the raw URL works for any size.
-    const rawUrl =
-      entry.download_url ??
-      `https://raw.githubusercontent.com/${source.owner}/${source.repo}/${sha}/${entry.path}`;
-    const content = await downloadFile(rawUrl, skillName, fetcher, env);
-    mkdirSync(dirname(target), { recursive: true });
-    writeFileSync(target, content);
+  // Download into a staging directory and rename into place, so an
+  // interrupted fetch never leaves a partial entry that looks complete.
+  const staging = `${cacheDir}.partial-${process.pid}`;
+  rmSync(staging, { recursive: true, force: true });
+  try {
+    for (const entry of entries) {
+      const rel = source.path ? entry.path.slice(prefix.length) : entry.path;
+      const target = join(staging, ...rel.split("/"));
+      // download_url is null for large files; the raw URL works for any size.
+      const rawUrl =
+        entry.download_url ??
+        `https://raw.githubusercontent.com/${source.owner}/${source.repo}/${sha}/${entry.path}`;
+      const content = await downloadFile(rawUrl, skillName, fetcher, env);
+      mkdirSync(dirname(target), { recursive: true });
+      writeFileSync(target, content);
+    }
+    mkdirSync(dirname(cacheDir), { recursive: true });
+    rmSync(cacheDir, { recursive: true, force: true });
+    renameSync(staging, cacheDir);
+  } finally {
+    rmSync(staging, { recursive: true, force: true });
   }
 
   return { sha, skill: readSkillDir(cacheDir, skillName), fetched: true };
