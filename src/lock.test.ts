@@ -32,6 +32,7 @@ function sampleLock(): Lockfile {
     compose: {
       both: { use: ["remote", "local"], integrity: "sha256-def=" },
     },
+    rules: {},
   };
 }
 
@@ -126,5 +127,41 @@ describe("lockfileProblems", () => {
 describe("emptyLockfile", () => {
   it("has version 1", () => {
     assert.equal(emptyLockfile().lockfileVersion, 1);
+  });
+});
+
+describe("lockfile rules section", () => {
+  it("roundtrips rules entries", () => {
+    const lock = sampleLock();
+    lock.rules["code-style"] = {
+      source: "github:o/r/rules/code-style.md@v1",
+      resolved: `github:o/r/rules/code-style.md@${"b".repeat(40)}`,
+      integrity: "sha256-xyz=",
+    };
+    const path = join(tmp.path, "rules.lock");
+    writeLockfile(path, lock);
+    assert.deepEqual(readLockfile(path), lock);
+  });
+
+  it("omits the rules key when empty, so old lockfiles do not churn", () => {
+    assert.ok(!serializeLockfile(sampleLock()).includes("rules:"));
+  });
+
+  it("reads pre-rules lockfiles as having no rules", () => {
+    const path = join(tmp.path, "old.lock");
+    writeLockfile(path, sampleLock());
+    assert.deepEqual(readLockfile(path)!.rules, {});
+  });
+
+  it("reports manifest/lock drift for rules", () => {
+    const manifest = parseManifest("rules:\n  style: ./rules/style.md", "t.yaml");
+    const lock = sampleLock();
+    // sampleLock has skills the manifest lacks; focus on the rules problems.
+    const problems = lockfileProblems(manifest, lock).filter((p) => p.includes("rule"));
+    assert.deepEqual(problems, ['rule "style" is in the manifest but not the lockfile']);
+
+    lock.rules.style = { source: "./other/style.md" };
+    const changed = lockfileProblems(manifest, lock).filter((p) => p.includes("rule"));
+    assert.match(changed[0], /changed source/);
   });
 });

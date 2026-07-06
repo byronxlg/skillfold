@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/byronxlg/skillfold/raw/main/skillfold.schema.json",
   "title": "Skillfold Manifest",
-  "description": "Declares the skills a project uses. Run \"skillfold install\" to install them into .claude/skills and pin exact versions in skillfold.lock.",
+  "description": "Declares the skills and rules a project uses. Run \"skillfold install\" to install them into .claude/skills and .claude/rules and pin exact versions in skillfold.lock.",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -23,7 +23,9 @@
           {
             "type": "object",
             "additionalProperties": false,
-            "required": ["source"],
+            "required": [
+              "source"
+            ],
             "properties": {
               "source": {
                 "type": "string",
@@ -31,7 +33,10 @@
                 "minLength": 1
               },
               "version": {
-                "type": ["string", "number"],
+                "type": [
+                  "string",
+                  "number"
+                ],
                 "description": "Version pin: a git tag, branch, or commit SHA for GitHub sources; an exact version or dist-tag for npm sources."
               }
             }
@@ -49,7 +54,9 @@
       "additionalProperties": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["use"],
+        "required": [
+          "use"
+        ],
         "properties": {
           "description": {
             "type": "string",
@@ -58,9 +65,28 @@
           "use": {
             "type": "array",
             "description": "Names of skills (or other composed skills) to concatenate, in order.",
-            "items": { "type": "string" },
+            "items": {
+              "type": "string"
+            },
             "minItems": 1,
             "uniqueItems": true
+          },
+          "allowed-tools": {
+            "description": "allowed-tools frontmatter of the generated skill: a comma-separated string or a list of tool names. Default: the union of the used skills' allowed-tools when every one declares a list; omitted (unrestricted) otherwise.",
+            "oneOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              }
+            ]
           }
         }
       }
@@ -68,6 +94,24 @@
     "skillsDir": {
       "type": "string",
       "description": "Directory to install skills into, relative to the manifest. Default: .claude/skills",
+      "minLength": 1
+    },
+    "rules": {
+      "description": "Rules to install as <rulesDir>/<name>.md, keyed by rule name. Each source points at a single markdown file (local path, github:, or npm:).",
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+        "maxLength": 64
+      },
+      "additionalProperties": {
+        "type": "string",
+        "description": "Source string of a markdown file: a local path (./rules/style.md), github:owner/repo/path/file.md@ref, or npm:package/path/file.md@version.",
+        "minLength": 1
+      }
+    },
+    "rulesDir": {
+      "type": "string",
+      "description": "Directory to install rules into, relative to the manifest. Default: .claude/rules",
       "minLength": 1
     }
   }

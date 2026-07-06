@@ -4,10 +4,11 @@ import { dirname, resolve } from "node:path";
 import { Document, parseDocument, YAMLMap } from "yaml";
 
 import { ManifestError } from "./errors.js";
+import { parseAllowedTools } from "./skill.js";
 import { formatSource, parseSource } from "./source.js";
 
 /**
- * The skillfold.yaml manifest. Two sections:
+ * The skillfold.yaml manifest. Three sections:
  *
  *   skills:                          # name -> source
  *     commit-helper: ./skills/commit-helper
@@ -19,17 +20,28 @@ import { formatSource, parseSource } from "./source.js";
  *       description: Cut releases end to end.
  *       use: [code-review, planning]
  *
- * Plus one optional setting:
+ *   rules:                           # name -> source of a single .md file
+ *     code-style: ./rules/code-style.md
+ *     security: github:owner/repo/rules/security.md@v1.2.0
+ *
+ * Plus two optional settings:
  *
  *   skillsDir: .claude/skills        # where skills are installed
+ *   rulesDir: .claude/rules          # where rules are installed
  */
 
 export const MANIFEST_FILENAME = "skillfold.yaml";
 export const DEFAULT_SKILLS_DIR = ".claude/skills";
+export const DEFAULT_RULES_DIR = ".claude/rules";
 
 export interface ComposeEntry {
   description?: string;
   use: string[];
+  /**
+   * Explicit allowed-tools for the generated SKILL.md. Defaults to the
+   * union of the used skills' allowed-tools.
+   */
+  allowedTools?: string[];
 }
 
 export interface Manifest {
@@ -37,11 +49,15 @@ export interface Manifest {
   skills: Record<string, string>;
   /** Composed skill name -> definition. */
   compose: Record<string, ComposeEntry>;
+  /** Rule name -> normalized source string of a single markdown file. */
+  rules: Record<string, string>;
   /** Install directory, relative to the manifest. Undefined = target default. */
   skillsDir?: string;
+  /** Rules install directory, relative to the manifest. Undefined = target default. */
+  rulesDir?: string;
 }
 
-const KNOWN_KEYS = new Set(["skills", "compose", "skillsDir"]);
+const KNOWN_KEYS = new Set(["skills", "compose", "rules", "skillsDir", "rulesDir"]);
 
 /** Valid skill names: what Claude Code accepts as a skill directory name. */
 const NAME_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
@@ -93,9 +109,9 @@ function normalizeComposeEntry(name: string, value: unknown): ComposeEntry {
   }
   const entry = value as Record<string, unknown>;
   for (const key of Object.keys(entry)) {
-    if (key !== "use" && key !== "description") {
+    if (key !== "use" && key !== "description" && key !== "allowed-tools") {
       throw new ManifestError(
-        `compose.${name}: unknown key "${key}" (expected use, description)`
+        `compose.${name}: unknown key "${key}" (expected use, description, allowed-tools)`
       );
     }
   }
@@ -122,7 +138,24 @@ function normalizeComposeEntry(name: string, value: unknown): ComposeEntry {
     }
     description = entry.description.trim();
   }
-  return { description, use };
+  let allowedTools: string[] | undefined;
+  const rawTools = entry["allowed-tools"];
+  if (rawTools !== undefined) {
+    const isStringList =
+      Array.isArray(rawTools) && rawTools.every((t) => typeof t === "string");
+    if (typeof rawTools !== "string" && !isStringList) {
+      throw new ManifestError(
+        `compose.${name}: "allowed-tools" must be a string or a list of strings`
+      );
+    }
+    allowedTools = parseAllowedTools({ "allowed-tools": rawTools });
+    if (!allowedTools) {
+      throw new ManifestError(`compose.${name}: "allowed-tools" is empty`);
+    }
+  }
+  const normalized: ComposeEntry = { description, use };
+  if (allowedTools) normalized.allowedTools = allowedTools;
+  return normalized;
 }
 
 function detectComposeCycles(compose: Record<string, ComposeEntry>): void {
@@ -158,7 +191,8 @@ export function parseManifest(content: string, filePath: string): Manifest {
   for (const key of Object.keys(top)) {
     if (!KNOWN_KEYS.has(key)) {
       throw new ManifestError(
-        `${filePath}: unknown top-level key "${key}" (expected skills, compose, skillsDir)`
+        `${filePath}: unknown top-level key "${key}" ` +
+          `(expected skills, compose, rules, skillsDir, rulesDir)`
       );
     }
   }
@@ -190,6 +224,25 @@ export function parseManifest(content: string, filePath: string): Manifest {
     }
   }
 
+  const rules: Record<string, string> = {};
+  if (top.rules !== undefined && top.rules !== null) {
+    if (typeof top.rules !== "object" || Array.isArray(top.rules)) {
+      throw new ManifestError(`${filePath}: "rules" must be a mapping of name -> source`);
+    }
+    for (const [name, value] of Object.entries(top.rules as Record<string, unknown>)) {
+      validateSkillName(name);
+      if (skills[name] || compose[name]) {
+        throw new ManifestError(
+          `"${name}" is defined in both rules and ${skills[name] ? "skills" : "compose"}; names must be unique`
+        );
+      }
+      if (typeof value !== "string" || !value.trim()) {
+        throw new ManifestError(`rules.${name}: expected a source string`);
+      }
+      rules[name] = formatSource(parseSource(value));
+    }
+  }
+
   for (const [name, entry] of Object.entries(compose)) {
     for (const dep of entry.use) {
       if (!skills[dep] && !compose[dep]) {
@@ -211,8 +264,15 @@ export function parseManifest(content: string, filePath: string): Manifest {
     }
     skillsDir = top.skillsDir.trim();
   }
+  let rulesDir: string | undefined;
+  if (top.rulesDir !== undefined) {
+    if (typeof top.rulesDir !== "string" || !top.rulesDir.trim()) {
+      throw new ManifestError(`${filePath}: "rulesDir" must be a path string`);
+    }
+    rulesDir = top.rulesDir.trim();
+  }
 
-  return { skills, compose, skillsDir };
+  return { skills, compose, rules, skillsDir, rulesDir };
 }
 
 export function loadManifest(manifestPath: string): Manifest {
@@ -260,11 +320,11 @@ export function addSkillToManifest(manifestPath: string, name: string, source: s
   writeFileSync(manifestPath, doc.toString());
 }
 
-/** Remove a skill (or composed skill) from the manifest file. Returns which section it was in. */
+/** Remove a skill, composed skill, or rule from the manifest file. Returns which section it was in. */
 export function removeSkillFromManifest(
   manifestPath: string,
   name: string
-): "skills" | "compose" {
+): "skills" | "compose" | "rules" {
   if (!existsSync(manifestPath)) {
     throw new ManifestError(`No ${MANIFEST_FILENAME} found at ${manifestPath}`);
   }
@@ -272,11 +332,13 @@ export function removeSkillFromManifest(
   if (doc.errors.length > 0) {
     throw new ManifestError(`${manifestPath}: ${doc.errors[0].message}`);
   }
-  let section: "skills" | "compose";
+  let section: "skills" | "compose" | "rules";
   if (doc.hasIn(["skills", name])) {
     section = "skills";
   } else if (doc.hasIn(["compose", name])) {
     section = "compose";
+  } else if (doc.hasIn(["rules", name])) {
+    section = "rules";
   } else {
     throw new ManifestError(`Skill "${name}" is not in the manifest`);
   }

@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 import { githubCacheDir } from "./cache.js";
@@ -137,6 +137,45 @@ async function downloadFile(
   return Buffer.from(await response.arrayBuffer());
 }
 
+export interface GitHubFileResult {
+  /** Full commit SHA the file was fetched at. */
+  sha: string;
+  content: Buffer;
+  fetched: boolean;
+}
+
+/**
+ * Fetch a single file from GitHub at an exact commit SHA, using the shared
+ * cache (rules are single markdown files, not directories).
+ */
+export async function fetchGitHubFile(
+  source: GitHubSource,
+  sha: string,
+  ruleName: string,
+  options: GitHubOptions = {}
+): Promise<GitHubFileResult> {
+  const fetcher = options.fetcher ?? fetch;
+  const env = options.env ?? process.env;
+  if (!source.path) {
+    throw new ResolveError(ruleName, "rule sources must point at a file inside the repo");
+  }
+  const cacheFile = githubCacheDir(source.owner, source.repo, sha, source.path, env);
+  if (existsSync(cacheFile)) {
+    return { sha, content: readFileSync(cacheFile), fetched: false };
+  }
+  const rawUrl = `https://raw.githubusercontent.com/${source.owner}/${source.repo}/${sha}/${source.path}`;
+  const content = await downloadFile(rawUrl, ruleName, fetcher, env);
+  const staging = `${cacheFile}.partial-${process.pid}`;
+  mkdirSync(dirname(cacheFile), { recursive: true });
+  try {
+    writeFileSync(staging, content);
+    renameSync(staging, cacheFile);
+  } finally {
+    rmSync(staging, { force: true });
+  }
+  return { sha, content, fetched: true };
+}
+
 /**
  * Fetch a skill directory from GitHub at an exact commit SHA, using the
  * shared cache. Cache hits never touch the network.
@@ -172,16 +211,27 @@ export async function fetchGitHubSkill(
     );
   }
 
-  for (const entry of entries) {
-    const rel = source.path ? entry.path.slice(prefix.length) : entry.path;
-    const target = join(cacheDir, ...rel.split("/"));
-    // download_url is null for large files; the raw URL works for any size.
-    const rawUrl =
-      entry.download_url ??
-      `https://raw.githubusercontent.com/${source.owner}/${source.repo}/${sha}/${entry.path}`;
-    const content = await downloadFile(rawUrl, skillName, fetcher, env);
-    mkdirSync(dirname(target), { recursive: true });
-    writeFileSync(target, content);
+  // Download into a staging directory and rename into place, so an
+  // interrupted fetch never leaves a partial entry that looks complete.
+  const staging = `${cacheDir}.partial-${process.pid}`;
+  rmSync(staging, { recursive: true, force: true });
+  try {
+    for (const entry of entries) {
+      const rel = source.path ? entry.path.slice(prefix.length) : entry.path;
+      const target = join(staging, ...rel.split("/"));
+      // download_url is null for large files; the raw URL works for any size.
+      const rawUrl =
+        entry.download_url ??
+        `https://raw.githubusercontent.com/${source.owner}/${source.repo}/${sha}/${entry.path}`;
+      const content = await downloadFile(rawUrl, skillName, fetcher, env);
+      mkdirSync(dirname(target), { recursive: true });
+      writeFileSync(target, content);
+    }
+    mkdirSync(dirname(cacheDir), { recursive: true });
+    rmSync(cacheDir, { recursive: true, force: true });
+    renameSync(staging, cacheDir);
+  } finally {
+    rmSync(staging, { recursive: true, force: true });
   }
 
   return { sha, skill: readSkillDir(cacheDir, skillName), fetched: true };

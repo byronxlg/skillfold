@@ -215,3 +215,93 @@ describe("manifest editing", () => {
     assert.throws(() => removeSkillFromManifest(path, "ghost"), /not in the manifest/);
   });
 });
+
+describe("compose allowed-tools key", () => {
+  const base = "skills:\n  a: ./skills/a\ncompose:\n  combo:\n    use: [a]\n";
+
+  it("accepts a comma-separated string", () => {
+    const manifest = parseManifest(`${base}    allowed-tools: Read, Grep\n`, "t.yaml");
+    assert.deepEqual(manifest.compose.combo.allowedTools, ["Read", "Grep"]);
+  });
+
+  it("accepts a list of strings", () => {
+    const manifest = parseManifest(`${base}    allowed-tools: [Read, Grep]\n`, "t.yaml");
+    assert.deepEqual(manifest.compose.combo.allowedTools, ["Read", "Grep"]);
+  });
+
+  it("rejects non-string values", () => {
+    assert.throws(
+      () => parseManifest(`${base}    allowed-tools: 42\n`, "t.yaml"),
+      /allowed-tools/
+    );
+  });
+
+  it("rejects an empty list", () => {
+    assert.throws(
+      () => parseManifest(`${base}    allowed-tools: []\n`, "t.yaml"),
+      /is empty/
+    );
+  });
+});
+
+describe("rules section", () => {
+  it("parses rules and rulesDir", () => {
+    const manifest = parseManifest(
+      [
+        "rules:",
+        "  code-style: ./rules/code-style.md",
+        "  security: github:o/r/rules/security.md@v1",
+        "rulesDir: .claude/rules",
+      ].join("\n"),
+      "t.yaml"
+    );
+    assert.deepEqual(manifest.rules, {
+      "code-style": "./rules/code-style.md",
+      security: "github:o/r/rules/security.md@v1",
+    });
+    assert.equal(manifest.rulesDir, ".claude/rules");
+  });
+
+  it("defaults to no rules", () => {
+    const manifest = parseManifest("skills:\n  a: ./skills/a", "t.yaml");
+    assert.deepEqual(manifest.rules, {});
+    assert.equal(manifest.rulesDir, undefined);
+  });
+
+  it("rejects non-string rule sources", () => {
+    assert.throws(
+      () => parseManifest("rules:\n  bad: { source: x }", "t.yaml"),
+      /rules.bad: expected a source string/
+    );
+  });
+
+  it("validates rule names", () => {
+    assert.throws(
+      () => parseManifest("rules:\n  Bad_Name: ./x.md", "t.yaml"),
+      /Invalid skill name/
+    );
+  });
+
+  it("rejects a rule name that collides with a skill or composed skill", () => {
+    assert.throws(
+      () => parseManifest("skills:\n  foo: ./skills/foo\nrules:\n  foo: ./rules/foo.md", "t.yaml"),
+      /defined in both rules and skills/
+    );
+    assert.throws(
+      () =>
+        parseManifest(
+          [
+            "skills:",
+            "  a: ./skills/a",
+            "compose:",
+            "  foo:",
+            "    use: [a]",
+            "rules:",
+            "  foo: ./rules/foo.md",
+          ].join("\n"),
+          "t.yaml"
+        ),
+      /defined in both rules and compose/
+    );
+  });
+});

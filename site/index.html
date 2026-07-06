@@ -356,7 +356,7 @@ lockfile: skillfold.lock
     <div class="feat"><h3><span class="ix">01</span>Declare in YAML</h3><p>One manifest maps skill names to sources. Rename, swap, or remove a skill by editing a line, not by shuffling directories.</p></div>
     <div class="feat"><h3><span class="ix">02</span>Lockfile pins</h3><p>Every remote skill is pinned to a full commit SHA or exact version, plus a sha256 hash over every file. <span class="lock">skillfold.lock</span> is committed; installs repeat byte-for-byte.</p></div>
     <div class="feat"><h3><span class="ix">03</span>Any source</h3><p>Local directories, <code>github:owner/repo/path@ref</code>, or <code>npm:package/skill@version</code>. Paste a GitHub tree URL and it just works.</p></div>
-    <div class="feat"><h3><span class="ix">04</span>Composition</h3><p>Composed skills concatenate other skills into one generated SKILL.md &mdash; recursive, cycle-checked, regenerated whenever inputs change.</p></div>
+    <div class="feat"><h3><span class="ix">04</span>Composition</h3><p>Composed skills concatenate other skills into one generated SKILL.md &mdash; recursive, cycle-checked, regenerated whenever inputs change. Supporting files and allowed-tools come along.</p></div>
     <div class="feat"><h3><span class="ix">05</span>Drift detection</h3><p><code>skillfold check</code> verifies manifest, lockfile, and installed files agree &mdash; fully offline, nonzero exit for CI. A one-line GitHub Action ships with the repo.</p></div>
     <div class="feat"><h3><span class="ix">06</span>Safe by design</h3><p>Skillfold only touches directories named in the lockfile. Hand-authored skills sitting next to managed ones are never overwritten or pruned.</p></div>
   </div>
@@ -386,6 +386,10 @@ lockfile: skillfold.lock
 <span class="c-key">compose</span>:
   <span class="c-key">reviewer</span>:
     <span class="c-key">use</span>: [code-review, testing]
+
+<span class="c-cmt"># single .md files, installed to .claude/rules</span>
+<span class="c-key">rules</span>:
+  <span class="c-key">code-style</span>: ./rules/code-style.md
 
 <span class="c-cmt"># optional; default .claude/skills</span>
 <span class="c-key">skillsDir</span>: .claude/skills</pre>

@@ -1,6 +1,6 @@
 # Manifest Reference
 
-`skillfold.yaml` has three top-level keys: `skills`, `compose`, and `skillsDir`. All are optional. A JSON Schema is published at [`skillfold.schema.json`](../skillfold.schema.json) for IDE autocompletion:
+`skillfold.yaml` has five top-level keys: `skills`, `compose`, `rules`, `skillsDir`, and `rulesDir`. All are optional. A JSON Schema is published at [`skillfold.schema.json`](../skillfold.schema.json) for IDE autocompletion:
 
 ```yaml
 # yaml-language-server: $schema=https://github.com/byronxlg/skillfold/raw/main/skillfold.schema.json
@@ -43,6 +43,8 @@ For npm sources, the `skill` segment is looked up in the package's `agentskills`
 
 Private GitHub repos work with a `GITHUB_TOKEN` (or `GH_TOKEN`) environment variable.
 
+The manifest name is the installed directory name. When it differs from the skill's frontmatter `name`, the installed `SKILL.md` gets its `name` rewritten to match (only that line changes; everything else is byte-identical).
+
 ## `compose`
 
 Generated skills. Each entry concatenates the bodies (frontmatter stripped) of the skills it `use`s, in order, into one `SKILL.md`.
@@ -52,12 +54,28 @@ compose:
   reviewer:
     description: Review code changes together with their tests.
     use: [code-review, testing]
+    allowed-tools: [Read, Grep]   # optional
 ```
 
 - `use` entries reference names from `skills` or other `compose` entries.
 - Nesting is allowed; cycles are rejected at parse time.
 - `description` is optional; the default lists the used skills.
+- `allowed-tools` is optional (string or list). By default the composed skill gets the union of the used skills' `allowed-tools` - but only when every one of them declares a list. A skill without `allowed-tools` is unrestricted, so any unrestricted input leaves the composed skill unrestricted too.
+- Supporting files of the used skills (`references/`, `scripts/`, ...) are carried into the composed skill, so relative paths in the bodies keep working. Identical duplicates collapse; two skills providing the same path with different contents is an error.
 - Composed skills install like any other skill and are regenerated whenever their inputs change.
+
+## `rules`
+
+Rules are single markdown files installed as `<rulesDir>/<name>.md` - instructions Claude Code loads from `.claude/rules/`. Same source kinds as skills, except the source points at a file, not a directory:
+
+```yaml
+rules:
+  code-style: ./rules/code-style.md
+  security: github:acme/standards/rules/security.md@v3
+  conventions: npm:acme-standards/rules/conventions.md@1.2.0
+```
+
+Rules pin in the lockfile exactly like skills and participate in `install`, `check`, `list`, `info`, and `remove`. There is no compose for rules - they stay a name -> file mapping.
 
 ## `skillsDir`
 
@@ -68,6 +86,10 @@ skillsDir: .claude/skills
 ```
 
 Point it anywhere a tool expects SKILL.md directories.
+
+## `rulesDir`
+
+Where rules are installed, relative to the manifest. Defaults to `.claude/rules` (or `rules` for the global `~/.claude` manifest).
 
 ## The lockfile
 
@@ -86,6 +108,11 @@ compose:
   reviewer:
     use: [code-review, testing]
     integrity: sha256-...
+rules:
+  security:
+    source: github:acme/standards/rules/security.md@v3
+    resolved: github:acme/standards/rules/security.md@8f3a9c1e...
+    integrity: sha256-...
 ```
 
 Rules:
@@ -93,4 +120,4 @@ Rules:
 - Commit it. Never edit it by hand.
 - `install` reuses existing pins even for moving refs (branches, `latest`). Only `update`, or changing the source string in the manifest, re-resolves.
 - `install --frozen` refuses to run if manifest and lockfile disagree, and verifies every content hash - the CI mode.
-- The names in the lockfile are exactly the directories skillfold considers its own: it will overwrite and prune those, and nothing else.
+- The names in the lockfile are exactly the directories (and rule files) skillfold considers its own: it will overwrite and prune those, and nothing else.

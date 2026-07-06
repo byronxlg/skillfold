@@ -1,9 +1,16 @@
+import { existsSync, readFileSync } from "node:fs";
 import { join, resolve as resolvePath } from "node:path";
 
+import { ruleFile } from "./install.js";
 import type { Lockfile } from "./lock.js";
-import type { Manifest } from "./manifest.js";
+import { DEFAULT_RULES_DIR, type Manifest } from "./manifest.js";
 import { parseSource } from "./source.js";
-import { computeIntegrity, readDirFiles } from "./skill.js";
+import {
+  computeFileIntegrity,
+  computeIntegrity,
+  normalizeSkillName,
+  readDirFiles,
+} from "./skill.js";
 
 /**
  * Status of one skill, computed offline from manifest + lockfile + disk.
@@ -17,7 +24,7 @@ export type SkillStatus = "ok" | "not installed" | "modified" | "not locked";
 
 export interface SkillRow {
   name: string;
-  kind: "local" | "github" | "npm" | "compose";
+  kind: "local" | "github" | "npm" | "compose" | "rule";
   /** Source as declared; `compose(a, b)` for composed skills. */
   source: string;
   /** Short pinned revision, e.g. "8f3a9c1" or "1.2.3". */
@@ -37,7 +44,8 @@ export function skillRows(
   manifest: Manifest,
   lock: Lockfile | null,
   baseDir: string,
-  skillsDir: string
+  skillsDir: string,
+  rulesDir?: string
 ): SkillRow[] {
   const rows: SkillRow[] = [];
 
@@ -52,7 +60,8 @@ export function skillRows(
       const sourceFiles = readDirFiles(resolvePath(baseDir, source.path));
       status =
         sourceFiles.length > 0 &&
-        computeIntegrity(sourceFiles) === computeIntegrity(installedFiles)
+        computeIntegrity(normalizeSkillName(sourceFiles, name)) ===
+          computeIntegrity(installedFiles)
           ? "ok"
           : "modified";
     } else if (!entry || entry.source !== sourceString) {
@@ -88,6 +97,37 @@ export function skillRows(
       name,
       kind: "compose",
       source: `compose(${entry.use.join(", ")})`,
+      status,
+    });
+  }
+
+  const effectiveRulesDir =
+    rulesDir ?? resolvePath(baseDir, manifest.rulesDir ?? DEFAULT_RULES_DIR);
+  for (const [name, sourceString] of Object.entries(manifest.rules)) {
+    const source = parseSource(sourceString);
+    const entry = lock?.rules[name];
+    const target = ruleFile(effectiveRulesDir, name);
+    let status: SkillStatus;
+    if (!existsSync(target)) {
+      status = "not installed";
+    } else if (source.kind === "local") {
+      const sourcePath = resolvePath(baseDir, source.path);
+      status =
+        existsSync(sourcePath) && readFileSync(sourcePath).equals(readFileSync(target))
+          ? "ok"
+          : "modified";
+    } else if (!entry || entry.source !== sourceString) {
+      status = "not locked";
+    } else if (entry.integrity && entry.integrity !== computeFileIntegrity(readFileSync(target))) {
+      status = "modified";
+    } else {
+      status = "ok";
+    }
+    rows.push({
+      name,
+      kind: "rule",
+      source: sourceString,
+      pinned: entry && entry.source === sourceString ? shortPin(entry.resolved) : undefined,
       status,
     });
   }

@@ -29,15 +29,20 @@ export {
   type Source,
 } from "./source.js";
 export {
+  computeFileIntegrity,
   computeIntegrity,
+  normalizeSkillName,
+  parseAllowedTools,
   parseFrontmatter,
   readDirFiles,
   readSkillDir,
+  renameSkill,
   type SkillContent,
   type SkillFile,
 } from "./skill.js";
 export {
   addSkillToManifest,
+  DEFAULT_RULES_DIR,
   DEFAULT_SKILLS_DIR,
   loadManifest,
   MANIFEST_FILENAME,
@@ -59,6 +64,7 @@ export {
   type LockSkillEntry,
 } from "./lock.js";
 export {
+  composeAllowedTools,
   composeBody,
   composeOrder,
   defaultComposeDescription,
@@ -68,31 +74,38 @@ export {
 export {
   resolveManifest,
   resolveSingle,
+  type ResolvedRule,
   type ResolvedSkill,
   type ResolveOptions,
   type ResolveResult,
 } from "./resolve.js";
 export {
   checkProject,
+  syncRulesDir,
   syncSkillsDir,
   type SyncOptions,
   type SyncResult,
+  type SyncRulesOptions,
 } from "./install.js";
 export { initProject, type InitResult } from "./init.js";
 export { renderRows, skillRows, type SkillRow, type SkillStatus } from "./list.js";
 export { renderSearchHits, searchSkills, type SearchHit } from "./search.js";
 export { cacheRoot, githubCacheDir, npmCacheDir } from "./cache.js";
 export {
+  fetchGitHubFile,
   fetchGitHubSkill,
   resolveGitHubRef,
   type Fetcher,
   type GitHubFetchResult,
+  type GitHubFileResult,
   type GitHubOptions,
 } from "./github.js";
 export {
   findInstalledPackage,
+  resolveNpmFile,
   resolveNpmSkill,
   resolveNpmVersion,
+  type NpmFileResult,
   type NpmOptions,
   type NpmResolveResult,
 } from "./npm.js";

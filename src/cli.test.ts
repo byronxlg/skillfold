@@ -148,6 +148,36 @@ describe("cli", () => {
     assert.equal(process.exitCode, undefined);
   });
 
+  it("supports rules end to end", async () => {
+    const dir = newProject();
+    writeSkill(dir, "skills/alpha", "alpha");
+    writeFile(dir, "rules/style.md", "Always write tests.\n");
+    writeFile(
+      dir,
+      "skillfold.yaml",
+      ["skills:", "  alpha: ./skills/alpha", "rules:", "  style: ./rules/style.md"].join("\n")
+    );
+    await main(["install", "--dir", dir]);
+    assert.equal(
+      readFileSync(join(dir, ".claude", "rules", "style.md"), "utf-8"),
+      "Always write tests.\n"
+    );
+    assert.match(logs.join("\n"), /style \(rule\)/);
+
+    logs = [];
+    await main(["check", "--dir", dir]);
+    assert.match(logs.join("\n"), /ok: 1 skill, 1 rule in sync/);
+
+    logs = [];
+    await main(["list", "--dir", dir]);
+    assert.match(logs.join("\n"), /style.*rules\/style.md.*ok/);
+
+    logs = [];
+    await main(["remove", "style", "--dir", dir]);
+    assert.match(logs.join("\n"), /removed style/);
+    assert.ok(!existsSync(join(dir, ".claude", "rules", "style.md")));
+  });
+
   it("install --frozen fails without a lockfile", async () => {
     const dir = newProject();
     await main(["init", "--dir", dir]);

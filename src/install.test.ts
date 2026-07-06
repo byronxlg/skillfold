@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { after, describe, it } from "node:test";
 
 import { InstallError } from "./errors.js";
-import { checkProject, syncSkillsDir } from "./install.js";
+import { checkProject, syncRulesDir, syncSkillsDir } from "./install.js";
 import { emptyLockfile } from "./lock.js";
 import { parseManifest } from "./manifest.js";
 import { resolveManifest } from "./resolve.js";
@@ -210,5 +210,129 @@ describe("resolved skill shape", () => {
     const { resolved } = await resolveAll(manifest, baseDir);
     const kinds = new Map(resolved.map((r: ResolvedSkill) => [r.name, r.kind]));
     assert.equal(kinds.get("both"), "compose");
+  });
+});
+
+describe("checkProject with renamed and multi-file skills", () => {
+  it("passes when the manifest name differs from the source frontmatter name", async () => {
+    const { baseDir, skillsDir } = project("skills:\n  other: ./skills/alpha");
+    const manifest = parseManifest("skills:\n  other: ./skills/alpha", "t.yaml");
+    const { resolved, lock } = await resolveAll(manifest, baseDir);
+    syncSkillsDir({ skillsDir, resolved, previousLock: null });
+    assert.deepEqual(checkProject(manifest, lock, baseDir, skillsDir), []);
+  });
+
+  it("passes for composed skills with supporting files", async () => {
+    const { baseDir, skillsDir } = project(WITH_COMPOSE);
+    writeFile(baseDir, "skills/alpha/references/notes.md", "alpha notes");
+    const manifest = parseManifest(WITH_COMPOSE, "t.yaml");
+    const { resolved, lock } = await resolveAll(manifest, baseDir);
+    syncSkillsDir({ skillsDir, resolved, previousLock: null });
+    assert.deepEqual(checkProject(manifest, lock, baseDir, skillsDir), []);
+    // The composed skill carries the supporting file.
+    assert.ok(existsSync(join(skillsDir, "both", "references", "notes.md")));
+  });
+
+  it("reports a compose file conflict as a problem, not a crash", async () => {
+    const text = `${TWO_SKILLS}\ncompose:\n  both:\n    use: [alpha, beta]`;
+    const { baseDir, skillsDir } = project(text);
+    writeFile(baseDir, "skills/alpha/references/x.md", "from alpha");
+    const manifest = parseManifest(text, "t.yaml");
+    const { resolved, lock } = await resolveAll(manifest, baseDir);
+    syncSkillsDir({ skillsDir, resolved, previousLock: null });
+    // Introduce the conflict after install: beta now also ships x.md.
+    writeFile(baseDir, "skills/beta/references/x.md", "from beta");
+    writeFile(join(skillsDir, "beta"), "references/x.md", "from beta");
+    const problems = checkProject(manifest, lock, baseDir, skillsDir);
+    assert.ok(problems.some((p) => p.includes('both provide "references/x.md"')));
+  });
+});
+
+describe("syncRulesDir", () => {
+  const RULES = "rules:\n  style: ./rules/style.md";
+
+  async function ruleProject() {
+    const p = project(RULES);
+    writeFile(p.baseDir, "rules/style.md", "Rule body.\n");
+    const manifest = parseManifest(RULES, "t.yaml");
+    const { resolved, rules, lock } = await resolveManifest(manifest, { baseDir: p.baseDir });
+    return { ...p, manifest, resolved, rules, lock, rulesDir: join(p.baseDir, ".claude", "rules") };
+  }
+
+  it("installs rules as <name>.md", async () => {
+    const { rules, rulesDir } = await ruleProject();
+    const result = syncRulesDir({ rulesDir, rules, previousLock: null });
+    assert.deepEqual(result.installed, ["style"]);
+    assert.equal(readFileSync(join(rulesDir, "style.md"), "utf-8"), "Rule body.\n");
+  });
+
+  it("skips unchanged rules and prunes removed ones", async () => {
+    const { rules, rulesDir, lock } = await ruleProject();
+    syncRulesDir({ rulesDir, rules, previousLock: null });
+    const again = syncRulesDir({ rulesDir, rules, previousLock: lock });
+    assert.deepEqual(again.unchanged, ["style"]);
+    const pruned = syncRulesDir({ rulesDir, rules: [], previousLock: lock });
+    assert.deepEqual(pruned.pruned, ["style"]);
+    assert.ok(!existsSync(join(rulesDir, "style.md")));
+  });
+
+  it("refuses to overwrite unmanaged rule files without force", async () => {
+    const { rules, rulesDir } = await ruleProject();
+    writeFile(rulesDir, "style.md", "hand-authored");
+    assert.throws(
+      () => syncRulesDir({ rulesDir, rules, previousLock: null }),
+      InstallError
+    );
+    const forced = syncRulesDir({ rulesDir, rules, previousLock: null, force: true });
+    assert.deepEqual(forced.installed, ["style"]);
+  });
+
+  it("never creates the rules dir when there are no rules", async () => {
+    const { rulesDir } = await ruleProject();
+    syncRulesDir({ rulesDir: `${rulesDir}-empty`, rules: [], previousLock: null });
+    assert.ok(!existsSync(`${rulesDir}-empty`));
+  });
+});
+
+describe("checkProject rules", () => {
+  const RULES = "rules:\n  style: ./rules/style.md";
+
+  async function synced() {
+    const p = project(RULES);
+    writeFile(p.baseDir, "rules/style.md", "Rule body.\n");
+    const manifest = parseManifest(RULES, "t.yaml");
+    const { rules, lock } = await resolveManifest(manifest, { baseDir: p.baseDir });
+    const rulesDir = join(p.baseDir, ".claude", "rules");
+    syncRulesDir({ rulesDir, rules, previousLock: null });
+    return { ...p, manifest, lock, rulesDir };
+  }
+
+  it("passes when rules are in sync", async () => {
+    const { manifest, lock, baseDir, skillsDir, rulesDir } = await synced();
+    assert.deepEqual(checkProject(manifest, lock, baseDir, skillsDir, rulesDir), []);
+  });
+
+  it("derives the rules dir from the manifest when the argument is omitted", async () => {
+    const text = "rules:\n  style: ./rules/style.md\nrulesDir: custom/rules";
+    const { baseDir, skillsDir } = project(text);
+    writeFile(baseDir, "rules/style.md", "Rule body.\n");
+    const manifest = parseManifest(text, "t.yaml");
+    const { rules, lock } = await resolveManifest(manifest, { baseDir });
+    syncRulesDir({ rulesDir: join(baseDir, "custom", "rules"), rules, previousLock: null });
+    assert.deepEqual(checkProject(manifest, lock, baseDir, skillsDir), []);
+  });
+
+  it("reports missing and stale rules", async () => {
+    const { manifest, lock, baseDir, skillsDir, rulesDir } = await synced();
+    writeFile(baseDir, "rules/style.md", "Edited source.\n");
+    assert.match(
+      checkProject(manifest, lock, baseDir, skillsDir, rulesDir).join("\n"),
+      /out of date with .\/rules\/style.md/
+    );
+    rmSync(join(rulesDir, "style.md"));
+    assert.match(
+      checkProject(manifest, lock, baseDir, skillsDir, rulesDir).join("\n"),
+      /rule "style" is not installed/
+    );
   });
 });

@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
+import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { after, describe, it } from "node:test";
 
 import { ResolveError } from "./errors.js";
-import { fetchGitHubSkill, resolveGitHubRef } from "./github.js";
+import { fetchGitHubFile, fetchGitHubSkill, resolveGitHubRef } from "./github.js";
 import { parseSource, type GitHubSource } from "./source.js";
 import { makeFetcher, makeTmpDir } from "./testutil.js";
 
@@ -116,6 +117,31 @@ describe("fetchGitHubSkill", () => {
     );
   });
 
+  it("leaves no cache entry when a download fails midway", async () => {
+    const env = { SKILLFOLD_CACHE: join(tmp.path, "cache5") };
+    const routes = githubRoutes();
+    delete (routes as Record<string, unknown>)[
+      "https://raw.test/skills/foo/references/notes.md"
+    ];
+    const broken = makeFetcher(routes); // second download 500s
+    await assert.rejects(fetchGitHubSkill(source, SHA, "foo", { fetcher: broken.fetcher, env }));
+    const cacheDir = join(tmp.path, "cache5", "github", "o", "r", SHA, "skills", "foo");
+    assert.ok(!existsSync(cacheDir), "partial cache entry must not exist");
+    const parent = join(tmp.path, "cache5", "github", "o", "r", SHA, "skills");
+    if (existsSync(parent)) {
+      assert.deepEqual(
+        readdirSync(parent).filter((n) => n.includes("partial")),
+        [],
+        "staging directory must be cleaned up"
+      );
+    }
+    // A retry with a working fetcher succeeds from scratch.
+    const good = makeFetcher(githubRoutes());
+    const result = await fetchGitHubSkill(source, SHA, "foo", { fetcher: good.fetcher, env });
+    assert.equal(result.fetched, true);
+    assert.equal(result.skill.files.length, 2);
+  });
+
   it("errors clearly when the path is not a directory", async () => {
     const env = { SKILLFOLD_CACHE: join(tmp.path, "cache4") };
     const { fetcher } = makeFetcher({
@@ -126,6 +152,36 @@ describe("fetchGitHubSkill", () => {
     await assert.rejects(
       fetchGitHubSkill(source, SHA, "foo", { fetcher, env }),
       ResolveError
+    );
+  });
+});
+
+describe("fetchGitHubFile", () => {
+  const fileSource = parseSource("github:o/r/rules/style.md@v1") as GitHubSource;
+  const routes = {
+    [`https://raw.githubusercontent.com/o/r/${SHA}/rules/style.md`]: "rule text",
+  };
+
+  it("downloads and caches a single file", async () => {
+    const env = { SKILLFOLD_CACHE: join(tmp.path, "fcache1") };
+    const first = makeFetcher(routes);
+    const result = await fetchGitHubFile(fileSource, SHA, "style", { fetcher: first.fetcher, env });
+    assert.equal(result.content.toString(), "rule text");
+    assert.equal(result.fetched, true);
+    const second = makeFetcher({});
+    const cached = await fetchGitHubFile(fileSource, SHA, "style", { fetcher: second.fetcher, env });
+    assert.equal(cached.fetched, false);
+    assert.equal(cached.content.toString(), "rule text");
+    assert.equal(second.requests.length, 0);
+  });
+
+  it("rejects sources without a file path", async () => {
+    const env = { SKILLFOLD_CACHE: join(tmp.path, "fcache2") };
+    const bare = parseSource("github:o/r") as GitHubSource;
+    const { fetcher } = makeFetcher(routes);
+    await assert.rejects(
+      fetchGitHubFile(bare, SHA, "style", { fetcher, env }),
+      /point at a file/
     );
   });
 });

@@ -19,6 +19,8 @@ export interface SkillContent {
   description: string;
   /** SKILL.md body with frontmatter stripped. */
   body: string;
+  /** All SKILL.md frontmatter attributes (allowed-tools, license, ...). */
+  attrs: Record<string, unknown>;
   /** All files, sorted by path. Always includes SKILL.md. */
   files: SkillFile[];
 }
@@ -113,7 +115,83 @@ export function readSkillDir(dir: string, skillName: string): SkillContent {
   const name = typeof attrs.name === "string" && attrs.name.trim() ? attrs.name.trim() : skillName;
   const description = typeof attrs.description === "string" ? attrs.description.trim() : "";
 
-  return { name, description, body, files };
+  return { name, description, body, attrs, files };
+}
+
+/**
+ * Parse an `allowed-tools` frontmatter value: either a comma-separated
+ * string (the form Claude Code documents) or a YAML list of strings.
+ * Returns undefined when absent or unparseable.
+ */
+export function parseAllowedTools(attrs: Record<string, unknown>): string[] | undefined {
+  const raw = attrs["allowed-tools"];
+  let tools: string[];
+  if (typeof raw === "string") {
+    tools = raw.split(",").map((t) => t.trim());
+  } else if (Array.isArray(raw) && raw.every((t) => typeof t === "string")) {
+    tools = (raw as string[]).map((t) => t.trim());
+  } else {
+    return undefined;
+  }
+  tools = tools.filter(Boolean);
+  return tools.length > 0 ? tools : undefined;
+}
+
+const FRONTMATTER_RE = /^---(\r?\n)([\s\S]*?)(\r?\n---\r?\n?)/;
+
+/**
+ * Rewrite the frontmatter `name` in a SKILL.md so it matches the directory
+ * the skill installs into (the spec expects them to agree). Only the `name`
+ * line is touched; the rest of the file is preserved byte for byte. Files
+ * without a frontmatter block are left alone.
+ */
+export function normalizeSkillName(files: SkillFile[], name: string): SkillFile[] {
+  const index = files.findIndex((f) => f.path === SKILL_MD);
+  if (index === -1) return files;
+  const text = files[index].content.toString("utf-8");
+  const bom = text.startsWith("\uFEFF") ? "\uFEFF" : "";
+  const stripped = bom ? text.slice(1) : text;
+  const match = FRONTMATTER_RE.exec(stripped);
+  if (!match) return files;
+  // Never rewrite frontmatter we cannot parse: the name line could not be
+  // located reliably in malformed YAML.
+  let attrs: unknown;
+  try {
+    attrs = parseYaml(match[2]);
+  } catch {
+    return files;
+  }
+  if (!attrs || typeof attrs !== "object" || Array.isArray(attrs)) return files;
+  if ((attrs as Record<string, unknown>).name === name) return files;
+  // Replace the top-level name line, or insert one after the opening ---.
+  // Inside valid frontmatter YAML, only a top-level key can sit at column 0.
+  const eol = match[1];
+  const block = match[2];
+  const newBlock = /^name:/m.test(block)
+    ? block.replace(/^name:.*$/m, `name: ${name}`)
+    : `name: ${name}${eol}${block}`;
+  const rest = stripped.slice(match[0].length);
+  const rewritten = `${bom}---${eol}${newBlock}${match[3]}${rest}`;
+  const updated = [...files];
+  updated[index] = { path: SKILL_MD, content: Buffer.from(rewritten, "utf-8") };
+  return updated;
+}
+
+/** Apply normalizeSkillName to a SkillContent, re-deriving its metadata. */
+export function renameSkill(skill: SkillContent, name: string): SkillContent {
+  // Fast path: frontmatter already carries this name (readSkillDir parsed it).
+  if (skill.name === name && skill.attrs.name === name) return skill;
+  const files = normalizeSkillName(skill.files, name);
+  if (files === skill.files && skill.name === name) return skill;
+  const skillMd = files.find((f) => f.path === SKILL_MD)!;
+  const { attrs, body } = parseFrontmatter(skillMd.content.toString("utf-8"));
+  const description = typeof attrs.description === "string" ? attrs.description.trim() : "";
+  return { name, description, body, attrs, files };
+}
+
+/** Content hash of a single file (used for rules): `sha256-<base64>`. */
+export function computeFileIntegrity(content: Buffer): string {
+  return `sha256-${createHash("sha256").update(content).digest("base64")}`;
 }
 
 /**

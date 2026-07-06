@@ -6,7 +6,8 @@ import { LockError } from "./errors.js";
 import { emptyLockfile, type Lockfile } from "./lock.js";
 import { parseManifest } from "./manifest.js";
 import { resolveManifest, resolveSingle } from "./resolve.js";
-import { makeFetcher, makeTmpDir, writeSkill } from "./testutil.js";
+import { parseFrontmatter } from "./skill.js";
+import { makeFetcher, makeTmpDir, writeFile, writeSkill } from "./testutil.js";
 
 const tmp = makeTmpDir();
 after(() => tmp.cleanup());
@@ -210,6 +211,198 @@ describe("lockfile shape", () => {
     await assert.rejects(
       resolveManifest(manifest, { baseDir, lock: emptyLockfile(), fetcher, env }),
       /directory not found/
+    );
+  });
+});
+
+describe("frontmatter name normalization", () => {
+  it("rewrites the frontmatter name to the manifest name", async () => {
+    const { baseDir } = project("norm1");
+    const manifest = parseManifest("skills:\n  renamed: ./skills/local-one", "t.yaml");
+    const { resolved } = await resolveManifest(manifest, { baseDir });
+    const skillMd = resolved[0].skill.files.find((f) => f.path === "SKILL.md")!;
+    const { attrs } = parseFrontmatter(skillMd.content.toString());
+    assert.equal(attrs.name, "renamed");
+    assert.equal(attrs.description, "Test skill local-one.");
+    assert.equal(resolved[0].skill.name, "renamed");
+  });
+
+  it("computes github integrity over the normalized files", async () => {
+    const { baseDir, env } = project("norm2");
+    const manifest = parseManifest(
+      "skills:\n  other-name: github:o/r/skills/remote@v1",
+      "t.yaml"
+    );
+    const { fetcher } = makeFetcher(githubRoutes(SHA));
+    const { resolved } = await resolveManifest(manifest, { baseDir, fetcher, env });
+    const { attrs } = parseFrontmatter(
+      resolved[0].skill.files[0].content.toString()
+    );
+    assert.equal(attrs.name, "other-name");
+    // The lock hash must match the files as installed, i.e. after the rename.
+    const { computeIntegrity } = await import("./skill.js");
+    assert.equal(resolved[0].integrity, computeIntegrity(resolved[0].skill.files));
+  });
+
+  it("resolveSingle keeps the original frontmatter name for `add`", async () => {
+    const { baseDir } = project("norm3");
+    writeFile(
+      baseDir,
+      "skills/dir-name/SKILL.md",
+      "---\nname: pretty-name\ndescription: D.\n---\n\nx\n"
+    );
+    const single = await resolveSingle("./skills/dir-name", baseDir);
+    assert.equal(single.skill.name, "pretty-name");
+  });
+});
+
+describe("composed skills with supporting files", () => {
+  it("carries dependency files into the composed skill", async () => {
+    const { baseDir } = project("files1");
+    writeFile(baseDir, "skills/local-one/references/notes.md", "shared notes");
+    const manifest = parseManifest(
+      [
+        "skills:",
+        "  local-one: ./skills/local-one",
+        "compose:",
+        "  combo:",
+        "    use: [local-one]",
+      ].join("\n"),
+      "t.yaml"
+    );
+    const { resolved } = await resolveManifest(manifest, { baseDir });
+    const combo = resolved.find((r) => r.name === "combo")!;
+    assert.deepEqual(
+      combo.skill.files.map((f) => f.path),
+      ["SKILL.md", "references/notes.md"]
+    );
+  });
+
+  it("unions allowed-tools when every dependency declares them", async () => {
+    const { baseDir } = project("tools1");
+    writeFile(
+      baseDir,
+      "skills/tooled/SKILL.md",
+      "---\nname: tooled\ndescription: T.\nallowed-tools: Read, Grep\n---\n\nx\n"
+    );
+    writeFile(
+      baseDir,
+      "skills/bashy/SKILL.md",
+      "---\nname: bashy\ndescription: B.\nallowed-tools: [Bash, Read]\n---\n\nx\n"
+    );
+    const manifest = parseManifest(
+      [
+        "skills:",
+        "  tooled: ./skills/tooled",
+        "  bashy: ./skills/bashy",
+        "compose:",
+        "  combo:",
+        "    use: [tooled, bashy]",
+      ].join("\n"),
+      "t.yaml"
+    );
+    const { resolved } = await resolveManifest(manifest, { baseDir });
+    const combo = resolved.find((r) => r.name === "combo")!;
+    assert.equal(combo.skill.attrs["allowed-tools"], "Read, Grep, Bash");
+  });
+
+  it("leaves the composed skill unrestricted when any dependency is", async () => {
+    const { baseDir } = project("tools2");
+    writeFile(
+      baseDir,
+      "skills/tooled/SKILL.md",
+      "---\nname: tooled\ndescription: T.\nallowed-tools: Read\n---\n\nx\n"
+    );
+    // local-one has no allowed-tools, i.e. it is unrestricted.
+    const manifest = parseManifest(
+      [
+        "skills:",
+        "  tooled: ./skills/tooled",
+        "  local-one: ./skills/local-one",
+        "compose:",
+        "  combo:",
+        "    use: [tooled, local-one]",
+      ].join("\n"),
+      "t.yaml"
+    );
+    const { resolved } = await resolveManifest(manifest, { baseDir });
+    const combo = resolved.find((r) => r.name === "combo")!;
+    assert.equal(combo.skill.attrs["allowed-tools"], undefined);
+  });
+});
+
+describe("rules resolution", () => {
+  const ruleRoutes = (sha: string) => ({
+    "https://api.github.com/repos/o/r/commits/v1": { sha },
+    [`https://raw.githubusercontent.com/o/r/${sha}/rules/style.md`]: "Remote rule text.\n",
+  });
+
+  it("resolves local and github rules into the lockfile", async () => {
+    const { baseDir, env } = project("rules1");
+    writeFile(baseDir, "rules/local.md", "Local rule.\n");
+    const manifest = parseManifest(
+      [
+        "rules:",
+        "  local: ./rules/local.md",
+        "  style: github:o/r/rules/style.md@v1",
+      ].join("\n"),
+      "t.yaml"
+    );
+    const { fetcher } = makeFetcher(ruleRoutes(SHA));
+    const { rules, lock } = await resolveManifest(manifest, { baseDir, fetcher, env });
+    assert.deepEqual(
+      rules.map((r) => [r.name, r.kind]),
+      [
+        ["local", "local"],
+        ["style", "github"],
+      ]
+    );
+    assert.equal(rules[0].content.toString(), "Local rule.\n");
+    assert.equal(rules[1].content.toString(), "Remote rule text.\n");
+    assert.equal(lock.rules.local.resolved, undefined);
+    assert.equal(lock.rules.style.resolved, `github:o/r/rules/style.md@${SHA}`);
+    assert.match(lock.rules.style.integrity!, /^sha256-/);
+  });
+
+  it("reuses rule pins from the lockfile", async () => {
+    const { baseDir, env } = project("rules2");
+    const manifest = parseManifest("rules:\n  style: github:o/r/rules/style.md@v1", "t.yaml");
+    const first = makeFetcher(ruleRoutes(SHA));
+    const { lock } = await resolveManifest(manifest, { baseDir, fetcher: first.fetcher, env });
+    // Same source with a lockfile pin: no ref resolution, cache hit for content.
+    const second = makeFetcher({});
+    const { rules } = await resolveManifest(manifest, {
+      baseDir,
+      fetcher: second.fetcher,
+      env,
+      lock,
+    });
+    assert.equal(second.requests.length, 0);
+    assert.equal(rules[0].resolved, `github:o/r/rules/style.md@${SHA}`);
+  });
+
+  it("errors clearly for a missing local rule file", async () => {
+    const { baseDir } = project("rules3");
+    const manifest = parseManifest("rules:\n  gone: ./rules/gone.md", "t.yaml");
+    await assert.rejects(resolveManifest(manifest, { baseDir }), /file not found/);
+  });
+
+  it("errors clearly when a local rule source is a directory", async () => {
+    const { baseDir } = project("rules5");
+    const manifest = parseManifest("rules:\n  dir: ./skills/local-one", "t.yaml");
+    await assert.rejects(resolveManifest(manifest, { baseDir }), /not a file/);
+  });
+
+  it("frozen requires pinned rules", async () => {
+    const { baseDir, env } = project("rules4");
+    const manifest = parseManifest("rules:\n  style: github:o/r/rules/style.md@v1", "t.yaml");
+    const { fetcher } = makeFetcher(ruleRoutes(SHA));
+    const lock = emptyLockfile();
+    // Cover the manifest's rule so lockfileProblems passes, but without a pin.
+    lock.rules.style = { source: "github:o/r/rules/style.md@v1" };
+    await assert.rejects(
+      resolveManifest(manifest, { baseDir, fetcher, env, lock, frozen: true }),
+      /not pinned in the lockfile/
     );
   });
 });

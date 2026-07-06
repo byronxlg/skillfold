@@ -1,6 +1,6 @@
 # Skillfold
 
-Declarative skill manager for Claude config. Declare skills in `skillfold.yaml`, pin exact revisions in `skillfold.lock`, install them into `.claude/skills`.
+Declarative skill manager for Claude config. Declare skills and rules in `skillfold.yaml`, pin exact revisions in `skillfold.lock`, install them into `.claude/skills` and `.claude/rules`.
 
 ## GitHub
 
@@ -48,11 +48,12 @@ action.yml             - GitHub Action wrapper for skillfold check
 
 ## Core Concepts
 
-- **Manifest** (`skillfold.yaml`): `skills` (name -> source), `compose` (generated skills concatenating others), optional `skillsDir`.
+- **Manifest** (`skillfold.yaml`): `skills` (name -> source), `compose` (generated skills concatenating others), `rules` (name -> single markdown file, installed as `<rulesDir>/<name>.md`), optional `skillsDir` / `rulesDir`.
 - **Sources**: local paths, `github:owner/repo/path@ref`, `npm:package/skill@version`. Trailing `@ref` after the last `/` pins a version.
 - **Lockfile** (`skillfold.lock`): exact commit SHA / version plus sha256 content hash per remote skill. Local sources are recorded unpinned. Committed to the repo.
 - **Pin reuse**: `install` never moves an existing pin; only `update` (or a changed manifest source string) re-resolves. `--frozen` additionally fails on any manifest/lock drift and verifies content hashes.
-- **Managed directories**: skillfold only overwrites or prunes directories whose names appear in the lockfile. Hand-authored skills are never touched without `--force`.
+- **Managed directories**: skillfold only overwrites or prunes directories (and rule files) whose names appear in the lockfile. Hand-authored files are never touched without `--force`.
+- **Compose fidelity**: composed skills carry the used skills' supporting files and union their `allowed-tools`; installs rewrite the frontmatter `name` to the manifest name.
 - **Cache**: `~/.cache/skillfold` (override with `SKILLFOLD_CACHE`), keyed by commit SHA / exact version, so repeat installs are offline.
 
 ## Code Conventions
