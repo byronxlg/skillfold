@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { resolve as resolvePath } from "node:path";
 
 import {
@@ -7,10 +8,10 @@ import {
 } from "./compose.js";
 import { LockError, ResolveError } from "./errors.js";
 import type { Fetcher } from "./github.js";
-import { fetchGitHubSkill, resolveGitHubRef } from "./github.js";
+import { fetchGitHubFile, fetchGitHubSkill, resolveGitHubRef } from "./github.js";
 import { emptyLockfile, lockfileProblems, type Lockfile } from "./lock.js";
 import type { Manifest } from "./manifest.js";
-import { resolveNpmSkill, type NpmOptions } from "./npm.js";
+import { resolveNpmFile, resolveNpmSkill, type NpmOptions } from "./npm.js";
 import {
   defaultSkillName,
   formatSource,
@@ -18,6 +19,7 @@ import {
   type Source,
 } from "./source.js";
 import {
+  computeFileIntegrity,
   computeIntegrity,
   parseAllowedTools,
   readSkillDir,
@@ -55,8 +57,24 @@ export interface ResolveOptions {
   onProgress?: (message: string) => void;
 }
 
+/** A rule resolved to a single markdown file's contents, ready to install. */
+export interface ResolvedRule {
+  name: string;
+  /** Source string as written in the manifest. */
+  source: string;
+  kind: "local" | "github" | "npm";
+  /** Exact pinned source (commit SHA / exact version). Absent for local. */
+  resolved?: string;
+  /** Content hash. Absent for local sources (they change freely). */
+  integrity?: string;
+  content: Buffer;
+  /** True if bytes came over the network rather than cache/disk. */
+  fetched: boolean;
+}
+
 export interface ResolveResult {
   resolved: ResolvedSkill[];
+  rules: ResolvedRule[];
   lock: Lockfile;
 }
 
@@ -64,12 +82,13 @@ function shouldReusePin(
   name: string,
   sourceString: string,
   lock: Lockfile | null | undefined,
-  update: string[] | "all" | undefined
+  update: string[] | "all" | undefined,
+  section: "skills" | "rules" = "skills"
 ): string | undefined {
   if (update === "all" || (Array.isArray(update) && update.includes(name))) {
     return undefined;
   }
-  const entry = lock?.skills[name];
+  const entry = lock?.[section][name];
   if (entry && entry.source === sourceString && entry.resolved) {
     return entry.resolved;
   }
@@ -179,6 +198,68 @@ async function resolveOne(
   };
 }
 
+async function resolveRule(
+  name: string,
+  sourceString: string,
+  options: ResolveOptions
+): Promise<ResolvedRule> {
+  const source = parseSource(sourceString);
+  const { baseDir, lock, frozen, update, fetcher, env, npmOptions } = options;
+
+  if (source.kind === "local") {
+    const path = resolvePath(baseDir, source.path);
+    let content: Buffer;
+    try {
+      content = readFileSync(path);
+    } catch {
+      throw new ResolveError(name, `file not found: ${source.path}`);
+    }
+    return { name, source: sourceString, kind: "local", content, fetched: false };
+  }
+
+  const lockEntry = lock?.rules[name];
+  if (frozen && (!lockEntry || lockEntry.source !== sourceString || !lockEntry.resolved)) {
+    throw new LockError(
+      `--frozen: rule "${name}" is not pinned in the lockfile. Run "skillfold install" and commit the lockfile.`
+    );
+  }
+  const reused = frozen
+    ? lockEntry!.resolved
+    : shouldReusePin(name, sourceString, lock, update, "rules");
+
+  let resolved: string;
+  let content: Buffer;
+  let fetched: boolean;
+  if (source.kind === "github") {
+    const sha = reused
+      ? pinnedGitHubSha(reused, name)
+      : await resolveGitHubRef(source, name, { fetcher, env });
+    const result = await fetchGitHubFile(source, sha, name, { fetcher, env });
+    resolved = formatSource({ ...source, ref: sha });
+    content = result.content;
+    fetched = result.fetched;
+  } else {
+    const pinnedVersion = reused ? pinnedNpmVersion(reused, name) : undefined;
+    const result = await resolveNpmFile(source, name, options.baseDir, pinnedVersion, {
+      fetcher,
+      env,
+      ...npmOptions,
+    });
+    resolved = formatSource({ ...source, version: result.version });
+    content = result.content;
+    fetched = result.fetched;
+  }
+
+  const integrity = computeFileIntegrity(content);
+  if (frozen && lockEntry?.integrity && integrity !== lockEntry.integrity) {
+    throw new LockError(
+      `--frozen: rule "${name}" content hash does not match the lockfile ` +
+        `(expected ${lockEntry.integrity}, got ${integrity})`
+    );
+  }
+  return { name, source: sourceString, kind: source.kind, resolved, integrity, content, fetched };
+}
+
 /**
  * Resolve every skill in the manifest to concrete files, honoring the
  * lockfile, and generate composed skills. Returns the resolved set plus the
@@ -251,6 +332,12 @@ export async function resolveManifest(
     byName.set(name, one);
   }
 
+  const rules: ResolvedRule[] = [];
+  for (const [name, sourceString] of Object.entries(manifest.rules)) {
+    options.onProgress?.(`resolving rule ${name} (${sourceString})`);
+    rules.push(await resolveRule(name, sourceString, options));
+  }
+
   const lock: Lockfile = emptyLockfile();
   for (const one of resolved) {
     if (one.kind === "compose") {
@@ -266,8 +353,15 @@ export async function resolveManifest(
       };
     }
   }
+  for (const rule of rules) {
+    lock.rules[rule.name] = {
+      source: rule.source,
+      resolved: rule.resolved,
+      integrity: rule.integrity,
+    };
+  }
 
-  return { resolved, lock };
+  return { resolved, rules, lock };
 }
 
 /**

@@ -178,6 +178,11 @@ export function renameSkill(skill: SkillContent, name: string): SkillContent {
   return { name, description, body, attrs, files };
 }
 
+/** Content hash of a single file (used for rules): `sha256-<base64>`. */
+export function computeFileIntegrity(content: Buffer): string {
+  return `sha256-${createHash("sha256").update(content).digest("base64")}`;
+}
+
 /**
  * Content hash over a skill's files: for each file (sorted by path), hash
  * `path NUL sha256(content) LF`, then digest the whole list.

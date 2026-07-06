@@ -6,10 +6,11 @@ import { pathToFileURL } from "node:url";
 
 import { SkillfoldError } from "./errors.js";
 import { initProject } from "./init.js";
-import { checkProject, syncSkillsDir, type SyncResult } from "./install.js";
+import { checkProject, syncRulesDir, syncSkillsDir, type SyncResult } from "./install.js";
 import { LOCK_FILENAME, readLockfile, writeLockfile, type Lockfile } from "./lock.js";
 import {
   addSkillToManifest,
+  DEFAULT_RULES_DIR,
   DEFAULT_SKILLS_DIR,
   loadManifest,
   MANIFEST_FILENAME,
@@ -18,14 +19,19 @@ import {
   type Manifest,
 } from "./manifest.js";
 import { renderRows, skillRows } from "./list.js";
-import { resolveManifest, resolveSingle, type ResolvedSkill } from "./resolve.js";
+import {
+  resolveManifest,
+  resolveSingle,
+  type ResolvedRule,
+  type ResolvedSkill,
+} from "./resolve.js";
 import { renderSearchHits, searchSkills } from "./search.js";
 import { defaultSkillName, parseSource } from "./source.js";
 
 const HELP = `skillfold - declarative skill manager for Claude config
 
-Declare skills in ${MANIFEST_FILENAME}, pin them in ${LOCK_FILENAME},
-install them into .claude/skills.
+Declare skills (and rules) in ${MANIFEST_FILENAME}, pin them in ${LOCK_FILENAME},
+install them into .claude/skills and .claude/rules.
 
 Usage
   skillfold <command> [options]
@@ -152,6 +158,11 @@ function skillsDirFor(paths: Paths, manifest: Manifest): string {
   return resolvePath(paths.root, dir);
 }
 
+function rulesDirFor(paths: Paths, manifest: Manifest): string {
+  const dir = manifest.rulesDir ?? (paths.global ? "rules" : DEFAULT_RULES_DIR);
+  return resolvePath(paths.root, dir);
+}
+
 function version(): string {
   const pkg = JSON.parse(
     readFileSync(new URL("../package.json", import.meta.url), "utf-8")
@@ -159,7 +170,7 @@ function version(): string {
   return pkg.version;
 }
 
-function describePin(skill: ResolvedSkill): string {
+function describePin(skill: ResolvedSkill | ResolvedRule): string {
   if (skill.kind === "compose") return "";
   if (!skill.resolved) return "";
   const source = parseSource(skill.resolved);
@@ -172,7 +183,10 @@ function printSync(
   resolved: ResolvedSkill[],
   sync: SyncResult,
   skillsDir: string,
-  root: string
+  root: string,
+  rules: ResolvedRule[] = [],
+  rulesSync: SyncResult | null = null,
+  rulesDir?: string
 ): void {
   const unchanged = new Set(sync.unchanged);
   for (const skill of resolved) {
@@ -184,10 +198,24 @@ function printSync(
   for (const name of sync.pruned) {
     console.log(`  - ${name.padEnd(24)} removed`);
   }
-  const rel = relative(root, skillsDir) || ".";
-  const parts = [`${sync.installed.length} installed`, `${sync.unchanged.length} unchanged`];
-  if (sync.pruned.length > 0) parts.push(`${sync.pruned.length} removed`);
-  console.log(`\n${parts.join(", ")} -> ${rel}`);
+  const rulesUnchanged = new Set(rulesSync?.unchanged ?? []);
+  for (const rule of rules) {
+    const marker = rulesUnchanged.has(rule.name) ? "=" : "+";
+    console.log(`  ${marker} ${`${rule.name} (rule)`.padEnd(24)} ${rule.source}${describePin(rule)}`);
+  }
+  for (const name of rulesSync?.pruned ?? []) {
+    console.log(`  - ${`${name} (rule)`.padEnd(24)} removed`);
+  }
+  const installed = sync.installed.length + (rulesSync?.installed.length ?? 0);
+  const same = sync.unchanged.length + (rulesSync?.unchanged.length ?? 0);
+  const pruned = sync.pruned.length + (rulesSync?.pruned.length ?? 0);
+  const dirs = [relative(root, skillsDir) || "."];
+  if (rulesSync && rulesDir && (rules.length > 0 || (rulesSync.pruned.length > 0))) {
+    dirs.push(relative(root, rulesDir) || ".");
+  }
+  const parts = [`${installed} installed`, `${same} unchanged`];
+  if (pruned > 0) parts.push(`${pruned} removed`);
+  console.log(`\n${parts.join(", ")} -> ${dirs.join(", ")}`);
 }
 
 interface InstallRunOptions {
@@ -199,7 +227,7 @@ interface InstallRunOptions {
 async function runInstall(paths: Paths, options: InstallRunOptions = {}): Promise<void> {
   const manifest = loadManifest(paths.manifestPath);
   const lock = readLockfile(paths.lockPath);
-  const { resolved, lock: newLock } = await resolveManifest(manifest, {
+  const { resolved, rules, lock: newLock } = await resolveManifest(manifest, {
     baseDir: paths.root,
     lock,
     frozen: options.frozen,
@@ -212,7 +240,14 @@ async function runInstall(paths: Paths, options: InstallRunOptions = {}): Promis
     previousLock: lock,
     force: options.force,
   });
-  printSync(resolved, sync, skillsDir, paths.root);
+  const rulesDir = rulesDirFor(paths, manifest);
+  const rulesSync = syncRulesDir({
+    rulesDir,
+    rules,
+    previousLock: lock,
+    force: options.force,
+  });
+  printSync(resolved, sync, skillsDir, paths.root, rules, rulesSync, rulesDir);
   if (!options.frozen) {
     writeLockfile(paths.lockPath, newLock);
     console.log(`lockfile: ${relative(paths.root, paths.lockPath) || LOCK_FILENAME}`);
@@ -269,15 +304,20 @@ function cmdCheck(paths: Paths): void {
   const manifest = loadManifest(paths.manifestPath);
   const lock = readLockfile(paths.lockPath);
   const skillsDir = skillsDirFor(paths, manifest);
-  const problems = checkProject(manifest, lock, paths.root, skillsDir);
+  const rulesDir = rulesDirFor(paths, manifest);
+  const problems = checkProject(manifest, lock, paths.root, skillsDir, rulesDir);
   if (problems.length > 0) {
     console.error("skillfold check failed:");
     for (const problem of problems) console.error(`  - ${problem}`);
     process.exitCode = 1;
     return;
   }
-  const count = Object.keys(manifest.skills).length + Object.keys(manifest.compose).length;
-  console.log(`ok: ${count} skill${count === 1 ? "" : "s"} in sync`);
+  const skillCount =
+    Object.keys(manifest.skills).length + Object.keys(manifest.compose).length;
+  const ruleCount = Object.keys(manifest.rules).length;
+  const counts = [`${skillCount} skill${skillCount === 1 ? "" : "s"}`];
+  if (ruleCount > 0) counts.push(`${ruleCount} rule${ruleCount === 1 ? "" : "s"}`);
+  console.log(`ok: ${counts.join(", ")} in sync`);
 }
 
 function cmdList(paths: Paths): void {
@@ -289,7 +329,8 @@ function cmdList(paths: Paths): void {
     // A broken lockfile should not stop listing; statuses degrade to "not locked".
   }
   const skillsDir = skillsDirFor(paths, manifest);
-  console.log(renderRows(skillRows(manifest, lock, paths.root, skillsDir)));
+  const rulesDir = rulesDirFor(paths, manifest);
+  console.log(renderRows(skillRows(manifest, lock, paths.root, skillsDir, rulesDir)));
 }
 
 function cmdInfo(paths: Paths, args: string[]): void {
@@ -300,21 +341,22 @@ function cmdInfo(paths: Paths, args: string[]): void {
   const manifest = loadManifest(paths.manifestPath);
   const lock = readLockfile(paths.lockPath);
   const skillsDir = skillsDirFor(paths, manifest);
-  const rows = skillRows(manifest, lock, paths.root, skillsDir).filter(
+  const rulesDir = rulesDirFor(paths, manifest);
+  const rows = skillRows(manifest, lock, paths.root, skillsDir, rulesDir).filter(
     (row) => row.name === name
   );
   if (rows.length === 0) {
     throw new SkillfoldError(`"${name}" is not in the manifest`);
   }
   const row = rows[0];
-  const lockEntry = lock?.skills[name];
+  const lockEntry = row.kind === "rule" ? lock?.rules[name] : lock?.skills[name];
   const lines = [
     `name:      ${row.name}`,
     `source:    ${row.source}`,
     ...(lockEntry?.resolved ? [`resolved:  ${lockEntry.resolved}`] : []),
     ...(lockEntry?.integrity ? [`integrity: ${lockEntry.integrity}`] : []),
     `status:    ${row.status}`,
-    `installed: ${join(skillsDir, name)}`,
+    `installed: ${row.kind === "rule" ? join(rulesDir, `${name}.md`) : join(skillsDir, name)}`,
   ];
   console.log(lines.join("\n"));
 }

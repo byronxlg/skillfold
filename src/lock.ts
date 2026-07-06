@@ -20,6 +20,11 @@ import type { Manifest } from "./manifest.js";
  *     release-manager:
  *       use: [code-review, commit-helper]
  *       integrity: sha256-...
+ *   rules:
+ *     code-style:
+ *       source: github:owner/repo/rules/code-style.md@v1.2.0
+ *       resolved: github:owner/repo/rules/code-style.md@<full commit sha>
+ *       integrity: sha256-...
  *
  * Local sources are recorded without pins (they are expected to change);
  * remote sources carry the exact revision and a content hash so installs
@@ -47,10 +52,12 @@ export interface Lockfile {
   lockfileVersion: 1;
   skills: Record<string, LockSkillEntry>;
   compose: Record<string, LockComposeEntry>;
+  /** Rule entries share the skill entry shape. */
+  rules: Record<string, LockSkillEntry>;
 }
 
 export function emptyLockfile(): Lockfile {
-  return { lockfileVersion: 1, skills: {}, compose: {} };
+  return { lockfileVersion: 1, skills: {}, compose: {}, rules: {} };
 }
 
 export function readLockfile(lockPath: string): Lockfile | null {
@@ -73,19 +80,21 @@ export function readLockfile(lockPath: string): Lockfile | null {
     );
   }
   const lock = emptyLockfile();
-  if (top.skills && typeof top.skills === "object" && !Array.isArray(top.skills)) {
-    for (const [name, value] of Object.entries(top.skills as Record<string, unknown>)) {
+  for (const section of ["skills", "rules"] as const) {
+    const raw = top[section];
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) continue;
+    for (const [name, value] of Object.entries(raw as Record<string, unknown>)) {
       if (!value || typeof value !== "object" || Array.isArray(value)) {
-        throw new LockError(`${lockPath}: skills.${name} must be a mapping`);
+        throw new LockError(`${lockPath}: ${section}.${name} must be a mapping`);
       }
       const entry = value as Record<string, unknown>;
       if (typeof entry.source !== "string") {
-        throw new LockError(`${lockPath}: skills.${name} is missing "source"`);
+        throw new LockError(`${lockPath}: ${section}.${name} is missing "source"`);
       }
       const skillEntry: LockSkillEntry = { source: entry.source };
       if (typeof entry.resolved === "string") skillEntry.resolved = entry.resolved;
       if (typeof entry.integrity === "string") skillEntry.integrity = entry.integrity;
-      lock.skills[name] = skillEntry;
+      lock[section][name] = skillEntry;
     }
   }
   if (top.compose && typeof top.compose === "object" && !Array.isArray(top.compose)) {
@@ -118,6 +127,8 @@ export function serializeLockfile(lock: Lockfile): string {
       lockfileVersion: lock.lockfileVersion,
       skills: sortedRecord(lock.skills),
       compose: sortedRecord(lock.compose),
+      // Omitted when empty so pre-rules lockfiles do not churn.
+      ...(Object.keys(lock.rules).length > 0 ? { rules: sortedRecord(lock.rules) } : {}),
     },
     { lineWidth: 0 }
   );
@@ -161,6 +172,21 @@ export function lockfileProblems(manifest: Manifest, lock: Lockfile | null): str
   for (const name of Object.keys(lock.compose)) {
     if (!manifest.compose[name]) {
       problems.push(`composed skill "${name}" is in the lockfile but not the manifest`);
+    }
+  }
+  for (const [name, source] of Object.entries(manifest.rules)) {
+    const entry = lock.rules[name];
+    if (!entry) {
+      problems.push(`rule "${name}" is in the manifest but not the lockfile`);
+    } else if (entry.source !== source) {
+      problems.push(
+        `rule "${name}" changed source (manifest: ${source}, lockfile: ${entry.source})`
+      );
+    }
+  }
+  for (const name of Object.keys(lock.rules)) {
+    if (!manifest.rules[name]) {
+      problems.push(`rule "${name}" is in the lockfile but not the manifest`);
     }
   }
   return problems;

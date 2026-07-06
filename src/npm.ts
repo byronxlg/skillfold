@@ -84,6 +84,80 @@ function skillDirInPackage(
   );
 }
 
+/** Resolve the directory of a package at the requested version, downloading if needed. */
+async function resolvePackageDir(
+  source: NpmSource,
+  name: string,
+  baseDir: string,
+  pinnedVersion: string | undefined,
+  options: NpmOptions
+): Promise<{ pkgDir: string; version: string; fetched: boolean }> {
+  const env = options.env ?? process.env;
+
+  // 1. The locally installed package, when it satisfies the request.
+  const installedDir = findInstalledPackage(source.pkg, baseDir);
+  if (installedDir) {
+    const installedVersion = readPackageJson(installedDir)?.version;
+    const wanted = pinnedVersion ?? source.version;
+    if (installedVersion && (!wanted || wanted === installedVersion)) {
+      return { pkgDir: installedDir, version: installedVersion, fetched: false };
+    }
+  }
+
+  // 2. The shared cache / registry, at an exact version.
+  const version =
+    pinnedVersion ??
+    (source.version && /^\d/.test(source.version)
+      ? source.version
+      : await resolveNpmVersion(source, name, options));
+
+  const cacheDir = npmCacheDir(source.pkg, version, env);
+  let fetched = false;
+  if (!existsSync(join(cacheDir, "package.json"))) {
+    const download = options.packDownloader ?? npmPackDownload;
+    try {
+      download(`${source.pkg}@${version}`, cacheDir);
+    } catch (err) {
+      rmSync(cacheDir, { recursive: true, force: true });
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new ResolveError(name, `failed to download ${source.pkg}@${version}: ${msg}`);
+    }
+    fetched = true;
+  }
+  return { pkgDir: cacheDir, version, fetched };
+}
+
+export interface NpmFileResult {
+  version: string;
+  content: Buffer;
+  fetched: boolean;
+}
+
+/** Resolve an npm rule source to a single file's contents (subpath is a literal file path). */
+export async function resolveNpmFile(
+  source: NpmSource,
+  ruleName: string,
+  baseDir: string,
+  pinnedVersion?: string,
+  options: NpmOptions = {}
+): Promise<NpmFileResult> {
+  if (!source.subpath) {
+    throw new ResolveError(ruleName, "rule sources must point at a file inside the package");
+  }
+  const { pkgDir, version, fetched } = await resolvePackageDir(
+    source,
+    ruleName,
+    baseDir,
+    pinnedVersion,
+    options
+  );
+  const file = join(pkgDir, ...source.subpath.split("/"));
+  if (!existsSync(file)) {
+    throw new ResolveError(ruleName, `"${source.subpath}" not found in package ${source.pkg}`);
+  }
+  return { version, content: readFileSync(file), fetched };
+}
+
 /** Resolve a version or dist-tag to an exact version via the registry. */
 export async function resolveNpmVersion(
   source: NpmSource,
@@ -165,41 +239,13 @@ export async function resolveNpmSkill(
   pinnedVersion?: string,
   options: NpmOptions = {}
 ): Promise<NpmResolveResult> {
-  const env = options.env ?? process.env;
-
-  // 1. The locally installed package, when it satisfies the request.
-  const installedDir = findInstalledPackage(source.pkg, baseDir);
-  if (installedDir) {
-    const pkgJson = readPackageJson(installedDir);
-    const installedVersion = pkgJson?.version;
-    const wanted = pinnedVersion ?? source.version;
-    if (installedVersion && (!wanted || wanted === installedVersion)) {
-      const dir = skillDirInPackage(installedDir, pkgJson, source, skillName);
-      return { version: installedVersion, skill: readSkillDir(dir, skillName), fetched: false };
-    }
-  }
-
-  // 2. The shared cache / registry, at an exact version.
-  const version =
-    pinnedVersion ??
-    (source.version && /^\d/.test(source.version)
-      ? source.version
-      : await resolveNpmVersion(source, skillName, options));
-
-  const cacheDir = npmCacheDir(source.pkg, version, env);
-  let fetched = false;
-  if (!existsSync(join(cacheDir, "package.json"))) {
-    const download = options.packDownloader ?? npmPackDownload;
-    try {
-      download(`${source.pkg}@${version}`, cacheDir);
-    } catch (err) {
-      rmSync(cacheDir, { recursive: true, force: true });
-      const msg = err instanceof Error ? err.message : String(err);
-      throw new ResolveError(skillName, `failed to download ${source.pkg}@${version}: ${msg}`);
-    }
-    fetched = true;
-  }
-  const pkgJson = readPackageJson(cacheDir);
-  const dir = skillDirInPackage(cacheDir, pkgJson, source, skillName);
+  const { pkgDir, version, fetched } = await resolvePackageDir(
+    source,
+    skillName,
+    baseDir,
+    pinnedVersion,
+    options
+  );
+  const dir = skillDirInPackage(pkgDir, readPackageJson(pkgDir), source, skillName);
   return { version, skill: readSkillDir(dir, skillName), fetched };
 }

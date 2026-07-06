@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve as resolvePath } from "node:path";
 
 import {
@@ -10,8 +10,9 @@ import { InstallError } from "./errors.js";
 import { lockfileProblems, type Lockfile } from "./lock.js";
 import type { Manifest } from "./manifest.js";
 import { parseSource } from "./source.js";
-import type { ResolvedSkill } from "./resolve.js";
+import type { ResolvedRule, ResolvedSkill } from "./resolve.js";
 import {
+  computeFileIntegrity,
   computeIntegrity,
   normalizeSkillName,
   parseAllowedTools,
@@ -95,6 +96,62 @@ export function syncSkillsDir(options: SyncOptions): SyncResult {
   return result;
 }
 
+export interface SyncRulesOptions {
+  /** Absolute path to the rules directory. */
+  rulesDir: string;
+  rules: ResolvedRule[];
+  previousLock: Lockfile | null;
+  /** Overwrite files skillfold does not manage. */
+  force?: boolean;
+}
+
+/** Rule file path inside the rules directory. */
+function ruleFile(rulesDir: string, name: string): string {
+  return join(rulesDir, `${name}.md`);
+}
+
+/**
+ * Materialize resolved rules as `<rulesDir>/<name>.md` and prune rules that
+ * left the manifest, with the same managed-vs-hand-authored semantics as
+ * syncSkillsDir. The rules directory is only created when rules exist.
+ */
+export function syncRulesDir(options: SyncRulesOptions): SyncResult {
+  const { rulesDir, rules, previousLock, force } = options;
+  const managed = new Set<string>(Object.keys(previousLock?.rules ?? {}));
+  const result: SyncResult = { installed: [], unchanged: [], pruned: [] };
+  const currentNames = new Set(rules.map((rule) => rule.name));
+
+  for (const rule of rules) {
+    const target = ruleFile(rulesDir, rule.name);
+    if (existsSync(target)) {
+      if (readFileSync(target).equals(rule.content)) {
+        result.unchanged.push(rule.name);
+        continue;
+      }
+      if (!managed.has(rule.name) && !force) {
+        throw new InstallError(
+          `${target} already exists and was not installed by skillfold. ` +
+            `Move it aside, pick another name, or rerun with --force to overwrite it.`
+        );
+      }
+    }
+    mkdirSync(rulesDir, { recursive: true });
+    writeFileSync(target, rule.content);
+    result.installed.push(rule.name);
+  }
+
+  for (const name of managed) {
+    if (currentNames.has(name)) continue;
+    const target = ruleFile(rulesDir, name);
+    if (existsSync(target)) {
+      rmSync(target, { force: true });
+      result.pruned.push(name);
+    }
+  }
+
+  return result;
+}
+
 /**
  * Offline verification that manifest, lockfile, and installed skills agree.
  * Returns human-readable problems; empty means everything is in sync.
@@ -110,7 +167,8 @@ export function checkProject(
   manifest: Manifest,
   lock: Lockfile | null,
   baseDir: string,
-  skillsDir: string
+  skillsDir: string,
+  rulesDir?: string
 ): string[] {
   const problems = lockfileProblems(manifest, lock);
   if (!lock) return problems;
@@ -157,6 +215,33 @@ export function checkProject(
         allowedTools: parseAllowedTools(attrs),
         files: installedFiles.filter((f) => f.path !== "SKILL.md"),
       });
+    }
+  }
+
+  for (const [name, sourceString] of Object.entries(manifest.rules)) {
+    const target = ruleFile(rulesDir ?? join(baseDir, ".claude", "rules"), name);
+    if (!existsSync(target)) {
+      problems.push(`rule "${name}" is not installed (run "skillfold install")`);
+      continue;
+    }
+    const installed = readFileSync(target);
+    const source = parseSource(sourceString);
+    if (source.kind === "local") {
+      const sourcePath = resolvePath(baseDir, source.path);
+      if (!existsSync(sourcePath)) {
+        problems.push(`rule "${name}" source file is missing: ${source.path}`);
+      } else if (!readFileSync(sourcePath).equals(installed)) {
+        problems.push(
+          `rule "${name}" is out of date with ${source.path} (run "skillfold install")`
+        );
+      }
+    } else {
+      const entry = lock.rules[name];
+      if (entry?.integrity && entry.integrity !== computeFileIntegrity(installed)) {
+        problems.push(
+          `rule "${name}" installed file does not match the lockfile (run "skillfold install")`
+        );
+      }
     }
   }
 

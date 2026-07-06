@@ -243,3 +243,42 @@ describe("compose allowed-tools key", () => {
     );
   });
 });
+
+describe("rules section", () => {
+  it("parses rules and rulesDir", () => {
+    const manifest = parseManifest(
+      [
+        "rules:",
+        "  code-style: ./rules/code-style.md",
+        "  security: github:o/r/rules/security.md@v1",
+        "rulesDir: .claude/rules",
+      ].join("\n"),
+      "t.yaml"
+    );
+    assert.deepEqual(manifest.rules, {
+      "code-style": "./rules/code-style.md",
+      security: "github:o/r/rules/security.md@v1",
+    });
+    assert.equal(manifest.rulesDir, ".claude/rules");
+  });
+
+  it("defaults to no rules", () => {
+    const manifest = parseManifest("skills:\n  a: ./skills/a", "t.yaml");
+    assert.deepEqual(manifest.rules, {});
+    assert.equal(manifest.rulesDir, undefined);
+  });
+
+  it("rejects non-string rule sources", () => {
+    assert.throws(
+      () => parseManifest("rules:\n  bad: { source: x }", "t.yaml"),
+      /rules.bad: expected a source string/
+    );
+  });
+
+  it("validates rule names", () => {
+    assert.throws(
+      () => parseManifest("rules:\n  Bad_Name: ./x.md", "t.yaml"),
+      /Invalid skill name/
+    );
+  });
+});

@@ -1,5 +1,5 @@
 import { Buffer } from "node:buffer";
-import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 import { githubCacheDir } from "./cache.js";
@@ -135,6 +135,45 @@ async function downloadFile(
     throw new ResolveError(skillName, `download failed (${response.status}) for ${url}`);
   }
   return Buffer.from(await response.arrayBuffer());
+}
+
+export interface GitHubFileResult {
+  /** Full commit SHA the file was fetched at. */
+  sha: string;
+  content: Buffer;
+  fetched: boolean;
+}
+
+/**
+ * Fetch a single file from GitHub at an exact commit SHA, using the shared
+ * cache (rules are single markdown files, not directories).
+ */
+export async function fetchGitHubFile(
+  source: GitHubSource,
+  sha: string,
+  ruleName: string,
+  options: GitHubOptions = {}
+): Promise<GitHubFileResult> {
+  const fetcher = options.fetcher ?? fetch;
+  const env = options.env ?? process.env;
+  if (!source.path) {
+    throw new ResolveError(ruleName, "rule sources must point at a file inside the repo");
+  }
+  const cacheFile = githubCacheDir(source.owner, source.repo, sha, source.path, env);
+  if (existsSync(cacheFile)) {
+    return { sha, content: readFileSync(cacheFile), fetched: false };
+  }
+  const rawUrl = `https://raw.githubusercontent.com/${source.owner}/${source.repo}/${sha}/${source.path}`;
+  const content = await downloadFile(rawUrl, ruleName, fetcher, env);
+  const staging = `${cacheFile}.partial-${process.pid}`;
+  mkdirSync(dirname(cacheFile), { recursive: true });
+  try {
+    writeFileSync(staging, content);
+    renameSync(staging, cacheFile);
+  } finally {
+    rmSync(staging, { force: true });
+  }
+  return { sha, content, fetched: true };
 }
 
 /**
