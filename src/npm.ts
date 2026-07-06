@@ -1,5 +1,13 @@
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  statSync,
+} from "node:fs";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -154,6 +162,12 @@ export async function resolveNpmFile(
   const file = join(pkgDir, ...source.subpath.split("/"));
   if (!existsSync(file)) {
     throw new ResolveError(ruleName, `"${source.subpath}" not found in package ${source.pkg}`);
+  }
+  if (!statSync(file).isFile()) {
+    throw new ResolveError(
+      ruleName,
+      `"${source.subpath}" in package ${source.pkg} is not a file (rules are single files)`
+    );
   }
   return { version, content: readFileSync(file), fetched };
 }

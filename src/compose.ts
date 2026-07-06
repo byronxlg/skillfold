@@ -43,21 +43,26 @@ export function defaultComposeDescription(use: string[]): string {
 
 /**
  * allowed-tools of a composed skill: the entry's own list when set,
- * otherwise the union of the inputs' lists in first-appearance order.
- * Undefined when neither yields any tools (the frontmatter line is omitted).
+ * otherwise the union of the inputs' lists in first-appearance order -
+ * but only when every input declares one. A skill without allowed-tools
+ * is unrestricted, so any unrestricted input makes the composed skill
+ * unrestricted too (the frontmatter line is omitted).
  */
 export function composeAllowedTools(
   entry: ComposeEntry,
   inputs: ComposeInput[]
 ): string[] | undefined {
   if (entry.allowedTools) return entry.allowedTools;
+  if (inputs.length === 0 || inputs.some((input) => !input.allowedTools)) {
+    return undefined;
+  }
   const union: string[] = [];
   for (const input of inputs) {
     for (const tool of input.allowedTools ?? []) {
       if (!union.includes(tool)) union.push(tool);
     }
   }
-  return union.length > 0 ? union : undefined;
+  return union;
 }
 
 /**

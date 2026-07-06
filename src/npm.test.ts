@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import { join } from "node:path";
 import { after, describe, it } from "node:test";
 
-import { findInstalledPackage, resolveNpmSkill, resolveNpmVersion } from "./npm.js";
+import {
+  findInstalledPackage,
+  resolveNpmFile,
+  resolveNpmSkill,
+  resolveNpmVersion,
+} from "./npm.js";
 import { parseSource, type NpmSource } from "./source.js";
 import { makeFetcher, makeTmpDir, writeFile, writeSkill } from "./testutil.js";
 
@@ -177,5 +182,28 @@ describe("resolveNpmVersion", () => {
     const source = parseSource("npm:@scope/pkg/x") as NpmSource;
     await resolveNpmVersion(source, "x", { fetcher });
     assert.match(requests[0], /@scope%2fpkg/);
+  });
+});
+
+describe("resolveNpmFile", () => {
+  it("reads a rule file from an installed package", async () => {
+    installFakePackage(tmp.path, "rule-pkg", "1.0.0");
+    writeFile(tmp.path, "node_modules/rule-pkg/rules/style.md", "npm rule\n");
+    const source = parseSource("npm:rule-pkg/rules/style.md") as NpmSource;
+    const result = await resolveNpmFile(source, "style", tmp.path);
+    assert.equal(result.content.toString(), "npm rule\n");
+    assert.equal(result.version, "1.0.0");
+    assert.equal(result.fetched, false);
+  });
+
+  it("rejects sources without a file subpath", async () => {
+    const source = parseSource("npm:rule-pkg") as NpmSource;
+    await assert.rejects(resolveNpmFile(source, "style", tmp.path), /point at a file/);
+  });
+
+  it("rejects a subpath that is a directory", async () => {
+    installFakePackage(tmp.path, "dir-pkg", "1.0.0");
+    const source = parseSource("npm:dir-pkg/skills/planning") as NpmSource;
+    await assert.rejects(resolveNpmFile(source, "style", tmp.path), /not a file/);
   });
 });

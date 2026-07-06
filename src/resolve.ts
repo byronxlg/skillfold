@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { resolve as resolvePath } from "node:path";
 
 import {
@@ -208,13 +208,22 @@ async function resolveRule(
 
   if (source.kind === "local") {
     const path = resolvePath(baseDir, source.path);
-    let content: Buffer;
+    let stat;
     try {
-      content = readFileSync(path);
+      stat = statSync(path);
     } catch {
       throw new ResolveError(name, `file not found: ${source.path}`);
     }
-    return { name, source: sourceString, kind: "local", content, fetched: false };
+    if (!stat.isFile()) {
+      throw new ResolveError(name, `not a file: ${source.path} (rules are single files)`);
+    }
+    return {
+      name,
+      source: sourceString,
+      kind: "local",
+      content: readFileSync(path),
+      fetched: false,
+    };
   }
 
   const lockEntry = lock?.rules[name];

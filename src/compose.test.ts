@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
-
 import { Buffer } from "node:buffer";
+import { describe, it } from "node:test";
 
 import {
   composeAllowedTools,
@@ -159,6 +158,13 @@ describe("compose allowed-tools", () => {
     assert.deepEqual(
       composeAllowedTools({ use: ["a"], allowedTools: ["Write"] }, [input("a", ["Read"])]),
       ["Write"]
+    );
+  });
+
+  it("omits the union when any input is unrestricted", () => {
+    assert.equal(
+      composeAllowedTools({ use: ["a", "b"] }, [input("a", ["Read"]), input("b", undefined)]),
+      undefined
     );
   });
 

@@ -90,7 +90,7 @@ compose:
     use: [code-review, testing]
 ```
 
-`reviewer` is generated at install time and regenerated whenever its inputs change. Composed skills can use other composed skills; cycles are rejected at parse time. Supporting files (`references/`, `scripts/`, ...) of the used skills are carried into the composed skill, and its `allowed-tools` defaults to the union of the used skills' (override with `allowed-tools:` on the entry).
+`reviewer` is generated at install time and regenerated whenever its inputs change. Composed skills can use other composed skills; cycles are rejected at parse time. Supporting files (`references/`, `scripts/`, ...) of the used skills are carried into the composed skill, and its `allowed-tools` defaults to the union of the used skills' when all of them declare one (override with `allowed-tools:` on the entry).
 
 ## Rules
 

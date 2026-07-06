@@ -72,7 +72,7 @@
             "uniqueItems": true
           },
           "allowed-tools": {
-            "description": "allowed-tools frontmatter of the generated skill: a comma-separated string or a list of tool names. Default: the union of the used skills' allowed-tools.",
+            "description": "allowed-tools frontmatter of the generated skill: a comma-separated string or a list of tool names. Default: the union of the used skills' allowed-tools when every one declares a list; omitted (unrestricted) otherwise.",
             "oneOf": [
               {
                 "type": "string",

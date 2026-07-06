@@ -8,7 +8,7 @@ import {
 } from "./compose.js";
 import { InstallError } from "./errors.js";
 import { lockfileProblems, type Lockfile } from "./lock.js";
-import type { Manifest } from "./manifest.js";
+import { DEFAULT_RULES_DIR, type Manifest } from "./manifest.js";
 import { parseSource } from "./source.js";
 import type { ResolvedRule, ResolvedSkill } from "./resolve.js";
 import {
@@ -106,7 +106,7 @@ export interface SyncRulesOptions {
 }
 
 /** Rule file path inside the rules directory. */
-function ruleFile(rulesDir: string, name: string): string {
+export function ruleFile(rulesDir: string, name: string): string {
   return join(rulesDir, `${name}.md`);
 }
 
@@ -218,8 +218,10 @@ export function checkProject(
     }
   }
 
+  const effectiveRulesDir =
+    rulesDir ?? resolvePath(baseDir, manifest.rulesDir ?? DEFAULT_RULES_DIR);
   for (const [name, sourceString] of Object.entries(manifest.rules)) {
-    const target = ruleFile(rulesDir ?? join(baseDir, ".claude", "rules"), name);
+    const target = ruleFile(effectiveRulesDir, name);
     if (!existsSync(target)) {
       problems.push(`rule "${name}" is not installed (run "skillfold install")`);
       continue;

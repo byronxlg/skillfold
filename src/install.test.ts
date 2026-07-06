@@ -312,6 +312,16 @@ describe("checkProject rules", () => {
     assert.deepEqual(checkProject(manifest, lock, baseDir, skillsDir, rulesDir), []);
   });
 
+  it("derives the rules dir from the manifest when the argument is omitted", async () => {
+    const text = "rules:\n  style: ./rules/style.md\nrulesDir: custom/rules";
+    const { baseDir, skillsDir } = project(text);
+    writeFile(baseDir, "rules/style.md", "Rule body.\n");
+    const manifest = parseManifest(text, "t.yaml");
+    const { rules, lock } = await resolveManifest(manifest, { baseDir });
+    syncRulesDir({ rulesDir: join(baseDir, "custom", "rules"), rules, previousLock: null });
+    assert.deepEqual(checkProject(manifest, lock, baseDir, skillsDir), []);
+  });
+
   it("reports missing and stale rules", async () => {
     const { manifest, lock, baseDir, skillsDir, rulesDir } = await synced();
     writeFile(baseDir, "rules/style.md", "Edited source.\n");

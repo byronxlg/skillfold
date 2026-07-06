@@ -278,13 +278,42 @@ describe("composed skills with supporting files", () => {
     );
   });
 
-  it("unions allowed-tools across dependencies", async () => {
+  it("unions allowed-tools when every dependency declares them", async () => {
     const { baseDir } = project("tools1");
     writeFile(
       baseDir,
       "skills/tooled/SKILL.md",
       "---\nname: tooled\ndescription: T.\nallowed-tools: Read, Grep\n---\n\nx\n"
     );
+    writeFile(
+      baseDir,
+      "skills/bashy/SKILL.md",
+      "---\nname: bashy\ndescription: B.\nallowed-tools: [Bash, Read]\n---\n\nx\n"
+    );
+    const manifest = parseManifest(
+      [
+        "skills:",
+        "  tooled: ./skills/tooled",
+        "  bashy: ./skills/bashy",
+        "compose:",
+        "  combo:",
+        "    use: [tooled, bashy]",
+      ].join("\n"),
+      "t.yaml"
+    );
+    const { resolved } = await resolveManifest(manifest, { baseDir });
+    const combo = resolved.find((r) => r.name === "combo")!;
+    assert.equal(combo.skill.attrs["allowed-tools"], "Read, Grep, Bash");
+  });
+
+  it("leaves the composed skill unrestricted when any dependency is", async () => {
+    const { baseDir } = project("tools2");
+    writeFile(
+      baseDir,
+      "skills/tooled/SKILL.md",
+      "---\nname: tooled\ndescription: T.\nallowed-tools: Read\n---\n\nx\n"
+    );
+    // local-one has no allowed-tools, i.e. it is unrestricted.
     const manifest = parseManifest(
       [
         "skills:",
@@ -298,7 +327,7 @@ describe("composed skills with supporting files", () => {
     );
     const { resolved } = await resolveManifest(manifest, { baseDir });
     const combo = resolved.find((r) => r.name === "combo")!;
-    assert.equal(combo.skill.attrs["allowed-tools"], "Read, Grep");
+    assert.equal(combo.skill.attrs["allowed-tools"], undefined);
   });
 });
 
@@ -356,6 +385,12 @@ describe("rules resolution", () => {
     const { baseDir } = project("rules3");
     const manifest = parseManifest("rules:\n  gone: ./rules/gone.md", "t.yaml");
     await assert.rejects(resolveManifest(manifest, { baseDir }), /file not found/);
+  });
+
+  it("errors clearly when a local rule source is a directory", async () => {
+    const { baseDir } = project("rules5");
+    const manifest = parseManifest("rules:\n  dir: ./skills/local-one", "t.yaml");
+    await assert.rejects(resolveManifest(manifest, { baseDir }), /not a file/);
   });
 
   it("frozen requires pinned rules", async () => {

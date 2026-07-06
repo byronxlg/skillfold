@@ -153,8 +153,16 @@ export function normalizeSkillName(files: SkillFile[], name: string): SkillFile[
   const stripped = bom ? text.slice(1) : text;
   const match = FRONTMATTER_RE.exec(stripped);
   if (!match) return files;
-  const { attrs } = parseFrontmatter(text);
-  if (attrs.name === name) return files;
+  // Never rewrite frontmatter we cannot parse: the name line could not be
+  // located reliably in malformed YAML.
+  let attrs: unknown;
+  try {
+    attrs = parseYaml(match[2]);
+  } catch {
+    return files;
+  }
+  if (!attrs || typeof attrs !== "object" || Array.isArray(attrs)) return files;
+  if ((attrs as Record<string, unknown>).name === name) return files;
   // Replace the top-level name line, or insert one after the opening ---.
   // Inside valid frontmatter YAML, only a top-level key can sit at column 0.
   const eol = match[1];
@@ -171,6 +179,8 @@ export function normalizeSkillName(files: SkillFile[], name: string): SkillFile[
 
 /** Apply normalizeSkillName to a SkillContent, re-deriving its metadata. */
 export function renameSkill(skill: SkillContent, name: string): SkillContent {
+  // Fast path: frontmatter already carries this name (readSkillDir parsed it).
+  if (skill.name === name && skill.attrs.name === name) return skill;
   const files = normalizeSkillName(skill.files, name);
   if (files === skill.files && skill.name === name) return skill;
   const skillMd = files.find((f) => f.path === SKILL_MD)!;

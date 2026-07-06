@@ -175,6 +175,11 @@ describe("normalizeSkillName", () => {
     assert.equal(normalizeSkillName(files, "anything"), files);
   });
 
+  it("never rewrites malformed frontmatter", () => {
+    const files = skillMd("---\nname: [unclosed\ndescription: x\n---\n\nbody\n");
+    assert.equal(normalizeSkillName(files, "new-name"), files);
+  });
+
   it("preserves CRLF line endings", () => {
     const files = skillMd("---\r\nname: old\r\ndescription: D.\r\n---\r\n\r\n# B\r\n");
     const out = normalizeSkillName(files, "new-name");

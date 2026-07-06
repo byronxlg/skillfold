@@ -6,9 +6,10 @@ For the full release history with detailed notes, see [GitHub Releases](https://
 
 - `rules` manifest section: single markdown files installed as `<rulesDir>/<name>.md` (default `.claude/rules`), from local, GitHub, or npm sources, pinned in the lockfile like skills
 - Composed skills carry the supporting files (`references/`, `scripts/`, ...) of the skills they use; identical duplicates collapse, conflicting paths error
-- Composed skill frontmatter gains `allowed-tools`: the union of the used skills' tools, or an explicit `allowed-tools` on the compose entry
+- Composed skill frontmatter gains `allowed-tools`: the union of the used skills' tools when every one declares a list (an unrestricted input leaves the composite unrestricted), or an explicit `allowed-tools` on the compose entry
 - Installs rewrite the SKILL.md frontmatter `name` to the manifest name, so the installed directory and frontmatter always agree
 - GitHub and npm cache writes are atomic; an interrupted fetch can no longer leave a partial cache entry
+- Note for existing lockfiles: renamed skills and composed skills hash differently after this release; run `skillfold install` once (not `--frozen`) to refresh `skillfold.lock`
 
 ## v2.0.0
 

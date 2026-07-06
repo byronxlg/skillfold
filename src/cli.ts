@@ -6,7 +6,13 @@ import { pathToFileURL } from "node:url";
 
 import { SkillfoldError } from "./errors.js";
 import { initProject } from "./init.js";
-import { checkProject, syncRulesDir, syncSkillsDir, type SyncResult } from "./install.js";
+import {
+  checkProject,
+  ruleFile,
+  syncRulesDir,
+  syncSkillsDir,
+  type SyncResult,
+} from "./install.js";
 import { LOCK_FILENAME, readLockfile, writeLockfile, type Lockfile } from "./lock.js";
 import {
   addSkillToManifest,
@@ -184,9 +190,9 @@ function printSync(
   sync: SyncResult,
   skillsDir: string,
   root: string,
-  rules: ResolvedRule[] = [],
-  rulesSync: SyncResult | null = null,
-  rulesDir?: string
+  rules: ResolvedRule[],
+  rulesSync: SyncResult,
+  rulesDir: string
 ): void {
   const unchanged = new Set(sync.unchanged);
   for (const skill of resolved) {
@@ -198,19 +204,19 @@ function printSync(
   for (const name of sync.pruned) {
     console.log(`  - ${name.padEnd(24)} removed`);
   }
-  const rulesUnchanged = new Set(rulesSync?.unchanged ?? []);
+  const rulesUnchanged = new Set(rulesSync.unchanged);
   for (const rule of rules) {
     const marker = rulesUnchanged.has(rule.name) ? "=" : "+";
     console.log(`  ${marker} ${`${rule.name} (rule)`.padEnd(24)} ${rule.source}${describePin(rule)}`);
   }
-  for (const name of rulesSync?.pruned ?? []) {
+  for (const name of rulesSync.pruned) {
     console.log(`  - ${`${name} (rule)`.padEnd(24)} removed`);
   }
-  const installed = sync.installed.length + (rulesSync?.installed.length ?? 0);
-  const same = sync.unchanged.length + (rulesSync?.unchanged.length ?? 0);
-  const pruned = sync.pruned.length + (rulesSync?.pruned.length ?? 0);
+  const installed = sync.installed.length + rulesSync.installed.length;
+  const same = sync.unchanged.length + rulesSync.unchanged.length;
+  const pruned = sync.pruned.length + rulesSync.pruned.length;
   const dirs = [relative(root, skillsDir) || "."];
-  if (rulesSync && rulesDir && (rules.length > 0 || (rulesSync.pruned.length > 0))) {
+  if (rules.length > 0 || rulesSync.pruned.length > 0) {
     dirs.push(relative(root, rulesDir) || ".");
   }
   const parts = [`${installed} installed`, `${same} unchanged`];
@@ -356,7 +362,7 @@ function cmdInfo(paths: Paths, args: string[]): void {
     ...(lockEntry?.resolved ? [`resolved:  ${lockEntry.resolved}`] : []),
     ...(lockEntry?.integrity ? [`integrity: ${lockEntry.integrity}`] : []),
     `status:    ${row.status}`,
-    `installed: ${row.kind === "rule" ? join(rulesDir, `${name}.md`) : join(skillsDir, name)}`,
+    `installed: ${row.kind === "rule" ? ruleFile(rulesDir, name) : join(skillsDir, name)}`,
   ];
   console.log(lines.join("\n"));
 }

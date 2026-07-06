@@ -54,13 +54,13 @@ compose:
   reviewer:
     description: Review code changes together with their tests.
     use: [code-review, testing]
-    allowed-tools: [Read, Grep]   # optional; defaults to the union of the used skills'
+    allowed-tools: [Read, Grep]   # optional
 ```
 
 - `use` entries reference names from `skills` or other `compose` entries.
 - Nesting is allowed; cycles are rejected at parse time.
 - `description` is optional; the default lists the used skills.
-- `allowed-tools` is optional (string or list); the default is the union of the used skills' `allowed-tools`, omitted when none declare any.
+- `allowed-tools` is optional (string or list). By default the composed skill gets the union of the used skills' `allowed-tools` - but only when every one of them declares a list. A skill without `allowed-tools` is unrestricted, so any unrestricted input leaves the composed skill unrestricted too.
 - Supporting files of the used skills (`references/`, `scripts/`, ...) are carried into the composed skill, so relative paths in the bodies keep working. Identical duplicates collapse; two skills providing the same path with different contents is an error.
 - Composed skills install like any other skill and are regenerated whenever their inputs change.
 

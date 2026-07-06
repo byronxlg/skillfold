@@ -1,8 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve as resolvePath } from "node:path";
 
+import { ruleFile } from "./install.js";
 import type { Lockfile } from "./lock.js";
-import type { Manifest } from "./manifest.js";
+import { DEFAULT_RULES_DIR, type Manifest } from "./manifest.js";
 import { parseSource } from "./source.js";
 import {
   computeFileIntegrity,
@@ -100,10 +101,12 @@ export function skillRows(
     });
   }
 
+  const effectiveRulesDir =
+    rulesDir ?? resolvePath(baseDir, manifest.rulesDir ?? DEFAULT_RULES_DIR);
   for (const [name, sourceString] of Object.entries(manifest.rules)) {
     const source = parseSource(sourceString);
     const entry = lock?.rules[name];
-    const target = join(rulesDir ?? join(baseDir, ".claude", "rules"), `${name}.md`);
+    const target = ruleFile(effectiveRulesDir, name);
     let status: SkillStatus;
     if (!existsSync(target)) {
       status = "not installed";

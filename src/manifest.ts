@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import { Document, parseDocument, YAMLMap } from "yaml";
 
 import { ManifestError } from "./errors.js";
+import { parseAllowedTools } from "./skill.js";
 import { formatSource, parseSource } from "./source.js";
 
 /**
@@ -140,17 +141,15 @@ function normalizeComposeEntry(name: string, value: unknown): ComposeEntry {
   let allowedTools: string[] | undefined;
   const rawTools = entry["allowed-tools"];
   if (rawTools !== undefined) {
-    if (typeof rawTools === "string") {
-      allowedTools = rawTools.split(",").map((t) => t.trim());
-    } else if (Array.isArray(rawTools) && rawTools.every((t) => typeof t === "string")) {
-      allowedTools = (rawTools as string[]).map((t) => t.trim());
-    } else {
+    const isStringList =
+      Array.isArray(rawTools) && rawTools.every((t) => typeof t === "string");
+    if (typeof rawTools !== "string" && !isStringList) {
       throw new ManifestError(
         `compose.${name}: "allowed-tools" must be a string or a list of strings`
       );
     }
-    allowedTools = allowedTools.filter(Boolean);
-    if (allowedTools.length === 0) {
+    allowedTools = parseAllowedTools({ "allowed-tools": rawTools });
+    if (!allowedTools) {
       throw new ManifestError(`compose.${name}: "allowed-tools" is empty`);
     }
   }
@@ -232,6 +231,11 @@ export function parseManifest(content: string, filePath: string): Manifest {
     }
     for (const [name, value] of Object.entries(top.rules as Record<string, unknown>)) {
       validateSkillName(name);
+      if (skills[name] || compose[name]) {
+        throw new ManifestError(
+          `"${name}" is defined in both rules and ${skills[name] ? "skills" : "compose"}; names must be unique`
+        );
+      }
       if (typeof value !== "string" || !value.trim()) {
         throw new ManifestError(`rules.${name}: expected a source string`);
       }

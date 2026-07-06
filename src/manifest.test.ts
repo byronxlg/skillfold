@@ -281,4 +281,27 @@ describe("rules section", () => {
       /Invalid skill name/
     );
   });
+
+  it("rejects a rule name that collides with a skill or composed skill", () => {
+    assert.throws(
+      () => parseManifest("skills:\n  foo: ./skills/foo\nrules:\n  foo: ./rules/foo.md", "t.yaml"),
+      /defined in both rules and skills/
+    );
+    assert.throws(
+      () =>
+        parseManifest(
+          [
+            "skills:",
+            "  a: ./skills/a",
+            "compose:",
+            "  foo:",
+            "    use: [a]",
+            "rules:",
+            "  foo: ./rules/foo.md",
+          ].join("\n"),
+          "t.yaml"
+        ),
+      /defined in both rules and compose/
+    );
+  });
 });
