@@ -1,9 +1,11 @@
+import { Buffer } from "node:buffer";
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve as resolvePath } from "node:path";
 
+import { extractRulesBlock } from "./agentsmd.js";
 import { ruleFile } from "./install.js";
-import type { Lockfile } from "./lock.js";
-import { DEFAULT_RULES_DIR, type Manifest } from "./manifest.js";
+import type { Lockfile, LockSkillEntry } from "./lock.js";
+import type { Manifest } from "./manifest.js";
 import { parseSource } from "./source.js";
 import {
   computeFileIntegrity,
@@ -11,6 +13,7 @@ import {
   normalizeSkillName,
   readDirFiles,
 } from "./skill.js";
+import type { TargetLayout } from "./targets.js";
 
 /**
  * Status of one skill, computed offline from manifest + lockfile + disk.
@@ -40,37 +43,102 @@ function shortPin(resolved: string | undefined): string | undefined {
   return undefined;
 }
 
+/** Later statuses are worse; rows show the worst status across layouts. */
+const SEVERITY: Record<SkillStatus, number> = {
+  ok: 0,
+  "not locked": 1,
+  modified: 2,
+  "not installed": 3,
+};
+
+function worst(statuses: SkillStatus[]): SkillStatus {
+  return statuses.reduce((a, b) => (SEVERITY[b] > SEVERITY[a] ? b : a), "ok");
+}
+
+function skillStatus(
+  name: string,
+  sourceString: string,
+  entry: LockSkillEntry | undefined,
+  baseDir: string,
+  skillsDir: string
+): SkillStatus {
+  const source = parseSource(sourceString);
+  const installedFiles = readDirFiles(join(skillsDir, name));
+  if (installedFiles.length === 0) return "not installed";
+  if (source.kind === "local") {
+    const sourceFiles = readDirFiles(resolvePath(baseDir, source.path));
+    return sourceFiles.length > 0 &&
+      computeIntegrity(normalizeSkillName(sourceFiles, name)) ===
+        computeIntegrity(installedFiles)
+      ? "ok"
+      : "modified";
+  }
+  if (!entry || entry.source !== sourceString) return "not locked";
+  if (entry.integrity && entry.integrity !== computeIntegrity(installedFiles)) {
+    return "modified";
+  }
+  return "ok";
+}
+
+function ruleStatus(
+  name: string,
+  sourceString: string,
+  entry: LockSkillEntry | undefined,
+  baseDir: string,
+  installed: Buffer | undefined
+): SkillStatus {
+  if (!installed) return "not installed";
+  const source = parseSource(sourceString);
+  if (source.kind === "local") {
+    const sourcePath = resolvePath(baseDir, source.path);
+    return existsSync(sourcePath) && readFileSync(sourcePath).equals(installed)
+      ? "ok"
+      : "modified";
+  }
+  if (!entry || entry.source !== sourceString) return "not locked";
+  if (entry.integrity && entry.integrity !== computeFileIntegrity(installed)) {
+    return "modified";
+  }
+  return "ok";
+}
+
+/** Rule contents installed in a layout, keyed by rule name. */
+function installedRules(layout: TargetLayout, names: string[]): Map<string, Buffer> {
+  const map = new Map<string, Buffer>();
+  if (layout.rulesDir) {
+    for (const name of names) {
+      const target = ruleFile(layout.rulesDir, name);
+      if (existsSync(target)) map.set(name, readFileSync(target));
+    }
+  }
+  if (layout.agentsMdPath && existsSync(layout.agentsMdPath)) {
+    try {
+      const block = extractRulesBlock(
+        readFileSync(layout.agentsMdPath, "utf-8"),
+        layout.agentsMdPath
+      );
+      for (const rule of block ?? []) map.set(rule.name, rule.content);
+    } catch {
+      // Malformed markers surface via `check`; list just shows "not installed".
+    }
+  }
+  return map;
+}
+
 export function skillRows(
   manifest: Manifest,
   lock: Lockfile | null,
   baseDir: string,
-  skillsDir: string,
-  rulesDir?: string
+  layouts: TargetLayout[]
 ): SkillRow[] {
   const rows: SkillRow[] = [];
 
   for (const [name, sourceString] of Object.entries(manifest.skills)) {
     const source = parseSource(sourceString);
     const entry = lock?.skills[name];
-    const installedFiles = readDirFiles(join(skillsDir, name));
-    let status: SkillStatus;
-    if (installedFiles.length === 0) {
-      status = "not installed";
-    } else if (source.kind === "local") {
-      const sourceFiles = readDirFiles(resolvePath(baseDir, source.path));
-      status =
-        sourceFiles.length > 0 &&
-        computeIntegrity(normalizeSkillName(sourceFiles, name)) ===
-          computeIntegrity(installedFiles)
-          ? "ok"
-          : "modified";
-    } else if (!entry || entry.source !== sourceString) {
-      status = "not locked";
-    } else if (entry.integrity && entry.integrity !== computeIntegrity(installedFiles)) {
-      status = "modified";
-    } else {
-      status = "ok";
-    }
+    const status = worst(
+      layouts.map((layout) => skillStatus(name, sourceString, entry, baseDir, layout.skillsDir))
+    );
     rows.push({
       name,
       kind: source.kind,
@@ -82,17 +150,14 @@ export function skillRows(
 
   for (const [name, entry] of Object.entries(manifest.compose)) {
     const locked = lock?.compose[name];
-    const installedFiles = readDirFiles(join(skillsDir, name));
-    let status: SkillStatus;
-    if (installedFiles.length === 0) {
-      status = "not installed";
-    } else if (!locked) {
-      status = "not locked";
-    } else if (locked.integrity !== computeIntegrity(installedFiles)) {
-      status = "modified";
-    } else {
-      status = "ok";
-    }
+    const status = worst(
+      layouts.map((layout): SkillStatus => {
+        const installedFiles = readDirFiles(join(layout.skillsDir, name));
+        if (installedFiles.length === 0) return "not installed";
+        if (!locked) return "not locked";
+        return locked.integrity === computeIntegrity(installedFiles) ? "ok" : "modified";
+      })
+    );
     rows.push({
       name,
       kind: "compose",
@@ -101,28 +166,15 @@ export function skillRows(
     });
   }
 
-  const effectiveRulesDir =
-    rulesDir ?? resolvePath(baseDir, manifest.rulesDir ?? DEFAULT_RULES_DIR);
+  const ruleNames = Object.keys(manifest.rules);
+  const perLayoutRules = layouts.map((layout) => installedRules(layout, ruleNames));
   for (const [name, sourceString] of Object.entries(manifest.rules)) {
-    const source = parseSource(sourceString);
     const entry = lock?.rules[name];
-    const target = ruleFile(effectiveRulesDir, name);
-    let status: SkillStatus;
-    if (!existsSync(target)) {
-      status = "not installed";
-    } else if (source.kind === "local") {
-      const sourcePath = resolvePath(baseDir, source.path);
-      status =
-        existsSync(sourcePath) && readFileSync(sourcePath).equals(readFileSync(target))
-          ? "ok"
-          : "modified";
-    } else if (!entry || entry.source !== sourceString) {
-      status = "not locked";
-    } else if (entry.integrity && entry.integrity !== computeFileIntegrity(readFileSync(target))) {
-      status = "modified";
-    } else {
-      status = "ok";
-    }
+    const status = worst(
+      perLayoutRules.map((installed) =>
+        ruleStatus(name, sourceString, entry, baseDir, installed.get(name))
+      )
+    );
     rows.push({
       name,
       kind: "rule",

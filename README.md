@@ -104,6 +104,16 @@ rules:
 
 Rules pin in the lockfile and participate in `install`, `check`, `list`, and `remove` exactly like skills.
 
+## Codex and other tools
+
+Skills are plain SKILL.md directories (the [agent skills standard](https://agentskills.io)), so supporting another tool is just more install locations:
+
+```yaml
+targets: [claude, codex]
+```
+
+With the `codex` target, skills also install into `.agents/skills` (where Codex looks), and rules sync into a marker-fenced managed block in `AGENTS.md` - hand-written content around the block is never touched. One manifest, one lockfile, both tools.
+
 ## Commands
 
 | Command | What it does |
@@ -119,7 +129,7 @@ Rules pin in the lockfile and participate in `install`, `check`, `list`, and `re
 | `skillfold info <name>` | Show source, pin, hash, and install path for one skill |
 | `skillfold search [query]` | Search npm for published skills |
 
-Add `-g` / `--global` to any of these to manage `~/.claude/skills` (your user-level skills) with a manifest at `~/.claude/skillfold.yaml` instead of the current project.
+Add `-g` / `--global` to any of these to manage your user-level config (`~/.claude/skills`, and with the codex target `~/.agents/skills` + `~/.codex/AGENTS.md`) with a manifest at `~/.claude/skillfold.yaml` instead of the current project. Project and global levels are independent - the tools themselves layer both at runtime - and `check`/`list` warn when a project skill name shadows a user-level one. See [Global vs project](docs/cli.md#global-vs-project).
 
 ## Sharing skills
 

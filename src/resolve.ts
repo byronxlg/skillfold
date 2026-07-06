@@ -348,6 +348,7 @@ export async function resolveManifest(
   }
 
   const lock: Lockfile = emptyLockfile();
+  lock.targets = [...(manifest.targets ?? ["claude"])];
   for (const one of resolved) {
     if (one.kind === "compose") {
       lock.compose[one.name] = {

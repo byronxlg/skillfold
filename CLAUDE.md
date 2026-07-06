@@ -32,6 +32,8 @@ src/
   npm.ts      - npm skill resolution: node_modules first, then registry via npm pack into cache
   cache.ts    - shared content cache (~/.cache/skillfold), keyed by SHA / exact version
   compose.ts  - composed skill generation (body concatenation, topological ordering)
+  targets.ts  - install-target layouts (claude, codex) mapping targets to locations
+  agentsmd.ts - managed rules block in AGENTS.md for the codex target
   install.ts  - sync into skillsDir (managed-dir safety, pruning) and offline check
   init.ts     - skillfold init scaffolding
   list.ts     - status table (ok / modified / not installed / not locked)
@@ -48,7 +50,7 @@ action.yml             - GitHub Action wrapper for skillfold check
 
 ## Core Concepts
 
-- **Manifest** (`skillfold.yaml`): `skills` (name -> source), `compose` (generated skills concatenating others), `rules` (name -> single markdown file, installed as `<rulesDir>/<name>.md`), optional `skillsDir` / `rulesDir`.
+- **Manifest** (`skillfold.yaml`): `skills` (name -> source), `compose` (generated skills concatenating others), `rules` (name -> single markdown file, installed as `<rulesDir>/<name>.md`), optional `targets` (`[claude, codex]`; codex installs skills to `.agents/skills` and rules into a managed `AGENTS.md` block), optional `skillsDir` / `rulesDir`.
 - **Sources**: local paths, `github:owner/repo/path@ref`, `npm:package/skill@version`. Trailing `@ref` after the last `/` pins a version.
 - **Lockfile** (`skillfold.lock`): exact commit SHA / version plus sha256 content hash per remote skill. Local sources are recorded unpinned. Committed to the repo.
 - **Pin reuse**: `install` never moves an existing pin; only `update` (or a changed manifest source string) re-resolves. `--frozen` additionally fails on any manifest/lock drift and verifies content hashes.

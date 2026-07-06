@@ -44,6 +44,7 @@ export {
   addSkillToManifest,
   DEFAULT_RULES_DIR,
   DEFAULT_SKILLS_DIR,
+  TARGET_NAMES,
   loadManifest,
   MANIFEST_FILENAME,
   parseManifest,
@@ -51,6 +52,7 @@ export {
   validateSkillName,
   type ComposeEntry,
   type Manifest,
+  type TargetName,
 } from "./manifest.js";
 export {
   emptyLockfile,
@@ -81,12 +83,27 @@ export {
 } from "./resolve.js";
 export {
   checkProject,
+  ruleFile,
   syncRulesDir,
   syncSkillsDir,
   type SyncOptions,
   type SyncResult,
   type SyncRulesOptions,
 } from "./install.js";
+export {
+  buildRulesBlock,
+  extractRulesBlock,
+  syncAgentsMd,
+  upsertRulesBlock,
+  type AgentsMdSyncResult,
+  type RuleContent,
+} from "./agentsmd.js";
+export {
+  resolveTargets,
+  shadowedSkillWarnings,
+  targetLayouts,
+  type TargetLayout,
+} from "./targets.js";
 export { initProject, type InitResult } from "./init.js";
 export { renderRows, skillRows, type SkillRow, type SkillStatus } from "./list.js";
 export { renderSearchHits, searchSkills, type SearchHit } from "./search.js";

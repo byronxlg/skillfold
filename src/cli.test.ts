@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { after, afterEach, beforeEach, describe, it } from "node:test";
 
@@ -176,6 +176,103 @@ describe("cli", () => {
     await main(["remove", "style", "--dir", dir]);
     assert.match(logs.join("\n"), /removed style/);
     assert.ok(!existsSync(join(dir, ".claude", "rules", "style.md")));
+  });
+
+  it("supports the codex target end to end", async () => {
+    const dir = newProject();
+    writeSkill(dir, "skills/alpha", "alpha");
+    writeFile(dir, "rules/style.md", "Always write tests.\n");
+    writeFile(dir, "AGENTS.md", "# Hand-written intro\n");
+    writeFile(
+      dir,
+      "skillfold.yaml",
+      [
+        "targets: [claude, codex]",
+        "skills:",
+        "  alpha: ./skills/alpha",
+        "rules:",
+        "  style: ./rules/style.md",
+      ].join("\n")
+    );
+    await main(["install", "--dir", dir]);
+    // Skills land in both trees; rules land as files and as an AGENTS.md block.
+    assert.ok(existsSync(join(dir, ".claude", "skills", "alpha", "SKILL.md")));
+    assert.ok(existsSync(join(dir, ".agents", "skills", "alpha", "SKILL.md")));
+    assert.ok(existsSync(join(dir, ".claude", "rules", "style.md")));
+    const agentsMd = readFileSync(join(dir, "AGENTS.md"), "utf-8");
+    assert.match(agentsMd, /^# Hand-written intro/);
+    assert.match(agentsMd, /skillfold:rule:style/);
+    assert.match(agentsMd, /Always write tests\./);
+    assert.match(logs.join("\n"), /\.agents\/skills/);
+
+    logs = [];
+    await main(["check", "--dir", dir]);
+    assert.match(logs.join("\n"), /ok: 1 skill, 1 rule in sync/);
+
+    // Drift in the codex tree only is caught and labeled.
+    rmSync(join(dir, ".agents", "skills", "alpha"), { recursive: true });
+    process.exitCode = undefined;
+    errors = [];
+    await main(["check", "--dir", dir]);
+    assert.equal(process.exitCode, 1);
+    assert.match(errors.join("\n"), /\[codex\] "alpha" is not installed/);
+    process.exitCode = undefined;
+
+    // Reinstall repairs it.
+    logs = [];
+    await main(["install", "--dir", dir]);
+    assert.ok(existsSync(join(dir, ".agents", "skills", "alpha", "SKILL.md")));
+  });
+
+  it("protects hand-authored files when a target is added later", async () => {
+    const dir = newProject();
+    writeSkill(dir, "skills/alpha", "alpha");
+    writeFile(dir, "skillfold.yaml", "skills:\n  alpha: ./skills/alpha");
+    await main(["install", "--dir", dir]);
+    // Hand-authored codex skill with the same name, then the codex target is added.
+    writeFile(dir, ".agents/skills/alpha/SKILL.md", "---\nname: alpha\n---\n\nHand-made.\n");
+    writeFile(
+      dir,
+      "skillfold.yaml",
+      "targets: [claude, codex]\nskills:\n  alpha: ./skills/alpha"
+    );
+    await assert.rejects(main(["install", "--dir", dir]), /was not installed by skillfold/);
+    assert.match(
+      readFileSync(join(dir, ".agents", "skills", "alpha", "SKILL.md"), "utf-8"),
+      /Hand-made/
+    );
+    // --force takes ownership; afterwards the layout is managed.
+    await main(["install", "--dir", dir, "--force"]);
+    assert.match(
+      readFileSync(join(dir, ".agents", "skills", "alpha", "SKILL.md"), "utf-8"),
+      /Test skill alpha/
+    );
+    logs = [];
+    await main(["check", "--dir", dir]);
+    assert.match(logs.join("\n"), /ok: 1 skill in sync/);
+  });
+
+  it("warns when a project skill shadows a user-level skill", async () => {
+    const dir = newProject();
+    writeSkill(dir, "skills/alpha", "alpha");
+    writeFile(dir, "skillfold.yaml", "skills:\n  alpha: ./skills/alpha");
+    await main(["install", "--dir", dir]);
+    const fakeHome = join(tmp.path, `home${counter++}`);
+    writeSkill(fakeHome, ".claude/skills/alpha", "alpha");
+    const realHome = process.env.HOME;
+    process.env.HOME = fakeHome;
+    try {
+      errors = [];
+      await main(["check", "--dir", dir]);
+      assert.match(
+        errors.join("\n"),
+        /warning: skill "alpha" is also installed at the user level \(~\/.claude\/skills\)/
+      );
+      assert.equal(process.exitCode, undefined); // warnings never fail check
+      assert.match(logs.join("\n"), /ok: 1 skill in sync/);
+    } finally {
+      process.env.HOME = realHome;
+    }
   });
 
   it("install --frozen fails without a lockfile", async () => {

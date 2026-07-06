@@ -113,6 +113,18 @@
       "type": "string",
       "description": "Directory to install rules into, relative to the manifest. Default: .claude/rules",
       "minLength": 1
+    },
+    "targets": {
+      "description": "Tools to install for. Default: [claude]. claude installs to .claude/skills and .claude/rules; codex installs skills to .agents/skills and syncs rules into a managed AGENTS.md block.",
+      "type": "array",
+      "items": {
+        "enum": [
+          "claude",
+          "codex"
+        ]
+      },
+      "minItems": 1,
+      "uniqueItems": true
     }
   }
 }
