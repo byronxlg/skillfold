@@ -129,7 +129,7 @@ With the `codex` target, skills also install into `.agents/skills` (where Codex 
 | `skillfold info <name>` | Show source, pin, hash, and install path for one skill |
 | `skillfold search [query]` | Search npm for published skills |
 
-Add `-g` / `--global` to any of these to manage `~/.claude/skills` (your user-level skills) with a manifest at `~/.claude/skillfold.yaml` instead of the current project.
+Add `-g` / `--global` to any of these to manage your user-level config (`~/.claude/skills`, and with the codex target `~/.agents/skills` + `~/.codex/AGENTS.md`) with a manifest at `~/.claude/skillfold.yaml` instead of the current project. Project and global levels are independent - the tools themselves layer both at runtime - and `check`/`list` warn when a project skill name shadows a user-level one. See [Global vs project](docs/cli.md#global-vs-project).
 
 ## Sharing skills
 

@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve as resolvePath } from "node:path";
 
@@ -68,4 +69,39 @@ export function targetLayouts(
       agentsMdPath: resolvePath(root, "AGENTS.md"),
     };
   });
+}
+
+/** Shorten a home-relative path to ~/... for display. */
+function displayPath(path: string): string {
+  const home = homedir();
+  return path.startsWith(home) ? `~${path.slice(home.length)}` : path;
+}
+
+/**
+ * Warn when a project skill name is also installed at the user level: the
+ * tools layer both scopes at runtime, so same-named skills show up twice
+ * (or shadow each other). Informational only, never a failure.
+ */
+export function shadowedSkillWarnings(
+  manifest: Manifest,
+  globalLayouts: TargetLayout[]
+): string[] {
+  const names = [...Object.keys(manifest.skills), ...Object.keys(manifest.compose)];
+  const warnings: string[] = [];
+  for (const name of names) {
+    const locations = [
+      ...new Set(
+        globalLayouts
+          .filter((layout) => existsSync(join(layout.skillsDir, name)))
+          .map((layout) => displayPath(layout.skillsDir))
+      ),
+    ];
+    if (locations.length > 0) {
+      warnings.push(
+        `skill "${name}" is also installed at the user level (${locations.join(", ")}); ` +
+          `the tool sees both copies`
+      );
+    }
+  }
+  return warnings;
 }

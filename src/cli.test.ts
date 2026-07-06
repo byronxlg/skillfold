@@ -252,6 +252,29 @@ describe("cli", () => {
     assert.match(logs.join("\n"), /ok: 1 skill in sync/);
   });
 
+  it("warns when a project skill shadows a user-level skill", async () => {
+    const dir = newProject();
+    writeSkill(dir, "skills/alpha", "alpha");
+    writeFile(dir, "skillfold.yaml", "skills:\n  alpha: ./skills/alpha");
+    await main(["install", "--dir", dir]);
+    const fakeHome = join(tmp.path, `home${counter++}`);
+    writeSkill(fakeHome, ".claude/skills/alpha", "alpha");
+    const realHome = process.env.HOME;
+    process.env.HOME = fakeHome;
+    try {
+      errors = [];
+      await main(["check", "--dir", dir]);
+      assert.match(
+        errors.join("\n"),
+        /warning: skill "alpha" is also installed at the user level \(~\/.claude\/skills\)/
+      );
+      assert.equal(process.exitCode, undefined); // warnings never fail check
+      assert.match(logs.join("\n"), /ok: 1 skill in sync/);
+    } finally {
+      process.env.HOME = realHome;
+    }
+  });
+
   it("install --frozen fails without a lockfile", async () => {
     const dir = newProject();
     await main(["init", "--dir", dir]);

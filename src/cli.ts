@@ -22,6 +22,7 @@ import {
   MANIFEST_FILENAME,
   removeSkillFromManifest,
   validateSkillName,
+  type Manifest,
 } from "./manifest.js";
 import {
   resolveManifest,
@@ -31,7 +32,7 @@ import {
 } from "./resolve.js";
 import { renderSearchHits, searchSkills } from "./search.js";
 import { defaultSkillName, parseSource } from "./source.js";
-import { targetLayouts, type TargetLayout } from "./targets.js";
+import { shadowedSkillWarnings, targetLayouts, type TargetLayout } from "./targets.js";
 
 const HELP = `skillfold - declarative skill manager for Claude config
 
@@ -331,11 +332,22 @@ async function cmdRemove(paths: Paths, args: string[], flags: Flags): Promise<vo
   await runInstall(paths, { force: flags.force });
 }
 
+/** User-level shadowing notes for project mode; empty in global mode. */
+function shadowWarnings(paths: Paths, manifest: Manifest): string[] {
+  if (paths.global) return [];
+  const globalRoot = join(homedir(), ".claude");
+  if (paths.root === globalRoot) return [];
+  return shadowedSkillWarnings(manifest, targetLayouts(manifest, globalRoot, true));
+}
+
 function cmdCheck(paths: Paths): void {
   const manifest = loadManifest(paths.manifestPath);
   const lock = readLockfile(paths.lockPath);
   const layouts = targetLayouts(manifest, paths.root, paths.global);
   const problems = checkProject(manifest, lock, paths.root, layouts);
+  for (const warning of shadowWarnings(paths, manifest)) {
+    console.error(`warning: ${warning}`);
+  }
   if (problems.length > 0) {
     console.error("skillfold check failed:");
     for (const problem of problems) console.error(`  - ${problem}`);
@@ -360,6 +372,9 @@ function cmdList(paths: Paths): void {
   }
   const layouts = targetLayouts(manifest, paths.root, paths.global);
   console.log(renderRows(skillRows(manifest, lock, paths.root, layouts)));
+  for (const warning of shadowWarnings(paths, manifest)) {
+    console.error(`warning: ${warning}`);
+  }
 }
 
 function cmdInfo(paths: Paths, args: string[]): void {

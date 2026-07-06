@@ -68,6 +68,20 @@ Source, resolved pin, integrity hash, status, and install path for one skill.
 
 Search the npm registry for packages tagged `skillfold-skill`.
 
+## Global vs project
+
+Skillfold manages two independent levels, mirroring how the tools themselves work:
+
+| | Project (default) | Global (`-g`) |
+| --- | --- | --- |
+| Manifest + lockfile | `./skillfold.yaml`, `./skillfold.lock` | `~/.claude/skillfold.yaml`, `~/.claude/skillfold.lock` |
+| claude target | `.claude/skills`, `.claude/rules` | `~/.claude/skills`, `~/.claude/rules` |
+| codex target | `.agents/skills`, `AGENTS.md` | `~/.agents/skills`, `~/.codex/AGENTS.md` |
+
+- **One manifest manages one level.** The project manifest is committed and shared with the team; the global manifest is personal config that travels with your dotfiles (`skillfold install -g` materializes it on any machine).
+- **Layering is the tool's job, not skillfold's.** Claude Code and Codex both read user-level and project-level skills and instructions together at runtime, so there is nothing for skillfold to merge - each level stays independently reproducible.
+- **Same-named skills at both levels show up twice** in the tool (or shadow each other). Project-mode `check` and `list` print a warning when a project skill name is also installed at the user level. Warnings never fail `check`.
+
 ## Global options
 
 | Option | Effect |

@@ -1,10 +1,14 @@
 import assert from "node:assert/strict";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { describe, it } from "node:test";
+import { after, describe, it } from "node:test";
 
 import { parseManifest } from "./manifest.js";
-import { targetLayouts } from "./targets.js";
+import { shadowedSkillWarnings, targetLayouts } from "./targets.js";
+import { makeTmpDir, writeSkill } from "./testutil.js";
+
+const tmp = makeTmpDir();
+after(() => tmp.cleanup());
 
 describe("manifest targets", () => {
   it("parses and dedupes targets", () => {
@@ -66,5 +70,45 @@ describe("targetLayouts", () => {
       CODEX_HOME: "/custom/codex",
     });
     assert.equal(codex.agentsMdPath, join("/custom/codex", "AGENTS.md"));
+  });
+});
+
+describe("shadowedSkillWarnings", () => {
+  it("warns when a project skill name exists in a user-level tree", () => {
+    writeSkill(tmp.path, "userskills/code-review", "code-review");
+    const manifest = parseManifest(
+      "skills:\n  code-review: ./skills/code-review\n  unique: ./skills/unique",
+      "t.yaml"
+    );
+    const warnings = shadowedSkillWarnings(manifest, [
+      { target: "claude", skillsDir: join(tmp.path, "userskills") },
+    ]);
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0], /"code-review" is also installed at the user level/);
+  });
+
+  it("covers composed skill names and dedupes locations", () => {
+    writeSkill(tmp.path, "userskills2/combo", "combo");
+    const manifest = parseManifest(
+      "skills:\n  a: ./skills/a\ncompose:\n  combo:\n    use: [a]",
+      "t.yaml"
+    );
+    const dir = join(tmp.path, "userskills2");
+    const warnings = shadowedSkillWarnings(manifest, [
+      { target: "claude", skillsDir: dir },
+      { target: "codex", skillsDir: dir },
+    ]);
+    assert.equal(warnings.length, 1);
+    assert.equal(warnings[0].match(/userskills2/g)!.length, 1);
+  });
+
+  it("stays silent with no user-level copies", () => {
+    const manifest = parseManifest("skills:\n  a: ./skills/a", "t.yaml");
+    assert.deepEqual(
+      shadowedSkillWarnings(manifest, [
+        { target: "claude", skillsDir: join(tmp.path, "empty-userskills") },
+      ]),
+      []
+    );
   });
 });

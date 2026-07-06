@@ -9,6 +9,7 @@ For the full release history with detailed notes, see [GitHub Releases](https://
 - Global mode maps the codex target to `~/.agents/skills` and `~/.codex/AGENTS.md` (honoring `CODEX_HOME`)
 - `check`/`list` verify every target layout and label problems with the drifted target
 - The lockfile records installed targets; a newly added target treats pre-existing files as hand-authored (no silent overwrites without `--force`)
+- Project-mode `check`/`list` warn when a project skill name is also installed at the user level (the tools see both copies); documented the global-vs-project model
 - API: `checkProject` and `skillRows` now take target layouts (from `targetLayouts()`) instead of skillsDir/rulesDir paths
 
 ## v2.1.0

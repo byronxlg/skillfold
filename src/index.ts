@@ -100,6 +100,7 @@ export {
 } from "./agentsmd.js";
 export {
   resolveTargets,
+  shadowedSkillWarnings,
   targetLayouts,
   type TargetLayout,
 } from "./targets.js";
