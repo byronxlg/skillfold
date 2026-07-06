@@ -20,5 +20,6 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npm test
-      - run: npx tsx src/cli.ts && npx tsx src/cli.ts --check
-      - run: npm run build && node dist/cli.js --check
+      - run: npx tsx src/cli.ts install --frozen
+      - run: npx tsx src/cli.ts check
+      - run: npm run build && node dist/cli.js --version

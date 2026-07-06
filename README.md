@@ -2,551 +2,154 @@
 
 # Skillfold
 
-**Typed coordination for multi-agent pipelines**
+**Declarative skill manager for Claude config**
 
 [![npm](https://img.shields.io/npm/v/skillfold?style=flat-square)](https://www.npmjs.com/package/skillfold)
 [![CI](https://img.shields.io/github/actions/workflow/status/byronxlg/skillfold/ci.yml?style=flat-square&label=CI)](https://github.com/byronxlg/skillfold/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
-[Documentation](https://byronxlg.github.io/skillfold/) | [Getting Started](https://byronxlg.github.io/skillfold/getting-started) | [Live Demo](https://byronxlg.github.io/skillfold/demo) | [Pipeline Builder](https://byronxlg.github.io/skillfold/builder)
+[Website](https://byronxlg.github.io/skillfold/) | [Getting Started](docs/getting-started.md) | [Manifest Reference](docs/manifest.md) | [CLI Reference](docs/cli.md)
 
 </div>
 
-You have a dozen agents in scattered Markdown files. How do you know they're wired correctly? How do you validate that Agent A's output types match Agent B's input? How do you catch cycles or unreachable nodes before runtime?
+Your `.claude/skills` directory is state with no source of truth. Skills get pasted in from blog posts, copied between machines, edited in place, and lost on the next laptop. Nobody knows which version of a skill a teammate is running, and "works on my machine" now applies to your agent.
 
-Native platforms make it easy to define individual agents and skills. What they don't solve is the coordination layer between agents: typed state, execution flows, conditional routing, and compile-time validation. Skillfold fills that gap. Declare your pipeline in YAML, validate it at compile time, and output native [SKILL.md](https://agentskills.io/specification) files for every agent. No runtime, no daemon, no SDK.
-
-## The Problem
-
-You wire three agents together by hand. The engineer writes `state.code`, the reviewer reads it, and a conditional routes back on failure. Everything lives in separate Markdown files with no shared schema, no validation, and no way to check correctness before you run it.
-
-- Does the reviewer actually read the field the engineer writes?
-- If you rename a state field, which agents break?
-- Is there a path from every node to `end`, or did you leave one dangling?
-- Can two agents write the same field in parallel?
-
-These are coordination problems, and they only get worse as the pipeline grows.
-
-## The Fix
-
-Declare everything in one YAML config. The compiler validates it at compile time and outputs native agent files.
+Skillfold treats skills like dependencies. Declare them in one YAML file, pin exact revisions in a lockfile, and install them reproducibly - like nix for skills, without the learning curve.
 
 ```yaml
 # skillfold.yaml
 skills:
-  atomic:
-    planning: ./skills/planning
-    coding: ./skills/coding
-    review: ./skills/review
-  composed:
-    engineer:
-      compose: [planning, coding]
-      description: "Implements the plan and writes tests."
-    reviewer:
-      compose: [review]
-      description: "Reviews code for correctness and quality."
-
-state:
-  Review:
-    approved: bool
-    feedback: string
-  code: { type: string }
-  review: { type: Review }
-
-team:
-  flow:
-    - engineer:
-        writes: [state.code]
-      then: reviewer
-    - reviewer:
-        reads: [state.code]
-        writes: [state.review]
-      then:
-        - when: review.approved == false
-          to: engineer
-        - when: review.approved == true
-          to: end
+  commit-helper: ./skills/commit-helper
+  frontend-design: github:anthropics/skills/frontend-design
+  planning: npm:skillfold/planning
 ```
 
-```bash
-npx skillfold
+```console
+$ skillfold install
+  + commit-helper            ./skills/commit-helper
+  + frontend-design          github:anthropics/skills/frontend-design -> 8f3a9c1
+  + planning                 npm:skillfold/planning -> 2.0.0
+
+3 installed, 0 unchanged -> .claude/skills
+lockfile: skillfold.lock
 ```
 
-The compiler checks that every state read has a matching write, every transition target exists, every cycle has an exit condition, and no two agents write the same field in parallel. If anything is wrong, you get an error at build time instead of a broken pipeline at runtime.
+Commit `skillfold.yaml` and `skillfold.lock`. Anyone who clones the repo runs `skillfold install` and gets byte-identical skills.
 
-## Quick Start
+## Install
 
-```bash
-npx skillfold init my-team   # scaffold a starter pipeline
-cd my-team
-npx skillfold                # compile it
+```sh
+npm install -g skillfold      # or: npx skillfold
 ```
 
-For a step-by-step walkthrough, see the [Getting Started](https://byronxlg.github.io/skillfold/getting-started) guide. To compile directly to your platform, see the [Integration Guide](https://byronxlg.github.io/skillfold/integrations).
+## Quickstart
 
-> [!TIP]
-> Add `team.orchestrator: orchestrator` and the orchestrator's compiled SKILL.md gets a generated execution plan with numbered steps, state tables, and conditional branches.
-
-<details>
-<summary><strong>See it in action</strong></summary>
-
-```
-$ npx skillfold init demo --template dev-team
-skillfold: project initialized
-  -> skillfold.yaml
-
-Next: cd demo && npm install skillfold && npx skillfold
-
-$ cd demo && npm install skillfold && npx skillfold --target claude-code
-skillfold: compiled dev-team
-  -> .claude/skills/planner/SKILL.md
-  -> .claude/skills/engineer/SKILL.md
-  -> .claude/skills/reviewer/SKILL.md
-  -> .claude/skills/orchestrator/SKILL.md
-  -> .claude/agents/planner.md
-  -> .claude/agents/engineer.md
-  -> .claude/agents/reviewer.md
-  -> .claude/commands/run-pipeline.md
-  3 agents, 5 skills (2 shared). ~79 lines deduplicated.
-
-$ ls .claude/agents/
-engineer.md    planner.md    reviewer.md
-
-$ head -20 .claude/agents/engineer.md
-<!-- Generated by skillfold v1.23.0 from dev-team (skillfold.yaml). Do not edit directly. -->
----
-name: engineer
-description: Implements the plan by writing production code and tests.
-model: inherit
-color: green
----
-
-# engineer
-
-Implements the plan by writing production code and tests.
-
-## Reads
-
-- `state.plan`
-
-## Writes
-
-- `state.implementation`
-
-$ npx skillfold list
-dev-team
-
-Skills (11 atomic, 3 composed):
-  planning             (atomic)
-  research             (atomic)
-  decision-making      (atomic)
-  code-writing         (atomic)
-  code-review          (atomic)
-  testing              (atomic)
-  writing              (atomic)
-  summarization        (atomic)
-  github-workflow      (atomic)
-  file-management      (atomic)
-  skillfold-cli        (atomic)
-  planner              = planning + decision-making
-  engineer             = planning + code-writing + testing
-  reviewer             = code-review + testing
-
-State (3 fields, 1 types):
-  plan                 string
-  implementation       string
-  review               Review
-  Review { approved: bool, feedback: string }
-
-Team Flow:
-  planner -> engineer
-  engineer -> reviewer
-  reviewer -> end (when review.approved == true)
-  reviewer -> engineer (when review.approved == false)
+```sh
+skillfold init                # scaffold skillfold.yaml + an example skill
+skillfold install             # install into .claude/skills, write skillfold.lock
+skillfold add github:anthropics/skills/frontend-design
+skillfold list
 ```
 
-</details>
+## How it works
 
----
+**Manifest** - `skillfold.yaml` declares skills by name from three kinds of sources:
 
-## What the Compiler Validates
+| Source | Example |
+| --- | --- |
+| Local directory | `./skills/commit-helper` |
+| GitHub | `github:owner/repo/path/to/skill@v1.2.0` |
+| npm | `npm:package/skill-name@1.0.0` |
 
-Every `npx skillfold` run checks the full pipeline at compile time:
+A trailing `@ref` pins a version: a tag, branch, or commit SHA for GitHub; an exact version or dist-tag for npm. Unpinned sources resolve to the default branch / latest at install time and are then held by the lockfile.
 
-- **State type matching** - reads and writes reference fields declared in the state schema
-- **Transition targets** - every `then` points to a real agent or `end`
-- **Cycle exit conditions** - loops have at least one conditional path to `end`
-- **Reachability** - no orphaned nodes or dead-end agents
-- **Write conflicts** - no two agents write the same state field in parallel
-- **Reference integrity** - every skill name in a composition exists
+**Lockfile** - `skillfold.lock` records the exact commit SHA or version every remote skill resolved to, plus a sha256 content hash. Installs are reproducible; tampering is detectable. `skillfold update` is the only thing that moves a pin.
 
-If anything fails, you get a clear error with the skill name and the problem. No silent runtime failures.
+**Install** - `skillfold install` materializes every skill into `.claude/skills/` (configurable with `skillsDir`). Skillfold only ever touches directories named in the lockfile - hand-authored skills sitting next to managed ones are never overwritten or pruned.
 
----
-
-## How Is This Different?
-
-Skillfold is **not** a runtime framework (like CrewAI or LangGraph). It is **not** a replacement for native agent definitions (like Claude Code subagents or Cursor rules). It is a compiler that adds a coordination type system on top of platform-native primitives.
-
-Think of it like TypeScript for agent pipelines. TypeScript doesn't replace JavaScript - it adds a type system that catches errors at compile time. Skillfold doesn't replace SKILL.md files - it adds typed state, flow validation, and orchestrator generation, then compiles down to the same Markdown your platform already reads.
-
-**What native platforms give you:** Define agents, attach skills, run them.
-
-**What they don't give you:** A way to declare that Agent A writes `state.code`, Agent B reads it, and the transition is conditional on `review.approved`. A way to validate that every state path exists, every transition target is reachable, and no two agents write the same field in parallel. A way to generate an orchestrator plan from a flow definition instead of writing it by hand.
-
-That coordination layer is what skillfold provides.
-
-Skill management tools like the [skills CLI](https://skills.sh) handle installing and updating individual SKILL.md files. Skillfold handles what comes after: composing multiple skills into coherent agents, declaring what each agent reads and writes, and validating the entire pipeline at compile time. You can use both together - reference your existing skills by path or GitHub URL, and skillfold composes and validates them.
-
----
-
-## Already Using Claude Code?
-
-Adopt your existing agents and start adding typed coordination:
-
-```bash
-npx skillfold adopt                  # import .claude/agents/ into a skillfold config
-npx skillfold --target claude-code   # compile back to native subagents, skills, and commands
-```
-
-```
-.claude/
-  agents/
-    engineer.md
-    reviewer.md
-  skills/
-    engineer/SKILL.md
-    reviewer/SKILL.md
-  commands/
-    run-pipeline.md       # generated orchestrator from team flow
-```
-
-Your agents keep working exactly as before. Now you can layer on state schemas, execution flows, and compile-time validation. The `/run-pipeline` command is generated from the flow definition - no hand-written orchestration.
-
-See the [Integration Guide](https://byronxlg.github.io/skillfold/integrations) for setup details. Works with [Claude Code](https://claude.ai/code), [Cursor](https://cursor.com), [VS Code](https://code.visualstudio.com), [GitHub Copilot](https://github.com), [OpenAI Codex](https://developers.openai.com/codex), [Gemini CLI](https://geminicli.com), and [27+ more](https://agentskills.io).
-
----
-
-## Works with Agent Teams
-
-[Agent Teams](https://docs.anthropic.com/en/docs/claude-code/agent-teams) is Claude Code's built-in runtime for interactive multi-agent orchestration. Skillfold is the declarative complement: you define your pipeline in version-controlled YAML, validate it at compile time, and output native agent files for any supported platform. Agent Teams is ideal for ad-hoc exploration where you direct agents in real time. Skillfold is ideal for repeatable workflows where the same config should produce the same pipeline every time, across teams and CI.
-
-The two tools work together. Skillfold compiles agent definitions, state schemas, and flow graphs into the plain Markdown that Agent Teams picks up at execution time. You get compile-time guarantees and multi-platform portability from skillfold, and live coordination and parallel dispatch from Agent Teams.
-
-| | Agent Teams | Skillfold |
-|---|---|---|
-| Definition | Natural language, ad-hoc | YAML config, version-controlled |
-| Validation | Runtime | Compile-time |
-| Reproducibility | Each run is unique | Same config, same pipeline |
-| Platforms | Claude Code | 12 targets (Claude Code, Agent Teams, Cursor, Windsurf, Codex, Copilot, Gemini, Goose, Roo Code, Kiro, Junie, generic) |
-| Best for | Interactive exploration | Repeatable team workflows |
-
----
-
-## How It Works
-
-Three sections in one YAML config, each building on the last:
-
-| Section | What you define | What the compiler does |
-|---------|----------------|----------------------|
-| **skills** | Atomic skill directories + composition rules | Concatenates skill bodies in order, recursively |
-| **state** | Typed schema with custom types and external locations | Validates reads/writes against the flow |
-| **team** | Execution flow with conditionals, loops, and parallel map | Generates orchestrator plan, checks reachability |
-
-Compiled output is portable across [33+ platforms](https://agentskills.io) that support the Agent Skills standard.
-
-Here's the example above as a flow diagram (`skillfold graph`):
-
-```mermaid
-graph TD
-    subgraph engineer
-        planning
-        coding
-    end
-    engineer -->|"code"| reviewer
-    subgraph reviewer
-        review
-    end
-    reviewer -->|"approved == false"| engineer
-    reviewer -->|"approved == true"| end_node([end])
-```
-
-<details>
-<summary><strong>Generated orchestrator output</strong></summary>
-
-```markdown
-## Execution Plan
-
-### Step 1: engineer
-Invoke **engineer**.
-Writes: `state.code`
-Then: proceed to step 2.
-
-### Step 2: reviewer
-Invoke **reviewer**.
-Reads: `state.code`
-Writes: `state.review`
-Then:
-- If `review.approved == false`: go to step 1
-- If `review.approved == true`: end
-```
-
-</details>
-
----
-
-## Features
-
-### Typed State Schemas
-
-Custom types, primitives, and `list<Type>`. The compiler validates that every read has a matching write, detects write conflicts, and maps state to external locations. Built-in integrations for GitHub issues, discussions, and pull requests generate validated URLs and orchestrator instructions automatically. For custom services, a top-level `resources` section declares namespace URLs for compile-time path validation.
+**Check** - `skillfold check` verifies offline that manifest, lockfile, and installed files all agree. Run it in CI:
 
 ```yaml
-state:
-  Task:
-    description: string
-    approved: bool
-  tasks:
-    type: "list<Task>"
-    location:
-      github-issues:
-        repo: myorg/myrepo
-        label: task
+- uses: byronxlg/skillfold@main   # runs: npx skillfold check
 ```
 
-### Execution Flows
+or use `skillfold install --frozen` for npm-ci-style installs that fail on any drift.
 
-Conditional routing with `when` expressions. Loops with required exit conditions. Parallel `map` over typed lists. Reachability analysis for all nodes. Flow nodes can reference external pipeline configs via `flow:` for nested sub-flow composition. Mark nodes `async: true` with a policy (`block`, `skip`, `use-latest`) for external agents like humans, CI systems, or other teams.
+## Composition
 
-```yaml
-team:
-  flow:
-    - owner:
-        async: true
-        writes: [state.direction]
-        policy: block
-      then: planner
-    - planner:
-        writes: [state.tasks]
-      then:
-        map: state.tasks
-        as: task
-        agent: worker
-        then: reviewer
-```
-
-### Skill Composition
-
-Atomic skills are reusable instruction fragments. Composed skills concatenate them in order, recursively. Define each skill once and share it across agents.
-
-```yaml
-composed:
-  tech-lead:
-    compose: [planning, code-review]       # bodies joined in order
-  senior-eng:
-    compose: [tech-lead, code-writing]     # recursive - includes planning + code-review + code-writing
-```
-
-### Remote Skills and Imports
-
-Reference skills by GitHub URL, npm package, or import them from other configs. Team flows stay local.
+Composed skills concatenate other skills into one generated SKILL.md:
 
 ```yaml
 skills:
-  atomic:
-    shared: https://github.com/org/repo/tree/main/skills/shared
-    planning: npm:skillfold-skill-planning    # resolve from npm package
-imports:
-  - npm:skillfold/library/skillfold.yaml      # npm: prefix (preferred)
-  - node_modules/skillfold/library/skillfold.yaml  # direct path (also works)
+  code-review: npm:skillfold/code-review
+  testing: npm:skillfold/testing
+
+compose:
+  reviewer:
+    description: Review code changes together with their tests.
+    use: [code-review, testing]
 ```
 
-> [!TIP]
-> Set `GITHUB_TOKEN` in your environment to fetch skills from private repositories.
+`reviewer` is generated at install time and regenerated whenever its inputs change. Composed skills can use other composed skills; cycles are rejected at parse time.
 
-### Graph Visualization
+## Commands
 
-`skillfold graph` outputs a Mermaid flowchart showing full composition lineage and state writes. Use `--html` for an interactive HTML page with clickable nodes, a composition details sidebar, and SVG export.
+| Command | What it does |
+| --- | --- |
+| `skillfold init` | Scaffold a starter manifest and example skill |
+| `skillfold add <source>` | Add a skill to the manifest and install it |
+| `skillfold remove <name>` | Remove a skill and uninstall it |
+| `skillfold install` | Install every declared skill, write the lockfile |
+| `skillfold install --frozen` | Install exactly what the lockfile pins; fail on drift |
+| `skillfold update [name...]` | Re-resolve moving refs and reinstall |
+| `skillfold check` | Verify manifest, lockfile, and installed skills agree |
+| `skillfold list` | Show declared skills and their status |
+| `skillfold info <name>` | Show source, pin, hash, and install path for one skill |
+| `skillfold search [query]` | Search npm for published skills |
 
----
+Add `-g` / `--global` to any of these to manage `~/.claude/skills` (your user-level skills) with a manifest at `~/.claude/skillfold.yaml` instead of the current project.
 
-## Shared Library
+## Sharing skills
 
-Skillfold ships with **11 generic skills** you can import into any pipeline:
+Publish a skill collection as an npm package with an `agentskills` map in its package.json:
 
-| Skill | Purpose |
-|-------|---------|
-| planning | Break problems into steps, identify dependencies |
-| research | Gather information, evaluate sources |
-| decision-making | Evaluate trade-offs, justify recommendations |
-| code-writing | Write clean, production-quality code |
-| code-review | Review for correctness, clarity, security |
-| testing | Write and reason about tests, edge cases |
-| writing | Produce clear, structured prose |
-| summarization | Condense information for target audiences |
-| github-workflow | Work with branches, PRs, issues via `gh` CLI |
-| file-management | Read, create, edit, and organize files |
-| skillfold-cli | Use the skillfold compiler to manage pipeline configs |
-
-Three ready-made example configs are included as templates:
-
-| Template | Pattern |
-|----------|---------|
-| **dev-team** | Linear pipeline with review loop (planner, engineer, reviewer) |
-| **content-pipeline** | Map/parallel pattern over topics (researcher, writer, editor) |
-| **code-review-bot** | Minimal two-agent flow (analyzer, reporter) |
-
-Start from any template with `skillfold init --template <name>`:
-
-```bash
-npx skillfold init my-team --template dev-team
+```json
+{
+  "name": "my-skills",
+  "keywords": ["skillfold-skill"],
+  "agentskills": {
+    "tdd": "./skills/tdd",
+    "docs": "./skills/docs"
+  }
+}
 ```
 
----
+Anyone can then run `skillfold add npm:my-skills/tdd`. The `skillfold-skill` keyword makes the package discoverable via `skillfold search`. See [docs/publishing.md](docs/publishing.md).
 
-## Self-Hosting
+Skillfold itself ships a small library of general-purpose skills: `planning`, `research`, `code-review`, `testing`, `writing`, and more - `skillfold add npm:skillfold/<name>`.
 
-Skillfold builds its own dev team. The [`skillfold.yaml`](skillfold.yaml) in this repo defines 7 composed agents (strategist, architect, designer, marketer, engineer, reviewer, orchestrator) with 5 flow nodes - starting from a strategist who sets direction, through architect, engineer, and reviewer (with a review loop), ending at marketer.
+## Library
 
-State is mapped to real infrastructure: plans live in GitHub Discussions, tasks become GitHub Issues, implementations are pull requests, and reviews are PR reviews. Browse the [Discussions](https://github.com/byronxlg/skillfold/discussions), [Issues](https://github.com/byronxlg/skillfold/issues?q=label%3Atask), and [Pull Requests](https://github.com/byronxlg/skillfold/pulls?q=is%3Apr) to see the pipeline's output.
+| Skill | Description |
+| --- | --- |
+| `planning` | Break problems into steps, identify dependencies, estimate scope |
+| `research` | Gather information, evaluate sources, synthesize findings |
+| `decision-making` | Evaluate trade-offs, document options, justify recommendations |
+| `code-writing` | Write clean, correct, production-quality code |
+| `code-review` | Review code for correctness, clarity, and security |
+| `testing` | Write and reason about tests, behavior testing, edge cases |
+| `writing` | Produce clear, structured prose and documentation |
+| `summarization` | Condense information with audience-appropriate detail |
+| `github-workflow` | Work with branches, PRs, issues, and reviews via `gh` |
+| `file-management` | Read, create, edit, and organize files and directories |
+| `skillfold-cli` | Use skillfold itself to manage a project's skills |
 
-The full team flow, generated by `skillfold graph`:
+## Programmatic API
 
-```mermaid
-graph TD
-    subgraph strategist
-        strategist_skillfold_context["skillfold-context"]
-        strategist_product_strategy["product-strategy"]
-        strategist_github["github"]
-    end
-    strategist -->|"direction"| architect
-    subgraph architect
-        architect_skillfold_context["skillfold-context"]
-        architect_create_implementation_plan["create-implementation-plan"]
-        architect_github["github"]
-    end
-    architect -->|"plan, tasks"| engineer
-    subgraph engineer
-        engineer_skillfold_context["skillfold-context"]
-        engineer_coding_guidelines["coding-guidelines"]
-        engineer_testing["testing"]
-        engineer_conventional_commit["conventional-commit"]
-        engineer_github["github"]
-    end
-    engineer -->|"implementation"| reviewer
-    subgraph reviewer
-        reviewer_skillfold_context["skillfold-context"]
-        reviewer_pr_review_expert["pr-review-expert"]
-        reviewer_security_best_practices["security-best-practices"]
-        reviewer_github["github"]
-    end
-    reviewer -->|"review.approved == false"| engineer
-    reviewer -->|"review.approved == true"| marketer
-    subgraph marketer
-        marketer_skillfold_context["skillfold-context"]
-        marketer_product_strategy["product-strategy"]
-        marketer_moltbook["moltbook"]
-        marketer_github["github"]
-    end
-    marketer -->|"announcement"| end_node([end])
-```
+Everything the CLI does is available as a library:
 
----
-
-## Reference
-
-### Install
-
-```bash
-npm install -g skillfold    # global install
-npx skillfold               # or run directly
-```
-
-Install individual skills with the [skills CLI](https://skills.sh), compose them into pipelines with skillfold:
-
-```bash
-npx skills add byronxlg/skillfold              # install all 11 library skills
-npx skills add byronxlg/skillfold -s code-review   # install a specific skill
-```
-
-Requires Node.js 20+. Single dependency: `yaml`. To uninstall: `npm uninstall -g skillfold` and delete any compiled output (`build/`, `.claude/`, etc.).
-
-**Claude Code plugin marketplace:** Install the skills library and `/skillfold` command directly in Claude Code:
-
-```
-/plugin marketplace add byronxlg/skillfold
-/plugin install skillfold@skillfold
-```
-
-### CLI
-
-```
-skillfold [command] [options]
-
-Commands:
-  init [dir]        Scaffold a new pipeline project
-  adopt             Adopt existing Claude Code agents into a pipeline
-  validate          Validate config without compiling
-  list              Display a structured summary of the pipeline
-  graph             Output Mermaid flowchart of the team flow
-  watch             Compile and watch for changes
-  plugin            Package compiled output as a Claude Code plugin
-  search [query]    Discover skill packages on npm
-  run               Execute the pipeline (spawns agents per the team flow)
-  (default)         Compile the pipeline config
-
-Options:
-  --config <path>      Config file (default: skillfold.yaml)
-  --out-dir <path>     Output directory (default: build, or .claude for claude-code target)
-  --dir <path>         Target directory for init (default: .)
-  --target <mode>      Output mode: skill, claude-code, agent-teams, cursor, windsurf, codex, copilot, gemini, goose, roo-code, kiro, junie
-  --template <name>    Start from a library template (init only)
-  --html               Output interactive HTML instead of Mermaid (graph only)
-  --check              Verify compiled output is up-to-date (exit 1 if stale)
-  --spawner <type>     Agent spawner for run: cli or sdk (default: cli)
-  --dry-run            Preview pipeline execution without spawning agents
-  --resume             Resume from last checkpoint
-  --on-error <mode>    Error handling: retry, skip, or abort (default: abort)
-  --max-retries <n>    Max retries per step (default: 3)
-  --max-iterations <n> Max loop iterations (default: 10)
-  --help               Show this help
-  --version            Show version
-```
-
-### CI Integration
-
-Add skillfold's `--check` flag to CI so stale compiled output fails the build. The repo ships a reusable GitHub Action:
-
-```yaml
-name: Skillfold
-on: [push, pull_request]
-jobs:
-  check:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - run: npm ci
-      - uses: byronxlg/skillfold@v1
-```
-
-### Config
-
-Four top-level sections: `resources`, `skills`, `state`, `team`. Full specification in the [Config Reference](https://byronxlg.github.io/skillfold/reference/config). A [JSON Schema](skillfold.schema.json) is available for IDE autocompletion.
-
-Add this line to the top of your `skillfold.yaml` for editor support:
-
-```yaml
-# yaml-language-server: $schema=node_modules/skillfold/skillfold.schema.json
-```
-
-### Tests
-
-```bash
-npm test          # node:test, no extra dependencies
-npx tsc --noEmit  # type check
+```ts
+import { loadManifest, resolveManifest, syncSkillsDir } from "skillfold";
 ```
 
 ## License

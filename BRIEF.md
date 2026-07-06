@@ -1,239 +1,90 @@
-# Skillfold — Concept & Design Brief
+# Skillfold - Concept & Design Brief
 
 ## What is Skillfold?
 
-Skillfold is a configuration language and compiler for building multi-agent AI pipelines. The name captures three things at once — **skill** composition, **fold** as the functional operation of combining many things into one, and **scaffold** as the temporary structure that enables the real thing to be built. You write Skillfold config, the compiler builds the structure, and then it gets out of the way.
+Skillfold is a declarative skill manager for Claude config. The name captures the core move: **skills**, **folded** into a project - declared once, pinned exactly, unfolded into `.claude/skills` on any machine.
 
-Skillfold sits above the Agent Skills open standard as a build tool. It lets developers define reusable skills, compose them into agents, and wire agents into typed execution graphs. The compiler outputs standard `SKILL.md` files fully compatible with the existing Agent Skills ecosystem. No custom runtime required.
+Think "nix for skills, without the learning curve": a single YAML manifest declares what skills a project uses, a lockfile pins exactly which bytes those skills resolve to, and one command makes the filesystem match.
 
----
+## The problem
 
-## The Problem
+Skills are how Claude Code (and the wider agent ecosystem) packages reusable capability: a directory with a `SKILL.md` plus supporting files. They are also, today, completely unmanaged:
 
-The Agent Skills spec defines what a single skill is and how it loads. It does not define:
+- Skills get pasted in from blog posts and gists, with no record of where they came from.
+- `.claude/skills` differs silently between teammates and machines.
+- Upstream skills improve, but nothing tells you your copy is stale - or changed.
+- There is no install story for a repo: "clone, then copy these five directories from somewhere" is the state of the art.
 
-- How skills relate to each other
-- How skills share or pass state
-- How execution flows between skills
-- How reusable behaviour is shared across skills
+This is exactly the problem package managers solved for code dependencies. Skills deserve the same treatment: a manifest, a lockfile, reproducible installs, and drift detection.
 
-Today these concerns are either ignored or handled by manually duplicating content across skill files. Changing a pipeline means editing many files. There is no single source of truth for team topology. As agent teams grow, this becomes the primary source of complexity.
+## The design
 
----
+Three artifacts:
 
-## The Two Core Ideas
+1. **`skillfold.yaml`** - the manifest. Human-written, small, commented.
+2. **`skillfold.lock`** - the lockfile. Machine-written, committed, exact.
+3. **`.claude/skills/`** - the install target. Disposable, reproducible.
 
-### 1. Skill Composition
-
-Skills should be composable. Atomic skills define reusable fragments of behaviour. Composed skills are built by combining atomic skills. Composition is recursive — a composed skill can itself be composed into another.
-
-The key insight is that a composed skill's context is the concatenation of its constituent skills' bodies. This is the primary mechanism for sharing behaviour across agents — write it once, compose it in wherever needed.
-
-### 2. Skill Graphing
-
-Agents are skills wired into a typed execution graph. The graph defines how state flows between agents, in what order they run, and how execution branches or loops. The graph compiles into an orchestrator skill that manages execution — individual agents remain unaware of the topology.
-
-State is typed and declared centrally. Each agent declares which state fields it reads and writes. The compiler validates that the graph is internally consistent.
-
----
-
-## Key Design Principles
-
-**Single source of truth.** The pipeline config owns skill composition, state schema, and execution topology. Changes to any of these happen in one place.
-
-**Compile to the standard.** Output is plain `SKILL.md` files per the Agent Skills open standard. Compatible with any compliant agent platform.
-
-**Skills all the way down.** There is no special agent type. An agent is just a skill that appears in a graph. A composed skill that isn't in a graph is still a valid, reusable skill.
-
-**Separation of concerns.** Capability lives in skills. Topology lives in the graph. State lives in the schema. None of these should bleed into each other.
-
-**Validated at compile time.** Type mismatches, missing state fields, write conflicts, and broken graph references are compiler errors. Runtime surprises should be rare.
-
----
-
-## What the Language Needs to Express
-
-At minimum the language needs to express:
-
-- References to skill folders by path or URL
-- Composition of skills into agents
-- A typed state schema with optional external backends
-- A directed execution graph with conditional routing and loops
-- Parallel execution over lists
-- An orchestrator compiled from the graph
-
-Beyond that, the build team should feel free to evolve the design. The example config below is an illustration of one possible syntax, not a specification.
-
----
-
-## Example Config
-
-The following example defines a software development pipeline with four agents: a strategy agent that sets the goal, a tech lead that produces a plan and breaks it into tasks, a senior engineer that works on each task, and a reviewer that approves or rejects the engineer's output. The engineer and reviewer loop per task until the reviewer approves. Tasks run in parallel.
-
-State is backed by external systems — the goal and plan live in Slack, tasks live in Jira. The orchestrator is composed with the relevant integration skills so it knows how to read and write those systems.
+### Manifest
 
 ```yaml
-name: dev-pipeline
-
 skills:
-  # Atomic skills - referenced by folder path or URL
-  atomic:
-    strategic-thinking: ./skills/strategic-thinking
-    task-decomposition: ./skills/task-decomposition
-    code-generation: ./skills/code-generation
-    code-review: ./skills/code-review
-    slack: ./skills/slack
-    confluence: ./skills/confluence
-    jira: ./skills/jira
+  commit-helper: ./skills/commit-helper                     # local
+  frontend-design: github:anthropics/skills/frontend-design # GitHub
+  planning: npm:skillfold/planning@2.0.0                    # npm
 
-  # Composed skills - recursive combinations of atomic skills
-  # An agent is any skill referenced in the team flow
-  composed:
-    strategy:
-      compose: [strategic-thinking, slack]
+compose:
+  reviewer:
+    description: Review code changes together with their tests.
+    use: [code-review, testing]
 
-    tech-lead:
-      compose: [strategic-thinking, task-decomposition, slack, jira]
-
-    senior-engineer:
-      compose: [task-decomposition, code-generation]
-
-    reviewer:
-      compose: [code-review]
-
-    orchestrator:
-      compose: [slack, confluence, jira]
-
-# State - typed schema, defaults to local file unless location declared
-state:
-  Task:
-    description: string
-    output: string
-    approved: bool
-
-  goal:
-    type: string
-    location:
-      skill: slack
-      path: dev-pipeline-channel
-
-  plan:
-    type: string
-    location:
-      skill: slack
-      path: dev-pipeline-channel
-      kind: reply
-
-  tasks:
-    type: list<Task>
-    location:
-      skill: jira
-      path: DEV/dev-board
-
-# Team - orchestrator and execution flow
-team:
-  orchestrator: orchestrator
-
-  # Flow - directed graph with typed state transitions
-  # Cycles are valid when every cycle has an explicit exit condition
-  # map always parallelizes - sequential iteration is a flow loop
-  flow:
-    - strategy:
-        writes: [state.goal]
-      then: tech-lead
-
-    - tech-lead:
-        reads: [state.goal]
-        writes: [state.plan, state.tasks]
-      then: map
-
-    - map:
-        over: state.tasks
-        as: task
-        graph:
-          - senior-engineer:
-              reads: [task.description]
-              writes: [task.output]
-            then: reviewer
-
-          - reviewer:
-              reads: [task.output]
-              writes: [task.approved]
-            then:
-              - when: task.approved == false
-                to: senior-engineer
-              - when: task.approved == true
-                to: end
+skillsDir: .claude/skills   # optional, this is the default
 ```
 
----
+Design choices:
 
-## What the Compiler Produces
+- **Names are the keys.** The manifest maps installed names to sources, so renaming a skill locally is trivial and collisions are impossible by construction.
+- **Sources are strings.** One-line, greppable, and pasteable. A trailing `@ref` after the last `/` pins a version - the same syntax across GitHub (tag/branch/SHA) and npm (version/dist-tag).
+- **Compose is the one generative feature.** A composed skill concatenates the bodies of other skills into a single generated SKILL.md. It is skill-shaped (installs like any other skill) and recursive (composed skills can use composed skills; cycles rejected at parse time). Everything else from the pipeline era - team flows, typed state, orchestrators, runners - is out of scope.
 
+### Lockfile
+
+```yaml
+lockfileVersion: 1
+skills:
+  frontend-design:
+    source: github:anthropics/skills/frontend-design
+    resolved: github:anthropics/skills/frontend-design@<full sha>
+    integrity: sha256-...
 ```
-dist/
-├── strategy.md        # strategic-thinking + slack bodies concatenated
-├── tech-lead.md       # strategic-thinking + task-decomposition + slack + jira bodies concatenated
-├── senior-engineer.md # task-decomposition + code-generation bodies concatenated
-├── reviewer.md        # code-review body
-└── orchestrator.md    # generated from the graph definition
-```
 
-All output files are valid `SKILL.md` files per the Agent Skills spec.
+- Remote sources are pinned to immutable identifiers (commit SHA, exact version) plus a sha256 content hash over every file.
+- Local sources are recorded but never pinned - they are the things you are editing.
+- `install` reuses pins; only `update` (or editing the source string) moves them. `install --frozen` is the CI mode: any drift is a hard failure, hashes are verified.
 
----
+### Install semantics
 
-## Compiler Responsibilities
+- Skillfold owns exactly the directories named in the lockfile. It will overwrite and prune those freely, and will never touch anything else without `--force`. Hand-authored skills coexist safely next to managed ones.
+- Fetches go through a shared content-addressed cache (`~/.cache/skillfold`) keyed by SHA/version, so repeat installs are offline and fast.
+- `check` is fully offline: manifest vs lock vs installed bytes, including regenerating composed skills from their installed inputs.
 
-**Skill compilation**
+### Distribution
 
-- Resolve skill folder paths and URLs, read each `SKILL.md` body
-- Concatenate composed skill bodies in declared order
-- Output one compiled `SKILL.md` per agent
+- npm packages publish skills via an `agentskills` map in package.json (`skill-name -> directory`), discoverable through the `skillfold-skill` keyword and `skillfold search`.
+- GitHub repos publish skills by simply containing skill directories - any `owner/repo/path` with a SKILL.md is addressable.
+- Skillfold ships a starter library of 11 general-purpose skills under `npm:skillfold/<name>`.
 
-**State validation**
+### Scope boundaries
 
-- Every `reads` and `writes` field must exist in the state schema
-- Write conflicts — two nodes writing the same field — are compile errors
-- Every state field with a `location` must reference a declared skill
+Deliberately not in scope:
 
-**Graph validation**
+- **No runtime.** Skillfold arranges files; it never spawns agents or executes anything.
+- **No multi-target compilation.** Claude config is the target. Other tools that read SKILL.md directories can point `skillsDir` wherever they like.
+- **No semver resolution (yet).** npm pins are exact versions or dist-tags; GitHub pins are refs. Ranges add a resolver and a failure mode; demand can justify them later.
 
-- Every `to:` reference must be a declared skill or `end`
-- Every cycle must have an explicit exit condition
-- Topological sort of acyclic edges as a consistency check
+## Open questions
 
-**Orchestrator generation**
-
-- Generate an orchestrator `SKILL.md` from the graph definition
-- The orchestrator is the only agent with full pipeline visibility
-- Individual agents have no topology awareness
-
-**Map**
-
-- `map` always parallelizes — each item runs its subgraph concurrently
-- The orchestrator manages spawning and joining parallel subgraphs
-- Loop conditions inside `map` are evaluated per item
-
----
-
-## What Skillfold is Not
-
-- A runtime — execution is handled by whatever agent platform consumes the compiled skills
-- A replacement for the Agent Skills spec — it compiles to that spec
-- A programming language — logic lives in the skills themselves, not in this config
-
----
-
-## Open Questions for the Build Team
-
-These are intentionally left open — the right answers depend on implementation experience:
-
-- ~~What is the right file format for the config? YAML, TOML, a custom DSL?~~ (Done: YAML with JSON Schema for IDE validation)
-- ~~How should the state type system work? How strict should it be?~~ (Done: typed schema with custom types, primitives, lists, compile-time validation)
-- How are external state backends handled at runtime?
-- ~~How does the orchestrator communicate with individual agents in practice?~~ (Done: Agent tool invocation with compiled SKILL.md as instructions)
-- ~~How are errors and failures handled mid-pipeline?~~ (Done: `--on-error` flag with retry/skip/abort modes, `--resume` for interrupted pipelines)
-- ~~Should the language support importing or extending other pipeline configs?~~ (Done: pipeline imports and sub-flow imports)
-- How does versioning work for skills referenced by URL?
-- ~~Should there be a package registry for shared skills?~~ (Done: npm-based registry with `npm:` prefix resolution and `skillfold search`)
+- `skillfold outdated` - report pins that lag their upstream ref without touching anything.
+- Semver ranges for npm sources.
+- Search that lists individual skills (from agentskills maps) rather than packages.
+- A "vendor" mode that copies skills into the repo for air-gapped installs.

@@ -1,114 +1,75 @@
-# Publishing Skills to npm
+# Publishing Skills
 
-Skillfold uses npm as its package registry. Any skill or pipeline config can be published as a standard npm package - no separate registry or tooling required.
+Any GitHub repo or npm package can distribute skills. A skill is a directory with a `SKILL.md` (YAML frontmatter with `name` and `description`, then the body) plus any supporting files.
 
-## Package Structure
+## Via GitHub (zero setup)
 
-A publishable skill package contains a `package.json`, an optional `skillfold.yaml` for importable pipeline configs, and one or more atomic skill directories:
+Push a skill directory to any public repo. It is immediately addressable:
 
-```
-my-skills/
-  package.json
-  skillfold.yaml         # pipeline config (optional, for importable configs)
-  skills/
-    planning/SKILL.md    # atomic skills
-    testing/SKILL.md
+```sh
+skillfold add github:you/your-repo/skills/tdd
 ```
 
-Each skill directory follows the standard layout: a directory containing a `SKILL.md` file with YAML frontmatter and instructions.
+Consumers can pin a tag, branch, or commit SHA with `@ref`. Tag releases so pins are meaningful:
 
-## package.json
+```sh
+git tag v1.0.0 && git push --tags
+```
 
-Required fields for a publishable skill package:
+```sh
+skillfold add github:you/your-repo/skills/tdd@v1.0.0
+```
+
+Private repos work too - consumers set `GITHUB_TOKEN`.
+
+## Via npm (versioned, discoverable)
+
+Publish a package whose `package.json` maps skill names to directories:
 
 ```json
 {
-  "name": "@team/shared-skills",
+  "name": "my-skills",
   "version": "1.0.0",
+  "description": "Skills for test-driven development workflows",
   "keywords": ["skillfold-skill"],
-  "description": "Shared planning and review skills",
-  "files": ["skillfold.yaml", "skills/"]
-}
-```
-
-- **name** - Standard npm package name. Scoped names (`@team/...`) are recommended for team-owned packages.
-- **keywords** - Must include `skillfold-skill`. This is what `skillfold search` uses to find packages on the registry.
-- **files** - Limits the published package to only the config and skill files. Keep the package small.
-
-## Publishing
-
-Publish like any npm package:
-
-```bash
-npm publish              # public package
-npm publish --access public   # first publish of a scoped package
-```
-
-If the package includes a `skillfold.yaml`, consumers can import the full config. If it only contains skill directories, consumers reference individual skills by path.
-
-## Using Published Skills
-
-Install the package, then reference it in your config:
-
-```bash
-npm install @team/shared-skills
-```
-
-Import the full config to get all skills and state:
-
-```yaml
-imports:
-  - npm:@team/shared-skills
-```
-
-Or reference individual skills directly:
-
-```yaml
-skills:
-  atomic:
-    planning: npm:@team/shared-skills/skills/planning
-```
-
-The `npm:` prefix resolves to the package's install path under `node_modules/`.
-
-## Discovery
-
-Search for published skill packages on npm:
-
-```bash
-skillfold search planning    # search by keyword
-skillfold search             # list all skillfold-skill packages
-```
-
-This queries the npm registry for packages with the `skillfold-skill` keyword and displays their name, description, and version.
-
-### Skills CLI compatibility
-
-Packages that include an `agentskills` field in `package.json` are also discoverable by the [skills CLI](https://skills.sh). This field maps skill names to their directory paths:
-
-```json
-{
+  "files": ["skills"],
   "agentskills": {
-    "planning": "./skills/planning",
-    "testing": "./skills/testing"
+    "tdd": "./skills/tdd",
+    "red-green-refactor": "./skills/red-green-refactor"
   }
 }
 ```
 
-Users can then install individual skills from your package:
+Layout:
 
-```bash
-npx skills add your-org/your-package -s planning
+```
+my-skills/
+  package.json
+  skills/
+    tdd/
+      SKILL.md
+      references/checklist.md
+    red-green-refactor/
+      SKILL.md
 ```
 
-Skillfold's own library skills are installable this way: `npx skills add byronxlg/skillfold`.
+Then `npm publish`. Consumers install with:
 
-## Versioning
+```sh
+skillfold add npm:my-skills/tdd
+skillfold add npm:my-skills/tdd@1.0.0     # exact pin
+```
 
-Follow standard semver conventions:
+Notes:
 
-- **Patch** (1.0.1) - Fix typos, clarify instructions, no behavior change
-- **Minor** (1.1.0) - Add new skills, add optional state fields
-- **Major** (2.0.0) - Rename or remove skills, change state schema in breaking ways
+- The `skillfold-skill` keyword makes the package discoverable via `skillfold search`.
+- The `agentskills` map is a plain name -> path object, shared with the wider agent-skills ecosystem.
+- A single-skill package can skip the map and put `SKILL.md` at the package root; consumers use `npm:my-skill` with no subpath.
+- Skill names in the map should be lowercase-kebab (installed directories are named after them by default).
 
-Consumers pin versions through their `package.json` as usual. Run `npm update` to pull in compatible updates.
+## Checklist before publishing
+
+- `SKILL.md` frontmatter has an accurate `name` and a `description` that says when to use the skill.
+- Supporting files live inside the skill directory (everything in it gets installed).
+- No secrets: installed files land in consumers' repos.
+- Test locally: `skillfold add ./skills/tdd` from a scratch project.

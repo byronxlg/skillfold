@@ -1,59 +1,58 @@
-interface NpmPackage {
+/**
+ * Search the npm registry for packages that publish skills
+ * (tagged with the `skillfold-skill` keyword).
+ */
+
+export interface SearchHit {
   name: string;
-  description: string;
   version: string;
-  keywords: string[];
-  links: { npm: string; homepage?: string };
+  description: string;
+  skills: string[];
 }
 
 interface NpmSearchResult {
   objects: Array<{
-    package: NpmPackage;
-    score: { detail: { popularity: number } };
+    package: {
+      name: string;
+      description?: string;
+      version: string;
+      keywords?: string[];
+    };
   }>;
   total: number;
 }
 
-export async function searchSkills(query?: string): Promise<void> {
-  const searchTerms = ["keywords:skillfold-skill", query]
-    .filter(Boolean)
-    .join("+");
-  const url = `https://registry.npmjs.org/-/v1/search?text=${encodeURIComponent(searchTerms)}&size=25`;
-
-  let response: Response;
-  try {
-    response = await fetch(url);
-  } catch {
-    console.error("Error: could not reach npm registry");
-    process.exit(1);
-  }
-
+export async function searchSkills(
+  query?: string,
+  fetcher: typeof fetch = fetch
+): Promise<SearchHit[]> {
+  const terms = ["keywords:skillfold-skill", query].filter(Boolean).join("+");
+  const url = `https://registry.npmjs.org/-/v1/search?text=${encodeURIComponent(terms)}&size=25`;
+  const response = await fetcher(url);
   if (!response.ok) {
-    console.error(`Error: npm registry returned ${response.status}`);
-    process.exit(1);
+    throw new Error(`npm registry returned ${response.status}`);
   }
-
   const data = (await response.json()) as NpmSearchResult;
+  return data.objects.map(({ package: pkg }) => ({
+    name: pkg.name,
+    version: pkg.version,
+    description: pkg.description ?? "",
+    skills: [],
+  }));
+}
 
-  if (data.total === 0 || data.objects.length === 0) {
-    console.log(
-      query
-        ? `No skillfold skills found matching "${query}"`
-        : "No skillfold skills found",
-    );
-    return;
+export function renderSearchHits(hits: SearchHit[], query?: string): string {
+  if (hits.length === 0) {
+    return query
+      ? `no published skills match "${query}"`
+      : "no published skills found";
   }
-
-  console.log(
-    `\n  Found ${data.objects.length} skill${data.objects.length === 1 ? "" : "s"}:\n`,
-  );
-
-  for (const { package: pkg } of data.objects) {
-    const desc = pkg.description || "No description";
-    console.log(`  ${pkg.name}  v${pkg.version}`);
-    console.log(`    ${desc}\n`);
+  const lines: string[] = [];
+  for (const hit of hits) {
+    lines.push(`  ${hit.name}  ${hit.version}`);
+    if (hit.description) lines.push(`    ${hit.description}`);
   }
-
-  console.log("  Install: npm install <package>");
-  console.log("  Import:  imports: [npm:<package>]\n");
+  lines.push("");
+  lines.push("  add one with: skillfold add npm:<package>/<skill-name>");
+  return lines.join("\n");
 }

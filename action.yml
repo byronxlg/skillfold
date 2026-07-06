@@ -1,31 +1,24 @@
 name: Skillfold Check
-description: Verify compiled agent skill output is up-to-date
+description: Verify skillfold.yaml, skillfold.lock, and installed skills agree
 branding:
   icon: check-circle
   color: blue
 
 inputs:
-  config:
-    description: Path to skillfold config file
-    required: false
-  target:
-    description: "Output target: skill or claude-code"
+  dir:
+    description: Directory containing skillfold.yaml
     required: false
 
 runs:
   using: composite
   steps:
-    - name: Skillfold --check
+    - name: skillfold check
       shell: bash
       env:
-        INPUT_CONFIG: ${{ inputs.config }}
-        INPUT_TARGET: ${{ inputs.target }}
+        INPUT_DIR: ${{ inputs.dir }}
       run: |
-        args=(--check)
-        if [ -n "$INPUT_CONFIG" ]; then
-          args+=(--config "$INPUT_CONFIG")
-        fi
-        if [ -n "$INPUT_TARGET" ]; then
-          args+=(--target "$INPUT_TARGET")
+        args=(check)
+        if [ -n "$INPUT_DIR" ]; then
+          args+=(--dir "$INPUT_DIR")
         fi
         npx skillfold "${args[@]}"

@@ -1,139 +1,116 @@
-import { type Config, type SkillEntry, isAtomic, isComposed } from "./config.js";
-import { type GraphNode, isAsyncNode, isConditionalThen, isMapNode, isSubFlowNode } from "./graph.js";
-import { resolveIntegrationUrl } from "./integrations.js";
-import { type StateField, type StateSchema } from "./state.js";
+import { join, resolve as resolvePath } from "node:path";
 
-function formatStateType(field: StateField): string {
-  switch (field.type.kind) {
-    case "primitive":
-      return field.type.value;
-    case "list":
-      return `list<${field.type.element}>`;
-    case "custom":
-      return field.type.name;
-  }
+import type { Lockfile } from "./lock.js";
+import type { Manifest } from "./manifest.js";
+import { parseSource } from "./source.js";
+import { computeIntegrity, readDirFiles } from "./skill.js";
+
+/**
+ * Status of one skill, computed offline from manifest + lockfile + disk.
+ *
+ *   ok            installed and matching
+ *   not installed nothing at <skillsDir>/<name>
+ *   modified      installed files differ from the lock / source
+ *   not locked    manifest entry has no lockfile pin yet
+ */
+export type SkillStatus = "ok" | "not installed" | "modified" | "not locked";
+
+export interface SkillRow {
+  name: string;
+  kind: "local" | "github" | "npm" | "compose";
+  /** Source as declared; `compose(a, b)` for composed skills. */
+  source: string;
+  /** Short pinned revision, e.g. "8f3a9c1" or "1.2.3". */
+  pinned?: string;
+  status: SkillStatus;
 }
 
-function formatLocation(field: StateField): string {
-  if (!field.location) return "";
-
-  // Integration location
-  if (field.location.integration) {
-    const url = resolveIntegrationUrl(field.location.integration);
-    const parts = [url];
-    if (field.location.kind) {
-      parts.push(`(${field.location.kind})`);
-    }
-    return "-> " + parts.join(" ");
-  }
-
-  // Traditional skill+path location
-  if (!field.location.skill || !field.location.path) return "";
-  const parts = [field.location.skill + ": " + field.location.path];
-  if (field.location.kind) {
-    parts.push(`(${field.location.kind})`);
-  }
-  return "-> " + parts.join(" ");
+function shortPin(resolved: string | undefined): string | undefined {
+  if (!resolved) return undefined;
+  const source = parseSource(resolved);
+  if (source.kind === "github" && source.ref) return source.ref.slice(0, 7);
+  if (source.kind === "npm" && source.version) return source.version;
+  return undefined;
 }
 
-function isRemote(skill: SkillEntry): boolean {
-  return isAtomic(skill) && skill.path.startsWith("https://");
-}
+export function skillRows(
+  manifest: Manifest,
+  lock: Lockfile | null,
+  baseDir: string,
+  skillsDir: string
+): SkillRow[] {
+  const rows: SkillRow[] = [];
 
-function renderSkills(
-  skills: Record<string, SkillEntry>,
-): string[] {
-  const entries = Object.entries(skills);
-  const atomics = entries.filter(([, s]) => isAtomic(s));
-  const composed = entries.filter(([, s]) => isComposed(s));
-  const lines: string[] = [];
-
-  lines.push(`Skills (${atomics.length} atomic, ${composed.length} composed):`);
-
-  for (const [name, skill] of atomics) {
-    const tags: string[] = ["atomic"];
-    if (isRemote(skill)) tags.push("remote");
-    lines.push(`  ${name.padEnd(20)} (${tags.join(", ")})`);
-  }
-
-  for (const [name, skill] of composed) {
-    if (!isComposed(skill)) continue;
-    lines.push(`  ${name.padEnd(20)} = ${skill.compose.join(" + ")}`);
-  }
-
-  return lines;
-}
-
-function renderState(state: StateSchema): string[] {
-  const fieldEntries = Object.entries(state.fields);
-  const typeEntries = Object.entries(state.types);
-  const lines: string[] = [];
-
-  lines.push(`State (${fieldEntries.length} fields, ${typeEntries.length} types):`);
-
-  for (const [name, field] of fieldEntries) {
-    const typeStr = formatStateType(field).padEnd(20);
-    const location = formatLocation(field);
-    lines.push(`  ${name.padEnd(20)} ${typeStr} ${location}`.trimEnd());
-  }
-
-  for (const [name, type] of typeEntries) {
-    const fieldDefs = Object.entries(type.fields)
-      .map(([fn, ft]) => `${fn}: ${ft}`)
-      .join(", ");
-    lines.push(`  ${name} { ${fieldDefs} }`);
-  }
-
-  return lines;
-}
-
-function nodeLabel(node: GraphNode): string {
-  if (isMapNode(node)) return "map";
-  if (isSubFlowNode(node)) return `${node.name} (sub-flow)`;
-  if (isAsyncNode(node)) return `${node.name} (async)`;
-  return node.skill;
-}
-
-function renderFlowEdges(nodes: GraphNode[]): string[] {
-  const lines: string[] = [];
-
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    const label = nodeLabel(node);
-
-    if (node.then === undefined) {
-      const next = i + 1 < nodes.length ? nodeLabel(nodes[i + 1]) : "end";
-      lines.push(`  ${label} -> ${next}`);
-    } else if (isConditionalThen(node.then)) {
-      for (const branch of node.then) {
-        const whenStr = `when ${branch.when}`;
-        lines.push(`  ${label} -> ${branch.to} (${whenStr})`);
-      }
+  for (const [name, sourceString] of Object.entries(manifest.skills)) {
+    const source = parseSource(sourceString);
+    const entry = lock?.skills[name];
+    const installedFiles = readDirFiles(join(skillsDir, name));
+    let status: SkillStatus;
+    if (installedFiles.length === 0) {
+      status = "not installed";
+    } else if (source.kind === "local") {
+      const sourceFiles = readDirFiles(resolvePath(baseDir, source.path));
+      status =
+        sourceFiles.length > 0 &&
+        computeIntegrity(sourceFiles) === computeIntegrity(installedFiles)
+          ? "ok"
+          : "modified";
+    } else if (!entry || entry.source !== sourceString) {
+      status = "not locked";
+    } else if (entry.integrity && entry.integrity !== computeIntegrity(installedFiles)) {
+      status = "modified";
     } else {
-      lines.push(`  ${label} -> ${node.then}`);
+      status = "ok";
     }
+    rows.push({
+      name,
+      kind: source.kind,
+      source: sourceString,
+      pinned: entry && entry.source === sourceString ? shortPin(entry.resolved) : undefined,
+      status,
+    });
   }
 
-  return lines;
+  for (const [name, entry] of Object.entries(manifest.compose)) {
+    const locked = lock?.compose[name];
+    const installedFiles = readDirFiles(join(skillsDir, name));
+    let status: SkillStatus;
+    if (installedFiles.length === 0) {
+      status = "not installed";
+    } else if (!locked) {
+      status = "not locked";
+    } else if (locked.integrity !== computeIntegrity(installedFiles)) {
+      status = "modified";
+    } else {
+      status = "ok";
+    }
+    rows.push({
+      name,
+      kind: "compose",
+      source: `compose(${entry.use.join(", ")})`,
+      status,
+    });
+  }
+
+  return rows;
 }
 
-export function listPipeline(config: Config): string {
-  const sections: string[] = [];
-
-  sections.push(config.name);
-  sections.push("");
-  sections.push(...renderSkills(config.skills));
-
-  if (config.state) {
-    sections.push("");
-    sections.push(...renderState(config.state));
+/** Render rows as an aligned table. */
+export function renderRows(rows: SkillRow[]): string {
+  if (rows.length === 0) {
+    return "no skills declared (add one with \"skillfold add <source>\")";
   }
-
-  if (config.team) {
-    sections.push("");
-    sections.push("Team Flow:");
-    sections.push(...renderFlowEdges(config.team.flow.nodes));
-  }
-
-  return sections.join("\n") + "\n";
+  const headers = ["name", "source", "pinned", "status"];
+  const table = rows.map((row) => [
+    row.name,
+    row.source,
+    row.pinned ?? "-",
+    row.status,
+  ]);
+  const widths = headers.map((header, i) =>
+    Math.max(header.length, ...table.map((row) => row[i].length))
+  );
+  const line = (cells: string[]) =>
+    "  " + cells.map((cell, i) => cell.padEnd(widths[i])).join("  ").trimEnd();
+  return [line(headers), ...table.map(line)].join("\n");
 }

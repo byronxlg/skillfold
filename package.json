@@ -1,7 +1,7 @@
 {
   "name": "skillfold",
-  "version": "1.23.0",
-  "description": "Configuration language and compiler for multi-agent AI pipelines. Compiles YAML into agent skills for Claude Code, Cursor, Windsurf, Codex, Copilot, Gemini, Goose, Roo Code, Kiro, and Junie.",
+  "version": "2.0.0",
+  "description": "Declarative skill manager for Claude config. Declare skills in YAML, pin them in a lockfile, install them into .claude/skills.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -17,26 +17,16 @@
   "files": [
     "dist",
     "library",
-    "plugin",
     "skillfold.schema.json"
   ],
   "keywords": [
-    "agent",
-    "ai",
-    "skills",
-    "pipeline",
-    "compiler",
-    "multi-agent",
-    "orchestrator",
-    "skill-composition",
+    "claude",
     "claude-code",
-    "agent-teams",
-    "cursor",
-    "windsurf",
-    "copilot",
-    "codex",
-    "gemini-cli",
-    "typescript",
+    "skills",
+    "agent-skills",
+    "skill-manager",
+    "package-manager",
+    "lockfile",
     "yaml",
     "devtool",
     "agentskills",
@@ -72,20 +62,8 @@
     "build": "tsc -p tsconfig.build.json",
     "postbuild": "chmod +x dist/cli.js",
     "prepare": "npm run build",
-    "build:plugin": "node scripts/build-plugin.mjs",
     "test": "tsx --test src/*.test.ts",
-    "start": "node dist/cli.js",
-    "docs:dev": "vitepress dev docs",
-    "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
-  },
-  "peerDependencies": {
-    "@anthropic-ai/claude-agent-sdk": ">=0.2.0"
-  },
-  "peerDependenciesMeta": {
-    "@anthropic-ai/claude-agent-sdk": {
-      "optional": true
-    }
+    "start": "node dist/cli.js"
   },
   "dependencies": {
     "yaml": "^2.8.0"
@@ -93,7 +71,6 @@
   "devDependencies": {
     "@types/node": "^22.0.0",
     "tsx": "^4.21.0",
-    "typescript": "^5.7.0",
-    "vitepress": "^1.6.4"
+    "typescript": "^5.7.0"
   }
 }

@@ -2,6 +2,21 @@
 
 For the full release history with detailed notes, see [GitHub Releases](https://github.com/byronxlg/skillfold/releases).
 
+## v2.0.0
+
+Complete overhaul. Skillfold is now a declarative skill manager for Claude config: declare skills in `skillfold.yaml`, pin them in `skillfold.lock`, install them into `.claude/skills`.
+
+- New manifest format: `skills` (name -> source), `compose`, optional `skillsDir`
+- Sources: local paths, `github:owner/repo/path@ref`, `npm:package/skill@version`
+- `skillfold.lock` lockfile with exact pins (commit SHA / version) and sha256 content hashes
+- Commands: `init`, `add`, `remove`, `install` (`--frozen` for CI), `update`, `check`, `list`, `info`, `search`
+- `--global` mode for managing `~/.claude/skills`
+- Shared content cache (`~/.cache/skillfold`) keyed by SHA/version; repeat installs are offline
+- Managed-directory safety: skillfold only overwrites/prunes directories named in the lockfile
+- Composition retained: composed skills concatenate other skills into a generated SKILL.md
+- Removed: team flows, typed state schema, orchestrator generation, `skillfold run` and spawners, state backends/integrations, graph visualization, plugin packaging, adopt, watch, and all non-Claude compilation targets
+- New single-page docs site; VitePress removed
+
 ## v1.23.0
 
 - `--target goose` compilation output for Block's Goose (`.goosehints`)

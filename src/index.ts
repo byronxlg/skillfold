@@ -1,103 +1,98 @@
-// Public API surface for programmatic use of skillfold.
+/**
+ * skillfold public API.
+ *
+ * The CLI is a thin layer over these functions; everything it does is
+ * available programmatically:
+ *
+ *   import { loadManifest, resolveManifest, syncSkillsDir } from "skillfold";
+ */
 
-// Config loading and types
 export {
-  loadConfig,
-  readConfig,
-  isAtomic,
-  isComposed,
-} from "./config.js";
-export type {
-  AtomicSkill,
-  ComposedSkill,
-  Config,
-  RawConfig,
-  SkillEntry,
-  TeamConfig,
-} from "./config.js";
-
-// Skill resolution
-export { resolveSkills, stripFrontmatter } from "./resolver.js";
-
-// Agent generation
-export { assignColor, generateAgents } from "./agent.js";
-export type { AgentColor, AgentDefinition, AgentResult } from "./agent.js";
-
-// Compilation
-export { check, compile, expandComposedBodies, generate, generateClaudeCode, generateGemini } from "./compiler.js";
-export type { CheckResult, CompileResult, CompileTarget, GenerateResult } from "./compiler.js";
-
-// Plugin packaging
-export { buildPlugin } from "./plugin.js";
-
-// Graph parsing and validation
-export {
-  isConditionalThen,
-  isMapNode,
-  parseGraph,
-  validateGraph,
-} from "./graph.js";
-export type {
-  ConditionalBranch,
-  Graph,
-  GraphNode,
-  MapNode,
-  StepNode,
-  Then,
-  WhenClause,
-} from "./graph.js";
-
-// State schema
-export { parseState } from "./state.js";
-export type {
-  CustomType,
-  PrimitiveType,
-  StateField,
-  StateLocation,
-  StateSchema,
-  StateType,
-} from "./state.js";
-
-// State integrations
-export {
-  getIntegration,
-  INTEGRATION_NAMES,
-  isIntegrationLocation,
-  parseIntegrationLocation,
-  renderIntegrationInstructions,
-  resolveIntegrationUrl,
-} from "./integrations.js";
-export type {
-  IntegrationLocation,
-  IntegrationType,
-} from "./integrations.js";
-
-// Orchestrator generation
-export { generateOrchestrator } from "./orchestrator.js";
-
-// Visualization
-export { generateMermaid } from "./visualize.js";
-
-// Pipeline introspection
-export { listPipeline } from "./list.js";
-
-// Init and templates
-export { initFromTemplate, initProject, TEMPLATES } from "./init.js";
-export type { Template } from "./init.js";
-
-// Adopt existing agents
-export { adoptProject } from "./adopt.js";
-export type { AdoptedAgent, AdoptResult } from "./adopt.js";
-
-// Pipeline execution
-export { ClaudeSpawner, run } from "./run.js";
-export type { MapItemResult, RunOptions, RunResult, Spawner, StepResult } from "./run.js";
-
-// Errors
-export {
-  CompileError,
-  ConfigError,
-  GraphError,
+  CheckError,
+  InstallError,
+  LockError,
+  ManifestError,
   ResolveError,
-  RunError,
+  SkillfoldError,
+  SourceError,
 } from "./errors.js";
+export {
+  defaultSkillName,
+  extractRef,
+  formatSource,
+  isCommitSha,
+  isFullSha,
+  parseSource,
+  type GitHubSource,
+  type LocalSource,
+  type NpmSource,
+  type Source,
+} from "./source.js";
+export {
+  computeIntegrity,
+  parseFrontmatter,
+  readDirFiles,
+  readSkillDir,
+  type SkillContent,
+  type SkillFile,
+} from "./skill.js";
+export {
+  addSkillToManifest,
+  DEFAULT_SKILLS_DIR,
+  loadManifest,
+  MANIFEST_FILENAME,
+  parseManifest,
+  removeSkillFromManifest,
+  validateSkillName,
+  type ComposeEntry,
+  type Manifest,
+} from "./manifest.js";
+export {
+  emptyLockfile,
+  LOCK_FILENAME,
+  lockfileProblems,
+  readLockfile,
+  serializeLockfile,
+  writeLockfile,
+  type LockComposeEntry,
+  type Lockfile,
+  type LockSkillEntry,
+} from "./lock.js";
+export {
+  composeBody,
+  composeOrder,
+  defaultComposeDescription,
+  generateComposedSkill,
+  type ComposeInput,
+} from "./compose.js";
+export {
+  resolveManifest,
+  resolveSingle,
+  type ResolvedSkill,
+  type ResolveOptions,
+  type ResolveResult,
+} from "./resolve.js";
+export {
+  checkProject,
+  syncSkillsDir,
+  type SyncOptions,
+  type SyncResult,
+} from "./install.js";
+export { initProject, type InitResult } from "./init.js";
+export { renderRows, skillRows, type SkillRow, type SkillStatus } from "./list.js";
+export { renderSearchHits, searchSkills, type SearchHit } from "./search.js";
+export { cacheRoot, githubCacheDir, npmCacheDir } from "./cache.js";
+export {
+  fetchGitHubSkill,
+  resolveGitHubRef,
+  type Fetcher,
+  type GitHubFetchResult,
+  type GitHubOptions,
+} from "./github.js";
+export {
+  findInstalledPackage,
+  resolveNpmSkill,
+  resolveNpmVersion,
+  type NpmOptions,
+  type NpmResolveResult,
+} from "./npm.js";

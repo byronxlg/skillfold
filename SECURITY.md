@@ -2,68 +2,43 @@
 
 ## Trust Model
 
-Skillfold is a compiler. It reads YAML configuration files and writes Markdown (`.md`) files. It does not execute generated output or run user-defined code.
+Skillfold is a file manager for skills. It reads a YAML manifest, downloads skill files from declared sources, and writes them into a skills directory. It never executes skill content, generated output, or user-defined code.
 
 ### Dependencies
 
 Single runtime dependency: [`yaml`](https://github.com/eemeli/yaml) (YAML parser).
 
-### Compiler (default)
+### What skillfold reads and writes
 
-The default `skillfold` command is a pure compiler:
+- **Reads**: `skillfold.yaml`, `skillfold.lock`, skill directories (local sources, `node_modules`, the download cache), and the installed skills directory.
+- **Writes**: the skills directory (default `.claude/skills`), `skillfold.lock`, and the download cache (`~/.cache/skillfold`, override with `SKILLFOLD_CACHE`).
+- **Managed-directory safety**: skillfold only overwrites or removes skill directories whose names appear in the lockfile. Anything else requires `--force`.
+- **No hooks, no background processes, no daemons.**
 
-- **Reads**: YAML config files (`skillfold.yaml`) and skill directories containing `SKILL.md` files
-- **Writes**: Compiled Markdown files to the configured output directory (default: `build/`)
-- **No hooks, no background processes, no daemons**
-- **No persistent state files**
+### Supply-chain properties
 
-### Pipeline Runner (`skillfold run`)
+- The lockfile pins every remote skill to an immutable identifier (full commit SHA for GitHub, exact version for npm) plus a sha256 content hash over all files.
+- `skillfold install --frozen` and `skillfold check` verify those hashes, so a tampered cache, registry substitution, or force-pushed tag surfaces as a hard failure rather than a silent change.
+- Skill content is still prompt material for your agent. Review skills from sources you do not control before installing them, the same way you would review a dependency.
 
-The `skillfold run` command is an opt-in execution mode with a broader surface:
+### Process execution
 
-- **Process execution**: Spawns `claude` CLI via `child_process.execFile` (CLI spawner, default) or uses the `@anthropic-ai/claude-agent-sdk` (SDK spawner, `--spawner sdk`).
-- **State files**: Writes `state.json` (pipeline state) and `.skillfold/run/` (checkpoint files for `--resume`). Both are gitignored.
-- **State backends**: Optionally reads from and writes to GitHub issues, discussions, and pull requests via `gh` CLI (`child_process.execFile`).
-- **Dry run**: Use `--dry-run` to preview the execution plan - which agents will run, in what order, with what state - without spawning agents or writing state. Always recommended before a first full run.
-
-#### Spawner permission model
-
-The two spawners have different permission profiles:
-
-- **CLI spawner** (`--spawner cli`, default): Uses `claude --print` for text-only generation. Agents cannot execute tools, modify files, or run commands. This is the safe default and requires no additional dependencies.
-- **SDK spawner** (`--spawner sdk`): Gives agents full tool access (Read, Write, Bash, etc.) and runs with `bypassPermissions` to enable unattended pipeline execution without interactive permission prompts. This is necessary because automated pipelines cannot pause for human approval at each tool call. The SDK spawner is opt-in - it requires explicitly installing the optional peer dependency `@anthropic-ai/claude-agent-sdk`.
-
-Use `--dry-run` to preview what the pipeline will do before committing to a full SDK spawner run.
-
-All shell execution uses `execFile` (not `exec`) to prevent shell injection.
-
-### Other Commands
-
-- **`skillfold search`**: Queries the npm registry (HTTPS) for packages with the `skillfold-skill` keyword.
-- **`skillfold init`**: Creates project directories and starter files in the current working directory.
-- **`skillfold plugin`**: Copies compiled output to a plugin directory structure. No network access.
+- `npm pack` and `tar` are invoked via `child_process.execFile` (never a shell) to download npm packages that are not already installed in `node_modules`.
+- No other processes are spawned.
 
 ### Network Access
 
-Network access is optional and limited to:
+Network access happens only during `install`/`add`/`update` for remote sources, and is limited to:
 
-- **Remote skills**: Fetches from `raw.githubusercontent.com` when a config references a GitHub URL. Private repos require the `GITHUB_TOKEN` environment variable.
-- **State backends** (`skillfold run`): Uses `gh` CLI to read/write GitHub issues, discussions, and pull requests.
-- **npm search** (`skillfold search`): Queries the npm registry.
+- **GitHub sources**: `api.github.com` (ref resolution, file listing) and `raw.githubusercontent.com` (file download). Private repos use the `GITHUB_TOKEN` / `GH_TOKEN` environment variable.
+- **npm sources**: `registry.npmjs.org` (version resolution and tarball download via `npm pack`).
+- **`skillfold search`**: queries the npm registry over HTTPS.
 
-No other network requests are made.
-
-### Compiled Output Pass-through
-
-The `hooks` field in `agentConfig` allows composed skills to specify Claude Code hook configuration. Skillfold does not execute these hooks - it passes them through to compiled agent frontmatter. The hooks are only executed by the consuming platform (e.g., Claude Code) when an agent is loaded. Review any `hooks` configuration in your `skillfold.yaml` with the same scrutiny you would apply to hooks configured directly in your platform settings.
-
-### File System Access
-
-Skillfold reads config files and skill directories, and writes compiled output to the configured output directory. The `skillfold run` command additionally writes `state.json` and `.skillfold/run/` checkpoint files. It does not read or write files outside these paths.
+`check` is fully offline. Installs with a warm cache are fully offline.
 
 ### npm Lifecycle Scripts
 
-The `prepare` script runs `npm run build`, which is standard TypeScript compilation (`tsc`). This only runs when installing from git source. There is no implicit execution beyond standard npm lifecycle scripts.
+The `prepare` script runs `npm run build`, which is standard TypeScript compilation (`tsc`). This only runs when installing from git source. Downloaded skill packages are extracted with `tar`; their lifecycle scripts are never executed.
 
 ## Reporting Vulnerabilities
 
