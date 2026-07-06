@@ -2,6 +2,14 @@
 
 For the full release history with detailed notes, see [GitHub Releases](https://github.com/byronxlg/skillfold/releases).
 
+## v2.1.0
+
+- `rules` manifest section: single markdown files installed as `<rulesDir>/<name>.md` (default `.claude/rules`), from local, GitHub, or npm sources, pinned in the lockfile like skills
+- Composed skills carry the supporting files (`references/`, `scripts/`, ...) of the skills they use; identical duplicates collapse, conflicting paths error
+- Composed skill frontmatter gains `allowed-tools`: the union of the used skills' tools, or an explicit `allowed-tools` on the compose entry
+- Installs rewrite the SKILL.md frontmatter `name` to the manifest name, so the installed directory and frontmatter always agree
+- GitHub and npm cache writes are atomic; an interrupted fetch can no longer leave a partial cache entry
+
 ## v2.0.0
 
 Complete overhaul. Skillfold is now a declarative skill manager for Claude config: declare skills in `skillfold.yaml`, pin them in `skillfold.lock`, install them into `.claude/skills`.

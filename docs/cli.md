@@ -22,11 +22,11 @@ skillfold add ./skills/commit-helper
 
 ### `skillfold remove <name>` (alias: `rm`)
 
-Remove a skill (or composed skill) from the manifest, uninstall it, and update the lockfile.
+Remove a skill, composed skill, or rule from the manifest, uninstall it, and update the lockfile.
 
 ### `skillfold install` (aliases: `i`, `sync`)
 
-Resolve every manifest entry, honoring existing lockfile pins; materialize all skills (including composed ones) into the skills directory; prune skills that left the manifest; write the lockfile.
+Resolve every manifest entry, honoring existing lockfile pins; materialize all skills (including composed ones) into the skills directory and all rules into the rules directory; prune entries that left the manifest; write the lockfile.
 
 - `--frozen` - CI mode. Requires manifest and lockfile to agree exactly, installs precisely the pinned revisions, verifies content hashes, and never rewrites the lockfile. Like `npm ci`.
 - `--force` - allow overwriting a skill directory that skillfold does not manage (i.e. not named in the lockfile).
@@ -40,16 +40,16 @@ Re-resolve refs past their lockfile pins - branches move to their new head, `lat
 Offline verification with a nonzero exit on any problem:
 
 - lockfile exists and covers exactly the manifest (sources unchanged)
-- every skill is installed
-- remote skills on disk match the lockfile's content hash
-- local skills on disk match their source directory
+- every skill and rule is installed
+- remote skills and rules on disk match the lockfile's content hash
+- local skills and rules on disk match their source
 - composed skills match what their installed inputs would generate
 
 This is what [the GitHub Action](../action.yml) runs.
 
 ### `skillfold list` (alias: `ls`)
 
-Status table for every declared skill:
+Status table for every declared skill and rule:
 
 ```
   name             source                                     pinned   status

@@ -90,7 +90,19 @@ compose:
     use: [code-review, testing]
 ```
 
-`reviewer` is generated at install time and regenerated whenever its inputs change. Composed skills can use other composed skills; cycles are rejected at parse time.
+`reviewer` is generated at install time and regenerated whenever its inputs change. Composed skills can use other composed skills; cycles are rejected at parse time. Supporting files (`references/`, `scripts/`, ...) of the used skills are carried into the composed skill, and its `allowed-tools` defaults to the union of the used skills' (override with `allowed-tools:` on the entry).
+
+## Rules
+
+The same manifest also manages rules - single markdown files installed into `.claude/rules/`:
+
+```yaml
+rules:
+  code-style: ./rules/code-style.md
+  security: github:acme/standards/rules/security.md@v3
+```
+
+Rules pin in the lockfile and participate in `install`, `check`, `list`, and `remove` exactly like skills.
 
 ## Commands
 
