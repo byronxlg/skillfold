@@ -1,7 +1,0 @@
-imports:
-  - ../shared/skillfold.yaml
-
-name: nested
-skills:
-  atomic:
-    nested-skill: ./dummy

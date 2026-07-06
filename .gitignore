@@ -1,28 +1,8 @@
 node_modules/
 dist/
-build/
 *.tsbuildinfo
 *.tmp
-.tmp-*
-*.local.yaml
-.claude/*
-!.claude/skills/
-.claude/skills/*
-!.claude/skills/build/
-.skillfold/
-state.json
-test-output/
-docs/.vitepress/dist/
-docs/.vitepress/cache/
+.DS_Store
 
-# Development artifacts
-.oss-bot-test/
-.parse_project.mjs
-.test-goose/
-.tmp_payload.json
-.tmux-session.sh
-.update-readme.mjs
-decode_readme.js
-decode_readme.mjs
-readme_decoded.md
-update_readme.mjs
+# Skills installed by skillfold are reproducible from skillfold.yaml + skillfold.lock
+.claude/

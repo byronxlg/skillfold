@@ -1,0 +1,186 @@
+import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve as resolvePath } from "node:path";
+
+import {
+  composeOrder,
+  generateComposedSkill,
+  type ComposeInput,
+} from "./compose.js";
+import { InstallError } from "./errors.js";
+import { lockfileProblems, type Lockfile } from "./lock.js";
+import type { Manifest } from "./manifest.js";
+import { parseSource } from "./source.js";
+import type { ResolvedSkill } from "./resolve.js";
+import {
+  computeIntegrity,
+  parseFrontmatter,
+  readDirFiles,
+  type SkillFile,
+} from "./skill.js";
+
+export interface SyncResult {
+  /** Skills written or rewritten. */
+  installed: string[];
+  /** Skills already up to date on disk. */
+  unchanged: string[];
+  /** Previously managed skills removed because they left the manifest. */
+  pruned: string[];
+}
+
+export interface SyncOptions {
+  /** Absolute path to the skills directory. */
+  skillsDir: string;
+  resolved: ResolvedSkill[];
+  /** Lockfile from before this run; its names are the dirs skillfold manages. */
+  previousLock: Lockfile | null;
+  /** Overwrite directories skillfold does not manage. */
+  force?: boolean;
+}
+
+function writeSkillFiles(dir: string, files: SkillFile[]): void {
+  for (const file of files) {
+    const target = join(dir, ...file.path.split("/"));
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, file.content);
+  }
+}
+
+/**
+ * Materialize resolved skills into the skills directory and prune skills
+ * that left the manifest. A directory is "managed" (safe to overwrite or
+ * remove) when its name appears in the lockfile; anything else is treated
+ * as hand-authored and never touched without --force.
+ */
+export function syncSkillsDir(options: SyncOptions): SyncResult {
+  const { skillsDir, resolved, previousLock, force } = options;
+  const managed = new Set<string>([
+    ...Object.keys(previousLock?.skills ?? {}),
+    ...Object.keys(previousLock?.compose ?? {}),
+  ]);
+  const result: SyncResult = { installed: [], unchanged: [], pruned: [] };
+  const currentNames = new Set(resolved.map((skill) => skill.name));
+
+  for (const skill of resolved) {
+    const target = join(skillsDir, skill.name);
+    if (existsSync(target)) {
+      const existingIntegrity = computeIntegrity(readDirFiles(target));
+      const newIntegrity = computeIntegrity(skill.skill.files);
+      if (existingIntegrity === newIntegrity) {
+        result.unchanged.push(skill.name);
+        continue;
+      }
+      if (!managed.has(skill.name) && !force) {
+        throw new InstallError(
+          `${target} already exists and was not installed by skillfold. ` +
+            `Move it aside, pick another name, or rerun with --force to overwrite it.`
+        );
+      }
+      rmSync(target, { recursive: true, force: true });
+    }
+    writeSkillFiles(target, skill.skill.files);
+    result.installed.push(skill.name);
+  }
+
+  for (const name of managed) {
+    if (currentNames.has(name)) continue;
+    const target = join(skillsDir, name);
+    if (existsSync(target)) {
+      rmSync(target, { recursive: true, force: true });
+      result.pruned.push(name);
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Offline verification that manifest, lockfile, and installed skills agree.
+ * Returns human-readable problems; empty means everything is in sync.
+ *
+ * Checks, in order:
+ *   - the lockfile covers exactly the manifest (sources unchanged)
+ *   - every skill is installed
+ *   - remote skills on disk match the lockfile's content hash
+ *   - local skills on disk match their source directory
+ *   - composed skills on disk match what the installed inputs would generate
+ */
+export function checkProject(
+  manifest: Manifest,
+  lock: Lockfile | null,
+  baseDir: string,
+  skillsDir: string
+): string[] {
+  const problems = lockfileProblems(manifest, lock);
+  if (!lock) return problems;
+
+  const bodies = new Map<string, ComposeInput>();
+
+  for (const [name, sourceString] of Object.entries(manifest.skills)) {
+    const target = join(skillsDir, name);
+    const installedFiles = readDirFiles(target);
+    if (installedFiles.length === 0) {
+      problems.push(`"${name}" is not installed (run "skillfold install")`);
+      continue;
+    }
+    const installedIntegrity = computeIntegrity(installedFiles);
+    const source = parseSource(sourceString);
+    if (source.kind === "local") {
+      const sourceFiles = readDirFiles(resolvePath(baseDir, source.path));
+      if (sourceFiles.length === 0) {
+        problems.push(`"${name}" source directory is missing: ${source.path}`);
+        continue;
+      }
+      if (computeIntegrity(sourceFiles) !== installedIntegrity) {
+        problems.push(
+          `"${name}" is out of date with ${source.path} (run "skillfold install")`
+        );
+      }
+    } else {
+      const entry = lock.skills[name];
+      if (entry?.integrity && entry.integrity !== installedIntegrity) {
+        problems.push(
+          `"${name}" installed files do not match the lockfile (run "skillfold install")`
+        );
+      }
+    }
+    const skillMd = installedFiles.find((f) => f.path === "SKILL.md");
+    if (skillMd) {
+      const { attrs, body } = parseFrontmatter(skillMd.content.toString("utf-8"));
+      bodies.set(name, {
+        description: typeof attrs.description === "string" ? attrs.description : "",
+        body,
+      });
+    }
+  }
+
+  // Regenerate composed skills from the installed inputs and compare.
+  for (const name of composeOrder(manifest.compose)) {
+    const entry = manifest.compose[name];
+    const target = join(skillsDir, name);
+    const installedFiles = readDirFiles(target);
+    if (installedFiles.length === 0) {
+      problems.push(`composed skill "${name}" is not installed (run "skillfold install")`);
+      continue;
+    }
+    const inputs: ComposeInput[] = [];
+    let missingInput = false;
+    for (const dep of entry.use) {
+      const input = bodies.get(dep);
+      if (!input) {
+        missingInput = true;
+        break;
+      }
+      inputs.push(input);
+    }
+    if (missingInput) continue; // the missing dep is already reported
+    const regenerated = generateComposedSkill(name, entry, inputs);
+    bodies.set(name, { description: regenerated.description, body: regenerated.body });
+    if (computeIntegrity(regenerated.files) !== computeIntegrity(installedFiles)) {
+      problems.push(
+        `composed skill "${name}" is out of date (run "skillfold install")`
+      );
+    }
+  }
+
+  return problems;
+}

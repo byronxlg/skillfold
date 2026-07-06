@@ -15,16 +15,12 @@ npm install
 
 ## Development
 
-Run the compiler in development mode:
+Run the CLI from source:
 
 ```bash
-npx tsx src/cli.ts
-```
-
-Compile to Claude Code layout:
-
-```bash
-npx tsx src/cli.ts --target claude-code
+npx tsx src/cli.ts --help
+npx tsx src/cli.ts install
+npx tsx src/cli.ts check
 ```
 
 ## Testing
@@ -41,7 +37,7 @@ Type check without emitting:
 npx tsc --noEmit
 ```
 
-Both must pass before submitting a PR.
+Both must pass before submitting a PR. Tests run fully offline: network access is injectable (`fetcher` options), so new tests should stub fetches with the helpers in `src/testutil.ts` rather than hitting the network.
 
 ## Code Conventions
 
@@ -50,15 +46,15 @@ Both must pass before submitting a PR.
 - Import order: node stdlib, then third-party, then local - alphabetical within each group
 - File extensions in imports: `.js` (NodeNext module resolution)
 - No `any` types, no unnecessary type assertions
-- Custom errors extend `Error` with descriptive messages including context
+- Custom errors extend `SkillfoldError` with messages safe to print directly to the terminal
 
 ## Versioning
 
 This project follows [Semantic Versioning](https://semver.org/):
 
-- **Patch** (e.g., 1.4.1): Bug fixes, typo corrections, minor tweaks
-- **Minor** (e.g., 1.5.0): New features that are backwards compatible
-- **Major** (e.g., 2.0.0): Breaking changes to the config format, CLI interface, or compiled output structure
+- **Patch** (e.g., 2.0.1): Bug fixes, typo corrections, minor tweaks
+- **Minor** (e.g., 2.1.0): New features that are backwards compatible
+- **Major** (e.g., 3.0.0): Breaking changes to the manifest format, lockfile format, or CLI interface
 
 Version bumps happen in `package.json` before tagging a release. The publish workflow (`.github/workflows/publish.yml`) is triggered by GitHub releases and publishes to npm with provenance.
 

@@ -1,467 +1,74 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/byronxlg/skillfold/raw/main/skillfold.schema.json",
-  "title": "Skillfold Pipeline Config",
-  "description": "Configuration for a skillfold multi-agent AI pipeline.",
+  "title": "Skillfold Manifest",
+  "description": "Declares the skills a project uses. Run \"skillfold install\" to install them into .claude/skills and pin exact versions in skillfold.lock.",
   "type": "object",
-  "required": ["name", "skills"],
   "additionalProperties": false,
   "properties": {
-    "name": {
-      "type": "string",
-      "description": "Pipeline name."
-    },
-    "imports": {
-      "type": "array",
-      "description": "Paths, URLs, or npm: references to other skillfold configs. Imports pull in skills and state, not team. Use npm:package-name for npm packages (resolves to node_modules/package-name/skillfold.yaml) or npm:package-name/custom.yaml for a specific file.",
-      "items": {
-        "type": "string"
-      }
-    },
-    "resources": {
-      "type": "object",
-      "description": "Top-level resource declarations mapping resource group names to namespace-URL maps. State locations reference these by the group name in the 'skill' field. Decouples deployment-specific URLs from skill definitions.",
-      "additionalProperties": {
-        "type": "object",
-        "description": "Resource namespaces with base URL templates.",
-        "additionalProperties": {
-          "type": "string"
-        },
-        "propertyNames": {
-          "pattern": "^[a-z0-9][a-z0-9-]*$"
-        }
-      },
-      "propertyNames": {
-        "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$"
-      }
-    },
     "skills": {
+      "description": "Skills to install, keyed by skill name (the directory name under the skills directory).",
       "type": "object",
-      "description": "Skill definitions split into atomic and composed sub-sections.",
-      "additionalProperties": false,
-      "anyOf": [
-        { "required": ["atomic"] },
-        { "required": ["composed"] }
-      ],
-      "properties": {
-        "atomic": {
-          "type": "object",
-          "description": "Atomic skills referenced by local path, GitHub URL, or npm: reference.",
-          "additionalProperties": {
-            "oneOf": [
-              {
-                "type": "string",
-                "description": "Path to the skill directory (local path, GitHub tree URL, or npm:package/path)."
-              },
-              {
-                "type": "object",
-                "required": ["path"],
-                "additionalProperties": false,
-                "properties": {
-                  "path": {
-                    "type": "string",
-                    "description": "Path to the skill directory."
-                  },
-                  "resources": {
-                    "type": "object",
-                    "description": "Deprecated: use top-level 'resources' section instead. Resource namespaces this skill exposes, with base URL templates.",
-                    "additionalProperties": {
-                      "type": "string"
-                    },
-                    "propertyNames": {
-                      "pattern": "^[a-z0-9][a-z0-9-]*$"
-                    }
-                  }
-                }
-              }
-            ]
-          }
-        },
-        "composed": {
-          "type": "object",
-          "description": "Composed skills that combine atomic skills.",
-          "additionalProperties": {
+      "propertyNames": {
+        "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+        "maxLength": 64
+      },
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "string",
+            "description": "Source string: a local path (./skills/my-skill), github:owner/repo/path@ref, or npm:package/skill-name@version.",
+            "minLength": 1
+          },
+          {
             "type": "object",
-            "required": ["compose", "description"],
             "additionalProperties": false,
+            "required": ["source"],
             "properties": {
-              "compose": {
-                "type": "array",
-                "description": "Ordered list of skill names to compose.",
-                "items": {
-                  "type": "string"
-                },
-                "minItems": 1
-              },
-              "description": {
+              "source": {
                 "type": "string",
-                "description": "Human-readable description of the composed skill.",
-                "minLength": 1,
-                "maxLength": 1024
+                "description": "Source without a version pin.",
+                "minLength": 1
               },
-              "frontmatter": {
-                "type": "object",
-                "description": "Extra YAML frontmatter fields emitted in --target claude-code output. Passthrough key-value pairs. Prefer the named fields (tools, permissionMode, etc.) for validated overrides.",
-                "additionalProperties": true
-              },
-              "tools": {
-                "type": "array",
-                "description": "Claude Code tools available to this agent (e.g., Read, Edit, Write, Bash, Grep, Glob).",
-                "items": { "type": "string" }
-              },
-              "disallowedTools": {
-                "type": "array",
-                "description": "Claude Code tools explicitly denied to this agent.",
-                "items": { "type": "string" }
-              },
-              "permissionMode": {
-                "type": "string",
-                "description": "Claude Code permission mode for this agent.",
-                "enum": ["default", "acceptEdits", "bypassPermissions", "plan"]
-              },
-              "model": {
-                "type": "string",
-                "description": "Model override for this agent (e.g., sonnet, opus, haiku). Replaces the default 'inherit'."
-              },
-              "memory": {
-                "type": "boolean",
-                "description": "Whether this agent has memory enabled."
-              },
-              "hooks": {
-                "type": "object",
-                "description": "Claude Code lifecycle hooks for this agent.",
-                "additionalProperties": true
-              },
-              "isolation": {
-                "type": "string",
-                "description": "Isolation mode for this agent.",
-                "enum": ["worktree", "none"]
-              },
-              "effort": {
-                "type": "string",
-                "description": "Reasoning effort level for this agent.",
-                "enum": ["low", "medium", "high"]
-              },
-              "maxTurns": {
-                "type": "integer",
-                "description": "Maximum number of turns for this agent.",
-                "minimum": 1
-              },
-              "background": {
-                "type": "boolean",
-                "description": "Whether this agent runs in the background."
-              },
-              "mcpServers": {
-                "type": "object",
-                "description": "MCP servers scoped to this agent. Each key is a server name mapping to its configuration (command, args, env, etc.).",
-                "additionalProperties": {
-                  "type": "object",
-                  "description": "MCP server configuration.",
-                  "additionalProperties": true
-                }
-              },
-              "skills": {
-                "type": "array",
-                "description": "Skills to preload into this agent's context.",
-                "items": { "type": "string" }
+              "version": {
+                "type": ["string", "number"],
+                "description": "Version pin: a git tag, branch, or commit SHA for GitHub sources; an exact version or dist-tag for npm sources."
               }
             }
           }
-        }
-      }
-    },
-    "state": {
-      "type": "object",
-      "description": "Typed state schema. Entries without a 'type' field define custom types. Entries with a 'type' field define state fields.",
-      "additionalProperties": {
-        "type": "object",
-        "oneOf": [
-          { "$ref": "#/$defs/customType" },
-          { "$ref": "#/$defs/stateField" }
         ]
       }
     },
-    "team": {
+    "compose": {
+      "description": "Generated skills whose body is the concatenation of other skills' bodies, in declared order.",
       "type": "object",
-      "description": "Team configuration with orchestrator and execution flow.",
-      "required": ["flow"],
-      "additionalProperties": false,
-      "properties": {
-        "orchestrator": {
-          "type": "string",
-          "description": "Name of the composed skill that receives the generated execution plan."
-        },
-        "flow": {
-          "type": "array",
-          "description": "Directed execution flow. Each element is a step node or map node.",
-          "items": {
-            "$ref": "#/$defs/flowElement"
-          },
-          "minItems": 1
-        }
-      }
-    }
-  },
-  "$defs": {
-    "primitiveType": {
-      "type": "string",
-      "enum": ["string", "bool", "number"]
-    },
-    "customType": {
-      "type": "object",
-      "description": "Custom type definition. An object whose keys are field names and values are primitive types. Must NOT contain a 'type' key.",
-      "not": {
-        "required": ["type"]
+      "propertyNames": {
+        "pattern": "^[a-z0-9]([a-z0-9-]*[a-z0-9])?$",
+        "maxLength": 64
       },
       "additionalProperties": {
-        "$ref": "#/$defs/primitiveType"
-      },
-      "minProperties": 1
-    },
-    "stateField": {
-      "type": "object",
-      "description": "State field with a type and optional external location.",
-      "required": ["type"],
-      "additionalProperties": false,
-      "properties": {
-        "type": {
-          "type": "string",
-          "description": "Type of the state field. Primitives (string, bool, number), custom type names, or list<TypeName>."
-        },
-        "location": {
-          "$ref": "#/$defs/stateLocation"
-        }
-      }
-    },
-    "stateLocation": {
-      "type": "object",
-      "description": "External storage location for a state field. Use either skill+path (traditional) or a built-in integration type (github-issues, github-discussions, github-pull-requests).",
-      "oneOf": [
-        {
-          "required": ["skill", "path"],
-          "additionalProperties": false,
-          "properties": {
-            "skill": {
-              "type": "string",
-              "description": "Name of the skill or resource group that provides access to this storage."
-            },
-            "path": {
-              "type": "string",
-              "description": "Path within the external system."
-            },
-            "kind": {
-              "type": "string",
-              "description": "Optional qualifier (e.g., 'reply', 'review')."
-            }
-          }
-        },
-        {
-          "required": ["github-issues"],
-          "additionalProperties": false,
-          "properties": {
-            "github-issues": {
-              "$ref": "#/$defs/githubIssuesConfig"
-            },
-            "kind": {
-              "type": "string",
-              "description": "Optional qualifier."
-            }
-          }
-        },
-        {
-          "required": ["github-discussions"],
-          "additionalProperties": false,
-          "properties": {
-            "github-discussions": {
-              "$ref": "#/$defs/githubDiscussionsConfig"
-            },
-            "kind": {
-              "type": "string",
-              "description": "Optional qualifier."
-            }
-          }
-        },
-        {
-          "required": ["github-pull-requests"],
-          "additionalProperties": false,
-          "properties": {
-            "github-pull-requests": {
-              "$ref": "#/$defs/githubPullRequestsConfig"
-            },
-            "kind": {
-              "type": "string",
-              "description": "Optional qualifier."
-            }
-          }
-        }
-      ]
-    },
-    "githubIssuesConfig": {
-      "type": "object",
-      "description": "GitHub Issues integration config.",
-      "required": ["repo"],
-      "additionalProperties": false,
-      "properties": {
-        "repo": {
-          "type": "string",
-          "description": "GitHub repository (owner/name)."
-        },
-        "label": {
-          "type": "string",
-          "description": "Filter issues by label."
-        },
-        "assignee": {
-          "type": "string",
-          "description": "Filter issues by assignee."
-        }
-      }
-    },
-    "githubDiscussionsConfig": {
-      "type": "object",
-      "description": "GitHub Discussions integration config.",
-      "required": ["repo"],
-      "additionalProperties": false,
-      "properties": {
-        "repo": {
-          "type": "string",
-          "description": "GitHub repository (owner/name)."
-        },
-        "category": {
-          "type": "string",
-          "description": "Filter discussions by category."
-        }
-      }
-    },
-    "githubPullRequestsConfig": {
-      "type": "object",
-      "description": "GitHub Pull Requests integration config.",
-      "required": ["repo"],
-      "additionalProperties": false,
-      "properties": {
-        "repo": {
-          "type": "string",
-          "description": "GitHub repository (owner/name)."
-        },
-        "state": {
-          "type": "string",
-          "description": "Filter pull requests by state (e.g., 'open', 'closed')."
-        }
-      }
-    },
-    "conditionalBranch": {
-      "type": "object",
-      "description": "Conditional transition. Routes to a target when the condition is met.",
-      "required": ["when", "to"],
-      "additionalProperties": false,
-      "properties": {
-        "when": {
-          "type": "string",
-          "description": "Condition expression (e.g., 'review.approved == true')."
-        },
-        "to": {
-          "type": "string",
-          "description": "Target skill name or 'end'."
-        }
-      }
-    },
-    "then": {
-      "description": "Transition target. A skill name, 'end', or an array of conditional branches.",
-      "oneOf": [
-        {
-          "type": "string"
-        },
-        {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/conditionalBranch"
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["use"],
+        "properties": {
+          "description": {
+            "type": "string",
+            "description": "Frontmatter description of the generated skill."
           },
-          "minItems": 1
-        }
-      ]
-    },
-    "stepBody": {
-      "type": ["object", "null"],
-      "description": "Step node body with optional reads, writes, async flag, policy, and flow reference.",
-      "additionalProperties": false,
-      "properties": {
-        "reads": {
-          "type": "array",
-          "description": "State fields this step reads.",
-          "items": { "type": "string" }
-        },
-        "writes": {
-          "type": "array",
-          "description": "State fields this step writes.",
-          "items": { "type": "string" }
-        },
-        "async": {
-          "type": "boolean",
-          "description": "When true, marks this node as an async checkpoint that waits for an external agent to provide state rather than invoking a composed skill."
-        },
-        "policy": {
-          "type": "string",
-          "description": "How to handle unavailable async data. Only valid when async is true.",
-          "enum": ["block", "skip", "use-latest"]
-        },
-        "flow": {
-          "type": "string",
-          "description": "Path to a sub-flow pipeline config. When set, this node runs the referenced pipeline as a nested flow instead of invoking a single skill."
+          "use": {
+            "type": "array",
+            "description": "Names of skills (or other composed skills) to concatenate, in order.",
+            "items": { "type": "string" },
+            "minItems": 1,
+            "uniqueItems": true
+          }
         }
       }
     },
-    "mapBody": {
-      "type": "object",
-      "description": "Map node that parallelizes over a list state field. Use 'flow' for the sub-flow (preferred). 'graph' is accepted for backward compatibility.",
-      "required": ["over", "as"],
-      "additionalProperties": false,
-      "oneOf": [
-        { "required": ["flow"] },
-        { "required": ["graph"] }
-      ],
-      "properties": {
-        "over": {
-          "type": "string",
-          "description": "State field of type list<T> to iterate over."
-        },
-        "as": {
-          "type": "string",
-          "description": "Alias for the current item in the map iteration."
-        },
-        "flow": {
-          "type": "array",
-          "description": "Sub-flow executed for each item.",
-          "items": {
-            "$ref": "#/$defs/flowElement"
-          },
-          "minItems": 1
-        },
-        "graph": {
-          "type": "array",
-          "description": "Sub-flow executed for each item (deprecated, use 'flow').",
-          "items": {
-            "$ref": "#/$defs/flowElement"
-          },
-          "minItems": 1
-        }
-      }
-    },
-    "flowElement": {
-      "type": "object",
-      "description": "A flow element: either a step node (skill-name: {reads, writes}) or a map node (map: {over, as, graph}). Has an optional 'then' for transitions.",
-      "properties": {
-        "then": {
-          "$ref": "#/$defs/then"
-        },
-        "map": {
-          "$ref": "#/$defs/mapBody"
-        }
-      },
-      "patternProperties": {
-        "^(?!then$|map$)[a-z0-9][a-z0-9-]*$": {
-          "$ref": "#/$defs/stepBody"
-        }
-      },
-      "minProperties": 1
+    "skillsDir": {
+      "type": "string",
+      "description": "Directory to install skills into, relative to the manifest. Default: .claude/skills",
+      "minLength": 1
     }
   }
 }

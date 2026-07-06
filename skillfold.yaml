@@ -1,127 +1,14 @@
-name: skillfold-team
+# Skills used while developing skillfold itself, installed from the
+# in-repo library. Run "skillfold install" (or npx tsx src/cli.ts install)
+# after cloning.
 
 skills:
-  atomic:
-    # Remote public skills
-    coding-guidelines: https://github.com/tech-leads-club/agent-skills/tree/main/packages/skills-catalog/skills/(development)/coding-guidelines
-    conventional-commit: https://github.com/github/awesome-copilot/tree/main/skills/conventional-commit
-    create-implementation-plan: https://github.com/github/awesome-copilot/tree/main/skills/create-implementation-plan
-    create-readme: https://github.com/github/awesome-copilot/tree/main/skills/create-readme
-    docs-writer: https://github.com/tech-leads-club/agent-skills/tree/main/packages/skills-catalog/skills/(development)/docs-writer
-    pr-review-expert: https://github.com/alirezarezvani/claude-skills/tree/main/engineering/pr-review-expert
-    security-best-practices: https://github.com/openai/skills/tree/main/skills/.curated/security-best-practices
+  code-review: ./library/skills/code-review
+  code-writing: ./library/skills/code-writing
+  testing: ./library/skills/testing
+  github-workflow: ./library/skills/github-workflow
 
-    # Project-specific skills
-    github: ./skills/github
-    moltbook: ./skills/moltbook
-    product-strategy: ./skills/product-strategy
-    skillfold-context: ./skills/skillfold-context
-    testing: ./skills/testing
-
-  composed:
-    strategist:
-      compose: [skillfold-context, product-strategy, github]
-      description: "Reads the project board and open issues, assesses priorities, and posts direction to Strategy discussions."
-
-    architect:
-      compose: [skillfold-context, create-implementation-plan, github]
-      description: "Designs implementation plans, decomposes work into issues, and manages the project board."
-
-    engineer:
-      compose: [skillfold-context, coding-guidelines, testing, conventional-commit, github]
-      description: "Writes production-quality TypeScript code and tests, works on feature branches and opens PRs."
-
-    reviewer:
-      compose: [skillfold-context, pr-review-expert, security-best-practices, github]
-      description: "Reviews pull requests for correctness, security, and design quality."
-
-    marketer:
-      compose: [skillfold-context, product-strategy, moltbook, github]
-      description: "Engages with the agent community on Moltbook and positions the project for adoption."
-
-    designer:
-      compose: [skillfold-context, create-readme, docs-writer, github]
-      description: "Designs project-facing content like READMEs, docs, and landing pages."
-
-    orchestrator:
-      compose: [skillfold-context, github]
-      description: "Coordinates the pipeline execution, manages the project board, and merges approved PRs."
-
-state:
-  Task:
-    title: string
-    description: string
-
-  Review:
-    approved: bool
-    feedback: string
-
-  human-discussion:
-    type: string
-    location:
-      github-discussions: { repo: byronxlg/skillfold, category: human }
-
-  direction:
-    type: string
-    location:
-      github-discussions: { repo: byronxlg/skillfold, category: strategy }
-
-  plan:
-    type: string
-    location:
-      github-discussions: { repo: byronxlg/skillfold, category: strategy }
-      kind: reply
-
-  tasks:
-    type: list<Task>
-    location:
-      github-issues: { repo: byronxlg/skillfold, label: task }
-
-  implementation:
-    type: string
-    location:
-      github-pull-requests: { repo: byronxlg/skillfold }
-
-  review:
-    type: Review
-    location:
-      github-pull-requests: { repo: byronxlg/skillfold }
-      kind: review
-
-  announcement:
-    type: string
-    location:
-      github-discussions: { repo: byronxlg/skillfold, category: announcements }
-
-team:
-  orchestrator: orchestrator
-
-  flow:
-    - strategist:
-        reads: [state.human-discussion, state.tasks, state.announcement]
-        writes: [state.direction]
-      then: architect
-
-    - architect:
-        reads: [state.direction]
-        writes: [state.plan, state.tasks]
-      then: engineer
-
-    - engineer:
-        reads: [state.plan, state.tasks]
-        writes: [state.implementation]
-      then: reviewer
-
-    - reviewer:
-        reads: [state.implementation]
-        writes: [state.review]
-      then:
-        - when: review.approved == false
-          to: engineer
-        - when: review.approved == true
-          to: marketer
-
-    - marketer:
-        reads: [state.direction, state.implementation]
-        writes: [state.announcement]
-      then: end
+compose:
+  reviewer:
+    description: Review code changes together with their tests.
+    use: [code-review, testing]
