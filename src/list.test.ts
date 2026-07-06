@@ -35,7 +35,7 @@ describe("skillRows", () => {
     const { rmSync } = await import("node:fs");
     rmSync(join(skillsDir, "pending"), { recursive: true });
 
-    const rows = skillRows(manifest, lock, baseDir, skillsDir);
+    const rows = skillRows(manifest, lock, baseDir, [{ target: "claude", skillsDir: skillsDir, rulesDir: join(baseDir, ".claude", "rules") }]);
     const byName = new Map(rows.map((row) => [row.name, row]));
     assert.equal(byName.get("here")?.status, "modified");
     assert.equal(byName.get("pending")?.status, "not installed");
@@ -49,7 +49,7 @@ describe("skillRows", () => {
     writeSkill(baseDir, "skills/x", "x");
     const manifest = parseManifest("skills:\n  x: github:o/r/x@v1", "t.yaml");
     writeSkill(skillsDir, "x", "x"); // installed but unlocked
-    const rows = skillRows(manifest, null, baseDir, skillsDir);
+    const rows = skillRows(manifest, null, baseDir, [{ target: "claude", skillsDir: skillsDir, rulesDir: join(baseDir, ".claude", "rules") }]);
     assert.equal(rows[0].status, "not locked");
   });
 });

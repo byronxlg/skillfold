@@ -2,6 +2,14 @@
 
 For the full release history with detailed notes, see [GitHub Releases](https://github.com/byronxlg/skillfold/releases).
 
+## v2.2.0
+
+- `targets` manifest key: `[claude, codex]` installs the same skills into `.claude/skills` and `.agents/skills` (where Codex discovers them) from one manifest and lockfile
+- The codex target syncs rules into a marker-fenced managed block in `AGENTS.md` (Codex's instructions file); content outside the markers is never touched, and `check` verifies the block offline
+- Global mode maps the codex target to `~/.agents/skills` and `~/.codex/AGENTS.md` (honoring `CODEX_HOME`)
+- `check`/`list` verify every target layout and label problems with the drifted target
+- API: `checkProject` and `skillRows` now take target layouts (from `targetLayouts()`) instead of skillsDir/rulesDir paths
+
 ## v2.1.0
 
 - `rules` manifest section: single markdown files installed as `<rulesDir>/<name>.md` (default `.claude/rules`), from local, GitHub, or npm sources, pinned in the lockfile like skills

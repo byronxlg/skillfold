@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { after, afterEach, beforeEach, describe, it } from "node:test";
 
@@ -176,6 +176,52 @@ describe("cli", () => {
     await main(["remove", "style", "--dir", dir]);
     assert.match(logs.join("\n"), /removed style/);
     assert.ok(!existsSync(join(dir, ".claude", "rules", "style.md")));
+  });
+
+  it("supports the codex target end to end", async () => {
+    const dir = newProject();
+    writeSkill(dir, "skills/alpha", "alpha");
+    writeFile(dir, "rules/style.md", "Always write tests.\n");
+    writeFile(dir, "AGENTS.md", "# Hand-written intro\n");
+    writeFile(
+      dir,
+      "skillfold.yaml",
+      [
+        "targets: [claude, codex]",
+        "skills:",
+        "  alpha: ./skills/alpha",
+        "rules:",
+        "  style: ./rules/style.md",
+      ].join("\n")
+    );
+    await main(["install", "--dir", dir]);
+    // Skills land in both trees; rules land as files and as an AGENTS.md block.
+    assert.ok(existsSync(join(dir, ".claude", "skills", "alpha", "SKILL.md")));
+    assert.ok(existsSync(join(dir, ".agents", "skills", "alpha", "SKILL.md")));
+    assert.ok(existsSync(join(dir, ".claude", "rules", "style.md")));
+    const agentsMd = readFileSync(join(dir, "AGENTS.md"), "utf-8");
+    assert.match(agentsMd, /^# Hand-written intro/);
+    assert.match(agentsMd, /skillfold:rule:style/);
+    assert.match(agentsMd, /Always write tests\./);
+    assert.match(logs.join("\n"), /\.agents\/skills/);
+
+    logs = [];
+    await main(["check", "--dir", dir]);
+    assert.match(logs.join("\n"), /ok: 1 skill, 1 rule in sync/);
+
+    // Drift in the codex tree only is caught and labeled.
+    rmSync(join(dir, ".agents", "skills", "alpha"), { recursive: true });
+    process.exitCode = undefined;
+    errors = [];
+    await main(["check", "--dir", dir]);
+    assert.equal(process.exitCode, 1);
+    assert.match(errors.join("\n"), /\[codex\] "alpha" is not installed/);
+    process.exitCode = undefined;
+
+    // Reinstall repairs it.
+    logs = [];
+    await main(["install", "--dir", dir]);
+    assert.ok(existsSync(join(dir, ".agents", "skills", "alpha", "SKILL.md")));
   });
 
   it("install --frozen fails without a lockfile", async () => {

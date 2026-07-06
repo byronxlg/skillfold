@@ -34,6 +34,10 @@ export const MANIFEST_FILENAME = "skillfold.yaml";
 export const DEFAULT_SKILLS_DIR = ".claude/skills";
 export const DEFAULT_RULES_DIR = ".claude/rules";
 
+/** Tools skillfold can install for. */
+export type TargetName = "claude" | "codex";
+export const TARGET_NAMES: readonly TargetName[] = ["claude", "codex"];
+
 export interface ComposeEntry {
   description?: string;
   use: string[];
@@ -55,9 +59,11 @@ export interface Manifest {
   skillsDir?: string;
   /** Rules install directory, relative to the manifest. Undefined = target default. */
   rulesDir?: string;
+  /** Tools to install for. Undefined = ["claude"]. */
+  targets?: TargetName[];
 }
 
-const KNOWN_KEYS = new Set(["skills", "compose", "rules", "skillsDir", "rulesDir"]);
+const KNOWN_KEYS = new Set(["skills", "compose", "rules", "skillsDir", "rulesDir", "targets"]);
 
 /** Valid skill names: what Claude Code accepts as a skill directory name. */
 const NAME_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
@@ -192,7 +198,7 @@ export function parseManifest(content: string, filePath: string): Manifest {
     if (!KNOWN_KEYS.has(key)) {
       throw new ManifestError(
         `${filePath}: unknown top-level key "${key}" ` +
-          `(expected skills, compose, rules, skillsDir, rulesDir)`
+          `(expected skills, compose, rules, skillsDir, rulesDir, targets)`
       );
     }
   }
@@ -272,7 +278,26 @@ export function parseManifest(content: string, filePath: string): Manifest {
     rulesDir = top.rulesDir.trim();
   }
 
-  return { skills, compose, rules, skillsDir, rulesDir };
+  let targets: TargetName[] | undefined;
+  if (top.targets !== undefined) {
+    if (!Array.isArray(top.targets) || top.targets.length === 0) {
+      throw new ManifestError(
+        `${filePath}: "targets" must be a non-empty list (${TARGET_NAMES.join(", ")})`
+      );
+    }
+    targets = [];
+    for (const item of top.targets) {
+      if (typeof item !== "string" || !(TARGET_NAMES as readonly string[]).includes(item)) {
+        throw new ManifestError(
+          `${filePath}: unknown target "${String(item)}" (expected ${TARGET_NAMES.join(", ")})`
+        );
+      }
+      const target = item as TargetName;
+      if (!targets.includes(target)) targets.push(target);
+    }
+  }
+
+  return { skills, compose, rules, skillsDir, rulesDir, targets };
 }
 
 export function loadManifest(manifestPath: string): Manifest {

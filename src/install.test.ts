@@ -4,7 +4,9 @@ import { join } from "node:path";
 import { after, describe, it } from "node:test";
 
 import { InstallError } from "./errors.js";
+import { syncAgentsMd } from "./agentsmd.js";
 import { checkProject, syncRulesDir, syncSkillsDir } from "./install.js";
+import { targetLayouts, type TargetLayout } from "./targets.js";
 import { emptyLockfile } from "./lock.js";
 import { parseManifest } from "./manifest.js";
 import { resolveManifest } from "./resolve.js";
@@ -31,6 +33,10 @@ function project(manifestText: string): {
   };
 }
 
+
+function claudeLayout(skillsDir: string, rulesDir?: string): TargetLayout[] {
+  return [{ target: "claude", skillsDir, rulesDir }];
+}
 const TWO_SKILLS = "skills:\n  alpha: ./skills/alpha\n  beta: ./skills/beta";
 const WITH_COMPOSE = `${TWO_SKILLS}\ncompose:\n  both:\n    use: [alpha, beta]`;
 
@@ -142,19 +148,19 @@ describe("checkProject", () => {
 
   it("passes for a fully synced project", async () => {
     const { baseDir, skillsDir, manifest, lock } = await installedProject(WITH_COMPOSE);
-    assert.deepEqual(checkProject(manifest, lock, baseDir, skillsDir), []);
+    assert.deepEqual(checkProject(manifest, lock, baseDir, claudeLayout(skillsDir)), []);
   });
 
   it("reports a missing lockfile", async () => {
     const { baseDir, skillsDir, manifest } = project(TWO_SKILLS);
-    const problems = checkProject(manifest, null, baseDir, skillsDir);
+    const problems = checkProject(manifest, null, baseDir, claudeLayout(skillsDir));
     assert.match(problems[0], /missing skillfold.lock/);
   });
 
   it("reports uninstalled skills", async () => {
     const { baseDir, skillsDir, manifest } = project(TWO_SKILLS);
     const { lock } = await resolveAll(manifest, baseDir);
-    const problems = checkProject(manifest, lock, baseDir, skillsDir);
+    const problems = checkProject(manifest, lock, baseDir, claudeLayout(skillsDir));
     assert.equal(problems.length, 2);
     assert.match(problems[0], /not installed/);
   });
@@ -162,7 +168,7 @@ describe("checkProject", () => {
   it("reports local skills whose source changed", async () => {
     const { baseDir, skillsDir, manifest, lock } = await installedProject(TWO_SKILLS);
     writeSkill(baseDir, "skills/alpha", "alpha", "# Alpha v2\n\nEdited.");
-    const problems = checkProject(manifest, lock, baseDir, skillsDir);
+    const problems = checkProject(manifest, lock, baseDir, claudeLayout(skillsDir));
     assert.equal(problems.length, 1);
     assert.match(problems[0], /"alpha" is out of date/);
   });
@@ -170,7 +176,7 @@ describe("checkProject", () => {
   it("reports composed skills that would regenerate differently", async () => {
     const { baseDir, skillsDir, manifest, lock } = await installedProject(WITH_COMPOSE);
     writeFile(skillsDir, "both/SKILL.md", "tampered");
-    const problems = checkProject(manifest, lock, baseDir, skillsDir);
+    const problems = checkProject(manifest, lock, baseDir, claudeLayout(skillsDir));
     assert.match(problems.join("\n"), /composed skill "both" is out of date/);
   });
 
@@ -180,7 +186,7 @@ describe("checkProject", () => {
     );
     writeSkill(baseDir, "skills/alpha", "alpha"); // keep dir, then point manifest elsewhere
     const moved = parseManifest("skills:\n  alpha: ./skills/moved", "t.yaml");
-    const problems = checkProject(moved, lock, baseDir, skillsDir);
+    const problems = checkProject(moved, lock, baseDir, claudeLayout(skillsDir));
     assert.match(problems.join("\n"), /source directory is missing/);
   });
 });
@@ -199,7 +205,7 @@ describe("checkProject with remote lock entries", () => {
       resolved: `github:o/r/alpha@${"e".repeat(40)}`,
       integrity: "sha256-stale=",
     };
-    const problems = checkProject(remoteManifest, remoteLock, baseDir, skillsDir);
+    const problems = checkProject(remoteManifest, remoteLock, baseDir, claudeLayout(skillsDir));
     assert.match(problems.join("\n"), /do not match the lockfile/);
   });
 });
@@ -219,7 +225,7 @@ describe("checkProject with renamed and multi-file skills", () => {
     const manifest = parseManifest("skills:\n  other: ./skills/alpha", "t.yaml");
     const { resolved, lock } = await resolveAll(manifest, baseDir);
     syncSkillsDir({ skillsDir, resolved, previousLock: null });
-    assert.deepEqual(checkProject(manifest, lock, baseDir, skillsDir), []);
+    assert.deepEqual(checkProject(manifest, lock, baseDir, claudeLayout(skillsDir)), []);
   });
 
   it("passes for composed skills with supporting files", async () => {
@@ -228,7 +234,7 @@ describe("checkProject with renamed and multi-file skills", () => {
     const manifest = parseManifest(WITH_COMPOSE, "t.yaml");
     const { resolved, lock } = await resolveAll(manifest, baseDir);
     syncSkillsDir({ skillsDir, resolved, previousLock: null });
-    assert.deepEqual(checkProject(manifest, lock, baseDir, skillsDir), []);
+    assert.deepEqual(checkProject(manifest, lock, baseDir, claudeLayout(skillsDir)), []);
     // The composed skill carries the supporting file.
     assert.ok(existsSync(join(skillsDir, "both", "references", "notes.md")));
   });
@@ -243,7 +249,7 @@ describe("checkProject with renamed and multi-file skills", () => {
     // Introduce the conflict after install: beta now also ships x.md.
     writeFile(baseDir, "skills/beta/references/x.md", "from beta");
     writeFile(join(skillsDir, "beta"), "references/x.md", "from beta");
-    const problems = checkProject(manifest, lock, baseDir, skillsDir);
+    const problems = checkProject(manifest, lock, baseDir, claudeLayout(skillsDir));
     assert.ok(problems.some((p) => p.includes('both provide "references/x.md"')));
   });
 });
@@ -309,30 +315,86 @@ describe("checkProject rules", () => {
 
   it("passes when rules are in sync", async () => {
     const { manifest, lock, baseDir, skillsDir, rulesDir } = await synced();
-    assert.deepEqual(checkProject(manifest, lock, baseDir, skillsDir, rulesDir), []);
+    assert.deepEqual(checkProject(manifest, lock, baseDir, claudeLayout(skillsDir, rulesDir)), []);
   });
 
-  it("derives the rules dir from the manifest when the argument is omitted", async () => {
+  it("honors a custom rulesDir layout", async () => {
     const text = "rules:\n  style: ./rules/style.md\nrulesDir: custom/rules";
     const { baseDir, skillsDir } = project(text);
     writeFile(baseDir, "rules/style.md", "Rule body.\n");
     const manifest = parseManifest(text, "t.yaml");
     const { rules, lock } = await resolveManifest(manifest, { baseDir });
-    syncRulesDir({ rulesDir: join(baseDir, "custom", "rules"), rules, previousLock: null });
-    assert.deepEqual(checkProject(manifest, lock, baseDir, skillsDir), []);
+    const rulesDir = join(baseDir, "custom", "rules");
+    syncRulesDir({ rulesDir, rules, previousLock: null });
+    assert.deepEqual(
+      checkProject(manifest, lock, baseDir, claudeLayout(skillsDir, rulesDir)),
+      []
+    );
   });
 
   it("reports missing and stale rules", async () => {
     const { manifest, lock, baseDir, skillsDir, rulesDir } = await synced();
     writeFile(baseDir, "rules/style.md", "Edited source.\n");
     assert.match(
-      checkProject(manifest, lock, baseDir, skillsDir, rulesDir).join("\n"),
+      checkProject(manifest, lock, baseDir, claudeLayout(skillsDir, rulesDir)).join("\n"),
       /out of date with .\/rules\/style.md/
     );
     rmSync(join(rulesDir, "style.md"));
     assert.match(
-      checkProject(manifest, lock, baseDir, skillsDir, rulesDir).join("\n"),
+      checkProject(manifest, lock, baseDir, claudeLayout(skillsDir, rulesDir)).join("\n"),
       /rule "style" is not installed/
     );
+  });
+});
+
+describe("checkProject with a codex layout", () => {
+  const MANIFEST = "targets: [claude, codex]\nskills:\n  alpha: ./skills/alpha\nrules:\n  style: ./rules/style.md";
+
+  async function synced() {
+    const p = project(MANIFEST);
+    writeFile(p.baseDir, "rules/style.md", "Rule body.\n");
+    const manifest = parseManifest(MANIFEST, "t.yaml");
+    const { resolved, rules, lock } = await resolveManifest(manifest, { baseDir: p.baseDir });
+    const layouts = targetLayouts(manifest, p.baseDir, false);
+    for (const layout of layouts) {
+      syncSkillsDir({ skillsDir: layout.skillsDir, resolved, previousLock: null });
+      if (layout.rulesDir) syncRulesDir({ rulesDir: layout.rulesDir, rules, previousLock: null });
+      if (layout.agentsMdPath) syncAgentsMd(layout.agentsMdPath, rules);
+    }
+    return { ...p, manifest, lock, layouts };
+  }
+
+  it("passes when both layouts are in sync", async () => {
+    const { manifest, lock, baseDir, layouts } = await synced();
+    assert.deepEqual(checkProject(manifest, lock, baseDir, layouts), []);
+    assert.ok(existsSync(join(baseDir, ".agents", "skills", "alpha", "SKILL.md")));
+    assert.match(
+      readFileSync(join(baseDir, "AGENTS.md"), "utf-8"),
+      /skillfold:rule:style/
+    );
+  });
+
+  it("labels problems with the drifted target", async () => {
+    const { manifest, lock, baseDir, layouts } = await synced();
+    rmSync(join(baseDir, ".agents", "skills", "alpha"), { recursive: true });
+    const problems = checkProject(manifest, lock, baseDir, layouts);
+    assert.deepEqual(problems, ['[codex] "alpha" is not installed (run "skillfold install")']);
+  });
+
+  it("flags a hand-edited AGENTS.md block", async () => {
+    const { manifest, lock, baseDir, layouts } = await synced();
+    const path = join(baseDir, "AGENTS.md");
+    writeFile(baseDir, "AGENTS.md", readFileSync(path, "utf-8").replace("Rule body.", "Edited."));
+    const problems = checkProject(manifest, lock, baseDir, layouts);
+    assert.equal(problems.length, 1);
+    assert.match(problems[0], /\[codex\] rule "style" in AGENTS.md is out of date/);
+  });
+
+  it("flags a lingering block when rules leave the manifest", async () => {
+    const { baseDir, layouts } = await synced();
+    const noRules = parseManifest("targets: [claude, codex]\nskills:\n  alpha: ./skills/alpha", "t.yaml");
+    const { lock: newLock } = await resolveManifest(noRules, { baseDir });
+    const problems = checkProject(noRules, newLock, baseDir, layouts);
+    assert.ok(problems.some((p) => p.includes("still contains a skillfold rules block")));
   });
 });

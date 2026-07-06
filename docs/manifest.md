@@ -1,6 +1,6 @@
 # Manifest Reference
 
-`skillfold.yaml` has five top-level keys: `skills`, `compose`, `rules`, `skillsDir`, and `rulesDir`. All are optional. A JSON Schema is published at [`skillfold.schema.json`](../skillfold.schema.json) for IDE autocompletion:
+`skillfold.yaml` has six top-level keys: `skills`, `compose`, `rules`, `targets`, `skillsDir`, and `rulesDir`. All are optional. A JSON Schema is published at [`skillfold.schema.json`](../skillfold.schema.json) for IDE autocompletion:
 
 ```yaml
 # yaml-language-server: $schema=https://github.com/byronxlg/skillfold/raw/main/skillfold.schema.json
@@ -76,6 +76,33 @@ rules:
 ```
 
 Rules pin in the lockfile exactly like skills and participate in `install`, `check`, `list`, `info`, and `remove`. There is no compose for rules - they stay a name -> file mapping.
+
+## `targets`
+
+Which tools to install for. Default: `[claude]`.
+
+```yaml
+targets: [claude, codex]
+```
+
+Skills use the same SKILL.md format everywhere (the [agent skills standard](https://agentskills.io)), so a target is just a set of install locations:
+
+| Target | Skills | Rules |
+| --- | --- | --- |
+| `claude` | `.claude/skills` (or `skillsDir`) | `.claude/rules` (or `rulesDir`) as one file per rule |
+| `codex` | `.agents/skills` | a managed block in `AGENTS.md` |
+
+Codex reads instructions from `AGENTS.md` rather than a rules directory, so the codex target syncs rules into a marker-fenced block:
+
+```md
+<!-- skillfold:rules:start -->
+...your rules, one section per rule...
+<!-- skillfold:rules:end -->
+```
+
+Everything outside the markers is yours and is never touched. The block is added, updated, and removed by `skillfold install`; `skillfold check` verifies it offline like any other installed file. In global mode (`-g`) the codex target manages `~/.agents/skills` and `~/.codex/AGENTS.md` (honoring `CODEX_HOME`).
+
+`skillsDir` / `rulesDir` override the claude locations only; Codex scans fixed conventional paths.
 
 ## `skillsDir`
 

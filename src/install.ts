@@ -1,6 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve as resolvePath } from "node:path";
 
+import { extractRulesBlock } from "./agentsmd.js";
 import {
   composeOrder,
   generateComposedSkill,
@@ -8,9 +9,10 @@ import {
 } from "./compose.js";
 import { InstallError } from "./errors.js";
 import { lockfileProblems, type Lockfile } from "./lock.js";
-import { DEFAULT_RULES_DIR, type Manifest } from "./manifest.js";
+import type { Manifest } from "./manifest.js";
 import { parseSource } from "./source.js";
 import type { ResolvedRule, ResolvedSkill } from "./resolve.js";
+import type { TargetLayout } from "./targets.js";
 import {
   computeFileIntegrity,
   computeIntegrity,
@@ -153,33 +155,50 @@ export function syncRulesDir(options: SyncRulesOptions): SyncResult {
 }
 
 /**
- * Offline verification that manifest, lockfile, and installed skills agree.
- * Returns human-readable problems; empty means everything is in sync.
- *
- * Checks, in order:
- *   - the lockfile covers exactly the manifest (sources unchanged)
- *   - every skill is installed
- *   - remote skills on disk match the lockfile's content hash
- *   - local skills on disk match their source directory
- *   - composed skills on disk match what the installed inputs would generate
+ * Verify one rule's installed content against its source (local) or the
+ * lockfile hash (remote). `where` names the install location for messages.
  */
-export function checkProject(
+function ruleProblem(
+  name: string,
+  sourceString: string,
+  installed: Buffer,
+  lock: Lockfile,
+  baseDir: string,
+  where: string
+): string | null {
+  const source = parseSource(sourceString);
+  if (source.kind === "local") {
+    const sourcePath = resolvePath(baseDir, source.path);
+    if (!existsSync(sourcePath)) {
+      return `rule "${name}" source file is missing: ${source.path}`;
+    }
+    if (!readFileSync(sourcePath).equals(installed)) {
+      return `rule "${name}" in ${where} is out of date with ${source.path} (run "skillfold install")`;
+    }
+    return null;
+  }
+  const entry = lock.rules[name];
+  if (entry?.integrity && entry.integrity !== computeFileIntegrity(installed)) {
+    return `rule "${name}" in ${where} does not match the lockfile (run "skillfold install")`;
+  }
+  return null;
+}
+
+function checkSkillsDir(
   manifest: Manifest,
-  lock: Lockfile | null,
+  lock: Lockfile,
   baseDir: string,
   skillsDir: string,
-  rulesDir?: string
-): string[] {
-  const problems = lockfileProblems(manifest, lock);
-  if (!lock) return problems;
-
+  label: string,
+  problems: string[]
+): void {
   const bodies = new Map<string, ComposeInput>();
 
   for (const [name, sourceString] of Object.entries(manifest.skills)) {
     const target = join(skillsDir, name);
     const installedFiles = readDirFiles(target);
     if (installedFiles.length === 0) {
-      problems.push(`"${name}" is not installed (run "skillfold install")`);
+      problems.push(`${label}"${name}" is not installed (run "skillfold install")`);
       continue;
     }
     const installedIntegrity = computeIntegrity(installedFiles);
@@ -187,21 +206,21 @@ export function checkProject(
     if (source.kind === "local") {
       const sourceFiles = readDirFiles(resolvePath(baseDir, source.path));
       if (sourceFiles.length === 0) {
-        problems.push(`"${name}" source directory is missing: ${source.path}`);
+        problems.push(`${label}"${name}" source directory is missing: ${source.path}`);
         continue;
       }
       // Installs rewrite the frontmatter name to the manifest name; apply
       // the same normalization before comparing against the source.
       if (computeIntegrity(normalizeSkillName(sourceFiles, name)) !== installedIntegrity) {
         problems.push(
-          `"${name}" is out of date with ${source.path} (run "skillfold install")`
+          `${label}"${name}" is out of date with ${source.path} (run "skillfold install")`
         );
       }
     } else {
       const entry = lock.skills[name];
       if (entry?.integrity && entry.integrity !== installedIntegrity) {
         problems.push(
-          `"${name}" installed files do not match the lockfile (run "skillfold install")`
+          `${label}"${name}" installed files do not match the lockfile (run "skillfold install")`
         );
       }
     }
@@ -218,42 +237,13 @@ export function checkProject(
     }
   }
 
-  const effectiveRulesDir =
-    rulesDir ?? resolvePath(baseDir, manifest.rulesDir ?? DEFAULT_RULES_DIR);
-  for (const [name, sourceString] of Object.entries(manifest.rules)) {
-    const target = ruleFile(effectiveRulesDir, name);
-    if (!existsSync(target)) {
-      problems.push(`rule "${name}" is not installed (run "skillfold install")`);
-      continue;
-    }
-    const installed = readFileSync(target);
-    const source = parseSource(sourceString);
-    if (source.kind === "local") {
-      const sourcePath = resolvePath(baseDir, source.path);
-      if (!existsSync(sourcePath)) {
-        problems.push(`rule "${name}" source file is missing: ${source.path}`);
-      } else if (!readFileSync(sourcePath).equals(installed)) {
-        problems.push(
-          `rule "${name}" is out of date with ${source.path} (run "skillfold install")`
-        );
-      }
-    } else {
-      const entry = lock.rules[name];
-      if (entry?.integrity && entry.integrity !== computeFileIntegrity(installed)) {
-        problems.push(
-          `rule "${name}" installed file does not match the lockfile (run "skillfold install")`
-        );
-      }
-    }
-  }
-
   // Regenerate composed skills from the installed inputs and compare.
   for (const name of composeOrder(manifest.compose)) {
     const entry = manifest.compose[name];
     const target = join(skillsDir, name);
     const installedFiles = readDirFiles(target);
     if (installedFiles.length === 0) {
-      problems.push(`composed skill "${name}" is not installed (run "skillfold install")`);
+      problems.push(`${label}composed skill "${name}" is not installed (run "skillfold install")`);
       continue;
     }
     const inputs: ComposeInput[] = [];
@@ -283,10 +273,118 @@ export function checkProject(
     });
     if (computeIntegrity(regenerated.files) !== computeIntegrity(installedFiles)) {
       problems.push(
-        `composed skill "${name}" is out of date (run "skillfold install")`
+        `${label}composed skill "${name}" is out of date (run "skillfold install")`
       );
     }
   }
+}
 
+function checkRulesDir(
+  manifest: Manifest,
+  lock: Lockfile,
+  baseDir: string,
+  rulesDir: string,
+  label: string,
+  problems: string[]
+): void {
+  for (const [name, sourceString] of Object.entries(manifest.rules)) {
+    const target = ruleFile(rulesDir, name);
+    if (!existsSync(target)) {
+      problems.push(`${label}rule "${name}" is not installed (run "skillfold install")`);
+      continue;
+    }
+    const problem = ruleProblem(name, sourceString, readFileSync(target), lock, baseDir, "the rules directory");
+    if (problem) problems.push(label + problem);
+  }
+}
+
+function checkAgentsMdRules(
+  manifest: Manifest,
+  lock: Lockfile,
+  baseDir: string,
+  agentsMdPath: string,
+  label: string,
+  problems: string[]
+): void {
+  const ruleNames = Object.keys(manifest.rules);
+  const exists = existsSync(agentsMdPath);
+  if (!exists) {
+    if (ruleNames.length > 0) {
+      problems.push(`${label}${agentsMdPath} is missing the rules block (run "skillfold install")`);
+    }
+    return;
+  }
+  let block;
+  try {
+    block = extractRulesBlock(readFileSync(agentsMdPath, "utf-8"), agentsMdPath);
+  } catch (err) {
+    problems.push(label + (err instanceof Error ? err.message : String(err)));
+    return;
+  }
+  if (ruleNames.length === 0) {
+    if (block) {
+      problems.push(
+        `${label}${agentsMdPath} still contains a skillfold rules block (run "skillfold install")`
+      );
+    }
+    return;
+  }
+  if (!block) {
+    problems.push(`${label}${agentsMdPath} is missing the rules block (run "skillfold install")`);
+    return;
+  }
+  const installed = new Map(block.map((rule) => [rule.name, rule.content]));
+  for (const [name, sourceString] of Object.entries(manifest.rules)) {
+    const content = installed.get(name);
+    if (!content) {
+      problems.push(
+        `${label}rule "${name}" is missing from ${agentsMdPath} (run "skillfold install")`
+      );
+      continue;
+    }
+    const problem = ruleProblem(name, sourceString, content, lock, baseDir, "AGENTS.md");
+    if (problem) problems.push(label + problem);
+  }
+  for (const rule of block) {
+    if (!manifest.rules[rule.name]) {
+      problems.push(
+        `${label}rule "${rule.name}" in ${agentsMdPath} is not in the manifest (run "skillfold install")`
+      );
+    }
+  }
+}
+
+/**
+ * Offline verification that manifest, lockfile, and installed files agree,
+ * across every target layout. Returns human-readable problems; empty means
+ * everything is in sync.
+ *
+ * Checks, in order:
+ *   - the lockfile covers exactly the manifest (sources unchanged)
+ *   - every skill is installed in every layout's skills directory
+ *   - remote skills on disk match the lockfile's content hash
+ *   - local skills on disk match their source directory
+ *   - composed skills on disk match what the installed inputs would generate
+ *   - rules match their source / lock hash, in the rules directory and in
+ *     the AGENTS.md managed block, per layout
+ */
+export function checkProject(
+  manifest: Manifest,
+  lock: Lockfile | null,
+  baseDir: string,
+  layouts: TargetLayout[]
+): string[] {
+  const problems = lockfileProblems(manifest, lock);
+  if (!lock) return problems;
+  for (const layout of layouts) {
+    const label = layouts.length > 1 ? `[${layout.target}] ` : "";
+    checkSkillsDir(manifest, lock, baseDir, layout.skillsDir, label, problems);
+    if (layout.rulesDir) {
+      checkRulesDir(manifest, lock, baseDir, layout.rulesDir, label, problems);
+    }
+    if (layout.agentsMdPath) {
+      checkAgentsMdRules(manifest, lock, baseDir, layout.agentsMdPath, label, problems);
+    }
+  }
   return problems;
 }
