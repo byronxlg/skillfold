@@ -15,3 +15,9 @@ compose:
       - code-review
       - testing
     integrity: sha256-xMPEf6aGadep9tfw/y9rN4bvGc7y5VK/HENaExEgT8Q=
+rules:
+  skillfold-conventions:
+    source: ./rules/skillfold-conventions.md
+targets:
+  - claude
+  - codex
