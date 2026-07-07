@@ -14,7 +14,7 @@ compose:
     use:
       - code-review
       - testing
-    integrity: sha256-xMPEf6aGadep9tfw/y9rN4bvGc7y5VK/HENaExEgT8Q=
+    integrity: sha256-N9pnu3ZVqxsezepfg234WhU4EnbNhUyq6LEcXCrqhBs=
 rules:
   skillfold-conventions:
     source: ./rules/skillfold-conventions.md
