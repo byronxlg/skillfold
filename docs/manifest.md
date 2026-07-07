@@ -13,7 +13,7 @@ A mapping of skill name to source. The name becomes the directory name under the
 ```yaml
 skills:
   commit-helper: ./skills/commit-helper
-  frontend-design: github:anthropics/skills/frontend-design@v1.2.0
+  frontend-design: github:anthropics/skills/skills/frontend-design@v1.2.0
   planning: npm:skillfold/planning@2.0.0
 ```
 
@@ -22,7 +22,7 @@ An entry can also be a mapping when you prefer the version on its own line:
 ```yaml
 skills:
   frontend-design:
-    source: github:anthropics/skills/frontend-design
+    source: github:anthropics/skills/skills/frontend-design
     version: v1.2.0
 ```
 
@@ -128,8 +128,8 @@ Where rules are installed, relative to the manifest. Defaults to `.claude/rules`
 lockfileVersion: 1
 skills:
   frontend-design:
-    source: github:anthropics/skills/frontend-design@v1.2.0
-    resolved: github:anthropics/skills/frontend-design@8f3a9c1e...   # full commit SHA
+    source: github:anthropics/skills/skills/frontend-design@v1.2.0
+    resolved: github:anthropics/skills/skills/frontend-design@8f3a9c1e...   # full commit SHA
     integrity: sha256-...                                            # hash of all files
   commit-helper:
     source: ./skills/commit-helper                                   # local: never pinned
