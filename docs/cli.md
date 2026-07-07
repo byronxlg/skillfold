@@ -45,6 +45,8 @@ Offline verification with a nonzero exit on any problem:
 - local skills and rules on disk match their source
 - composed skills match what their installed inputs would generate
 
+It also prints a non-fatal `warning:` when an installed skill's `SKILL.md` is missing a `description` or has unparseable frontmatter - these do not fail the check (a description-less skill still installs, it just never triggers for the agent). Run `skillfold list` to see which skills.
+
 This is what [the GitHub Action](../action.yml) runs.
 
 ### `skillfold list` (alias: `ls`)
@@ -58,7 +60,7 @@ Status table for every declared skill and rule:
   reviewer         compose(code-review, testing)              -        modified
 ```
 
-Statuses: `ok`, `not installed`, `modified` (installed files drifted), `not locked` (no lockfile pin yet).
+Statuses: `ok`, `not installed`, `modified` (installed files drifted), `not locked` (no lockfile pin yet). An otherwise-`ok` skill whose `SKILL.md` is missing a `description` or has unparseable frontmatter shows `warn: <issue>` instead.
 
 ### `skillfold info <name>`
 

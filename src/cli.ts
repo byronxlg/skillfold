@@ -354,6 +354,16 @@ function cmdCheck(paths: Paths): void {
     process.exitCode = 1;
     return;
   }
+  const fmWarnings = skillRows(manifest, lock, paths.root, layouts).filter(
+    (row) => row.status === "ok" && row.warning
+  );
+  if (fmWarnings.length > 0) {
+    const n = fmWarnings.length;
+    console.error(
+      `warning: ${n} skill${n === 1 ? "" : "s"} ` +
+        `${n === 1 ? "has a frontmatter issue" : "have frontmatter issues"} (see list)`
+    );
+  }
   const skillCount =
     Object.keys(manifest.skills).length + Object.keys(manifest.compose).length;
   const ruleCount = Object.keys(manifest.rules).length;
