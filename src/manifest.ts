@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 import { Document, parseDocument, YAMLMap } from "yaml";
@@ -349,6 +349,10 @@ export function addSkillToManifest(manifestPath: string, name: string, source: s
     doc.set("skills", doc.createNode({}));
   }
   doc.setIn(["skills", name], source);
+  // Create the manifest's directory if needed - in global mode the manifest
+  // lives at ~/.claude/skillfold.yaml, whose parent may not exist yet, and
+  // "add" is a valid first command (no prior "init").
+  mkdirSync(dirname(manifestPath), { recursive: true });
   writeFileSync(manifestPath, doc.toString(MANIFEST_TO_STRING));
 }
 

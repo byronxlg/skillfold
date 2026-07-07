@@ -234,6 +234,13 @@ describe("manifest editing", () => {
     assert.throws(() => removeSkillFromManifest(path, "ghost"), /not in the manifest/);
   });
 
+  it("creates the manifest's parent directory when adding (global-mode first run)", () => {
+    const dir = join(tmp.path, "does", "not", "exist", "yet");
+    const path = join(dir, "skillfold.yaml");
+    addSkillToManifest(path, "planning", "npm:skillfold/planning");
+    assert.deepEqual(Object.keys(loadManifest(path).skills), ["planning"]);
+  });
+
   it("refuses to remove a skill still used by a composed skill", () => {
     const path = join(tmp.path, "rm3.yaml");
     const source = ["skills:", "  a: ./a", "  b: ./b", "compose:", "  ab:", "    use: [a, b]"].join(
