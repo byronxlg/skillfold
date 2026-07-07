@@ -233,6 +233,31 @@ describe("manifest editing", () => {
     writeFile(tmp.path, "rm2.yaml", "skills:\n  a: ./a\n");
     assert.throws(() => removeSkillFromManifest(path, "ghost"), /not in the manifest/);
   });
+
+  it("refuses to remove a skill still used by a composed skill", () => {
+    const path = join(tmp.path, "rm3.yaml");
+    const source = ["skills:", "  a: ./a", "  b: ./b", "compose:", "  ab:", "    use: [a, b]"].join(
+      "\n"
+    );
+    writeFile(tmp.path, "rm3.yaml", source);
+    assert.throws(
+      () => removeSkillFromManifest(path, "b"),
+      /Cannot remove "b": still used by composed skill ab/
+    );
+    // The manifest is left untouched (the operation is atomic).
+    assert.equal(readFileSync(path, "utf-8"), source);
+  });
+
+  it("still removes the composed skill itself even though it uses others", () => {
+    const path = join(tmp.path, "rm4.yaml");
+    writeFile(
+      tmp.path,
+      "rm4.yaml",
+      ["skills:", "  a: ./a", "  b: ./b", "compose:", "  ab:", "    use: [a, b]"].join("\n")
+    );
+    assert.equal(removeSkillFromManifest(path, "ab"), "compose");
+    assert.deepEqual(Object.keys(loadManifest(path).skills), ["a", "b"]);
+  });
 });
 
 describe("compose allowed-tools key", () => {

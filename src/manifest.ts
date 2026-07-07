@@ -374,6 +374,26 @@ export function removeSkillFromManifest(
   } else {
     throw new ManifestError(`Skill "${name}" is not in the manifest`);
   }
+  // Refuse before writing if a composed skill still uses this one - otherwise
+  // the removal would leave a dangling compose reference that wedges every
+  // later command (install/check/list all fail manifest validation).
+  const data = doc.toJS() as {
+    compose?: Record<string, { use?: unknown }>;
+  };
+  const usedBy = Object.entries(data.compose ?? {})
+    .filter(([composed, entry]) => {
+      if (composed === name) return false;
+      return Array.isArray(entry?.use) && entry.use.includes(name);
+    })
+    .map(([composed]) => composed);
+  if (usedBy.length > 0) {
+    const plural = usedBy.length > 1;
+    throw new ManifestError(
+      `Cannot remove "${name}": still used by composed skill${plural ? "s" : ""} ` +
+        `${usedBy.join(", ")}. Remove ${plural ? "those entries" : "that entry"} ` +
+        `or edit ${plural ? "their" : "its"} "use" list first.`
+    );
+  }
   doc.deleteIn([section, name]);
   // Drop the section entirely if it is now empty.
   const sectionNode = doc.get(section, true);
