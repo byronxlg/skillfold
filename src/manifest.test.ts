@@ -187,6 +187,25 @@ describe("manifest editing", () => {
     assert.equal(loadManifest(path).skills.first, "./skills/first");
   });
 
+  it("does not reflow inline flow arrays on edit", () => {
+    const path = join(tmp.path, "flow.yaml");
+    writeFile(
+      tmp.path,
+      "flow.yaml",
+      ["targets: [claude, codex]", "skills:", "  a: ./a", "compose:", "  c:", "    use: [a, b]"].join(
+        "\n"
+      )
+    );
+    addSkillToManifest(path, "d", "./d");
+    const added = readFileSync(path, "utf-8");
+    assert.match(added, /targets: \[claude, codex\]/);
+    assert.match(added, /use: \[a, b\]/);
+    removeSkillFromManifest(path, "d");
+    const removed = readFileSync(path, "utf-8");
+    assert.match(removed, /targets: \[claude, codex\]/);
+    assert.match(removed, /use: \[a, b\]/);
+  });
+
   it("rejects duplicate names", () => {
     const path = join(tmp.path, "dup.yaml");
     writeFile(tmp.path, "dup.yaml", "skills:\n  taken: ./a\n");

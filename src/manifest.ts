@@ -311,6 +311,13 @@ export function loadManifest(manifestPath: string): Manifest {
 }
 
 /**
+ * toString options for manifest edits. `flowCollectionPadding: false` keeps
+ * inline arrays as `[a, b]` (skillfold's convention everywhere) instead of
+ * the library default `[ a, b ]`, so an edit never reflows untouched lines.
+ */
+const MANIFEST_TO_STRING = { flowCollectionPadding: false } as const;
+
+/**
  * Add a skill entry to the manifest file, preserving comments and formatting.
  * Creates the file if it does not exist.
  */
@@ -342,7 +349,7 @@ export function addSkillToManifest(manifestPath: string, name: string, source: s
     doc.set("skills", doc.createNode({}));
   }
   doc.setIn(["skills", name], source);
-  writeFileSync(manifestPath, doc.toString());
+  writeFileSync(manifestPath, doc.toString(MANIFEST_TO_STRING));
 }
 
 /** Remove a skill, composed skill, or rule from the manifest file. Returns which section it was in. */
@@ -373,7 +380,7 @@ export function removeSkillFromManifest(
   if (sectionNode instanceof YAMLMap && sectionNode.items.length === 0) {
     doc.delete(section);
   }
-  writeFileSync(manifestPath, doc.toString());
+  writeFileSync(manifestPath, doc.toString(MANIFEST_TO_STRING));
   return section;
 }
 
