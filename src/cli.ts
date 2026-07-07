@@ -488,6 +488,12 @@ function invokedDirectly(): boolean {
 }
 
 if (invokedDirectly()) {
+  // A reader that closes the pipe early (e.g. `skillfold list | head`) makes
+  // the next stdout write emit EPIPE; exit quietly instead of crashing.
+  process.stdout.on("error", (err: NodeJS.ErrnoException) => {
+    if (err.code === "EPIPE") process.exit(0);
+    throw err;
+  });
   main().catch((err) => {
     if (err instanceof SkillfoldError) {
       console.error(`error: ${err.message}`);
