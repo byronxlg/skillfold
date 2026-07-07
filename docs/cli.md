@@ -15,7 +15,7 @@ Scaffold a starter `skillfold.yaml` and an example skill at `skills/hello-skillf
 Fetch a skill, append it to the manifest, install it, and update the lockfile. The name defaults to the skill's frontmatter `name` (sanitized), falling back to the last path segment. Fails if the name is already taken.
 
 ```sh
-skillfold add github:anthropics/skills/frontend-design
+skillfold add github:anthropics/skills/skills/frontend-design
 skillfold add npm:skillfold/code-review --name reviewer
 skillfold add ./skills/commit-helper
 ```
@@ -54,7 +54,7 @@ Status table for every declared skill and rule:
 ```
   name             source                                     pinned   status
   commit-helper    ./skills/commit-helper                     -        ok
-  frontend-design  github:anthropics/skills/frontend-design   8f3a9c1  ok
+  frontend-design  github:anthropics/skills/skills/frontend-design   8f3a9c1  ok
   reviewer         compose(code-review, testing)              -        modified
 ```
 

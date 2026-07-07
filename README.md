@@ -20,14 +20,14 @@ Skillfold treats skills like dependencies. Declare them in one YAML file, pin ex
 # skillfold.yaml
 skills:
   commit-helper: ./skills/commit-helper
-  frontend-design: github:anthropics/skills/frontend-design
+  frontend-design: github:anthropics/skills/skills/frontend-design
   planning: npm:skillfold/planning
 ```
 
 ```console
 $ skillfold install
   + commit-helper            ./skills/commit-helper
-  + frontend-design          github:anthropics/skills/frontend-design -> 8f3a9c1
+  + frontend-design          github:anthropics/skills/skills/frontend-design -> 8f3a9c1
   + planning                 npm:skillfold/planning -> 2.0.0
 
 3 installed, 0 unchanged -> .claude/skills
@@ -47,7 +47,7 @@ npm install -g skillfold      # or: npx skillfold
 ```sh
 skillfold init                # scaffold skillfold.yaml + an example skill
 skillfold install             # install into .claude/skills, write skillfold.lock
-skillfold add github:anthropics/skills/frontend-design
+skillfold add github:anthropics/skills/skills/frontend-design
 skillfold list
 ```
 
