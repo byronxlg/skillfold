@@ -6,3 +6,4 @@ dist/
 
 # Skills installed by skillfold are reproducible from skillfold.yaml + skillfold.lock
 .claude/
+.agents/

@@ -2,6 +2,10 @@
 # in-repo library. Run "skillfold install" (or npx tsx src/cli.ts install)
 # after cloning.
 
+# Dogfood both supported tools: Claude Code (.claude/skills, .claude/rules)
+# and Codex (.agents/skills, a managed block in AGENTS.md).
+targets: [claude, codex]
+
 skills:
   code-review: ./library/skills/code-review
   code-writing: ./library/skills/code-writing
@@ -12,3 +16,6 @@ compose:
   reviewer:
     description: Review code changes together with their tests.
     use: [code-review, testing]
+
+rules:
+  skillfold-conventions: ./rules/skillfold-conventions.md
