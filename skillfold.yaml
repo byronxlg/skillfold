@@ -12,6 +12,10 @@ skills:
   testing: ./library/skills/testing
   github-workflow: ./library/skills/github-workflow
 
+  # Repo-specific, not part of the published library: drives the weekly
+  # blog automation in .github/workflows/blog-post.yml.
+  blog-post: ./skills/blog-post
+
 compose:
   reviewer:
     description: Review code changes together with their tests.
