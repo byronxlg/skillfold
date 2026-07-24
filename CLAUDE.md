@@ -15,8 +15,9 @@ Declarative skill manager for Claude config. Declare skills and rules in `skillf
 - **Verify sync**: `npx tsx src/cli.ts check`
 - **List status**: `npx tsx src/cli.ts list`
 - **Tests**: `npm test` (node:test via tsx, no extra deps)
-- **Type check**: `npx tsc --noEmit`
+- **Type check**: `npm run typecheck` (src + scripts)
 - **Build**: `npm run build`
+- **Build the blog**: `npm run build:blog` (regenerates site/blog/, output is gitignored)
 
 ## Project Structure
 
@@ -42,6 +43,11 @@ src/
   testutil.ts - test helpers (tmp dirs, fixture skills, fetch stub); excluded from build
 library/      - 11 general-purpose skills published with the package (agentskills map)
 site/         - static docs site deployed to GitHub Pages
+  index.html    - landing page (page-specific CSS inline)
+  assets/       - vendored fonts, base.css (shared chrome), blog.css
+  blog/posts/   - blog sources: markdown + YAML frontmatter (the only committed blog files)
+scripts/
+  build-blog.ts - renders site/blog/posts/*.md into site/blog/ and site/feed.xml
 docs/         - markdown docs (getting started, manifest, CLI, publishing)
 skillfold.yaml         - this repo's own manifest (dogfood; installs from library/)
 skillfold.schema.json  - JSON Schema for manifest validation and IDE autocompletion

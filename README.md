@@ -8,7 +8,7 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/byronxlg/skillfold/ci.yml?style=flat-square&label=CI)](https://github.com/byronxlg/skillfold/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
-[Website](https://byronxlg.github.io/skillfold/) | [Getting Started](docs/getting-started.md) | [Manifest Reference](docs/manifest.md) | [CLI Reference](docs/cli.md)
+[Website](https://byronxlg.github.io/skillfold/) | [Blog](https://byronxlg.github.io/skillfold/blog/) | [Getting Started](docs/getting-started.md) | [Manifest Reference](docs/manifest.md) | [CLI Reference](docs/cli.md)
 
 </div>
 
