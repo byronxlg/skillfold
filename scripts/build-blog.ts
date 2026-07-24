@@ -325,6 +325,70 @@ ${items}
 `;
 }
 
+function isoDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function renderSitemap(posts: Post[]): string {
+  const urls = [
+    `  <url>\n    <loc>${SITE_URL}</loc>\n  </url>`,
+    `  <url>\n    <loc>${SITE_URL}blog/</loc>${posts[0] ? `\n    <lastmod>${isoDate(posts[0].date)}</lastmod>` : ""}\n  </url>`,
+    ...posts.map(
+      (p) => `  <url>\n    <loc>${SITE_URL}blog/${p.slug}/</loc>\n    <lastmod>${isoDate(p.date)}</lastmod>\n  </url>`,
+    ),
+  ];
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+${urls.join("\n")}
+</urlset>
+`;
+}
+
+function renderRobots(): string {
+  return `User-agent: *
+Allow: /
+
+Sitemap: ${SITE_URL}sitemap.xml
+`;
+}
+
+const LANDING_START = "<!-- skillfold:blog:start -->";
+const LANDING_END = "<!-- skillfold:blog:end -->";
+const LANDING_COUNT = 3;
+
+/**
+ * Fill the marker-fenced block on the landing page with the newest posts.
+ * The block is committed, so this only rewrites index.html when the rendered
+ * rows actually change - a clean tree stays clean.
+ */
+async function syncLandingPage(posts: Post[]): Promise<boolean> {
+  const file = join(SITE, "index.html");
+  const html = await readFile(file, "utf8");
+  const start = html.indexOf(LANDING_START);
+  const end = html.indexOf(LANDING_END);
+  if (start === -1 || end === -1) {
+    throw new BuildError(`site/index.html is missing the ${LANDING_START} / ${LANDING_END} markers`);
+  }
+  if (end < start) throw new BuildError("site/index.html has the blog markers in the wrong order");
+
+  const rows = posts
+    .slice(0, LANDING_COUNT)
+    .map(
+      (p) => `    <a class="keyrow" href="blog/${p.slug}/">
+      <span class="cmd-name">${escapeHtml(p.title)}</span>
+      <span class="dots"></span>
+      <span class="act">${displayDate(p.date)}</span>
+    </a>`,
+    )
+    .join("\n");
+
+  const block = `${LANDING_START}\n  <div class="posts-mini">\n${rows}\n  </div>\n  ${LANDING_END}`;
+  const next = html.slice(0, start) + block + html.slice(end + LANDING_END.length);
+  if (next === html) return false;
+  await writeFile(file, next);
+  return true;
+}
+
 async function main(): Promise<void> {
   const posts = await readPosts();
 
@@ -365,8 +429,14 @@ async function main(): Promise<void> {
 
   const newest = posts[0]?.date ?? new Date(0);
   await writeFile(join(SITE, "feed.xml"), renderFeed(posts, newest));
+  await writeFile(join(SITE, "sitemap.xml"), renderSitemap(posts));
+  await writeFile(join(SITE, "robots.txt"), renderRobots());
+  const landingChanged = await syncLandingPage(posts);
 
-  console.log(`blog: ${posts.length} post${posts.length === 1 ? "" : "s"} -> site/blog/, site/feed.xml`);
+  console.log(
+    `blog: ${posts.length} post${posts.length === 1 ? "" : "s"} -> site/blog/, feed.xml, sitemap.xml, robots.txt` +
+      (landingChanged ? "\nblog: rewrote the landing page block (commit site/index.html)" : ""),
+  );
 }
 
 main().catch((err: unknown) => {

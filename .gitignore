@@ -13,3 +13,5 @@ site/blog/index.html
 site/blog/*/
 !site/blog/posts/
 site/feed.xml
+site/sitemap.xml
+site/robots.txt

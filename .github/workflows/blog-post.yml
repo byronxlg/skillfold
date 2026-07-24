@@ -1,0 +1,81 @@
+name: Weekly blog post
+
+# Writes the next blog post from docs/blog-todo.md and opens a PR for review.
+# Runs Claude Code on plan (subscription) usage, not API billing: create the
+# secret with a token from `claude setup-token` ->
+#   gh secret set CLAUDE_CODE_OAUTH_TOKEN
+# Post-only PRs are merged by the run itself; the PR remains as the audit
+# trail and revert point.
+#
+# Weekly rather than daily: skillfold's topic space is finite and a daily
+# cadence would exhaust docs/blog-todo.md in under two weeks and start
+# producing filler. Change the cron below if that stops being true.
+on:
+  schedule:
+    - cron: "17 7 * * 1" # Mondays 07:17 UTC; offset to dodge on-the-hour load
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write # claude-code-action mints its GitHub token via OIDC
+  actions: write # dispatch docs.yml after merging (GITHUB_TOKEN pushes don't trigger it)
+
+concurrency:
+  group: blog-post
+  cancel-in-progress: false
+
+jobs:
+  write-post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # The post pipeline runs the real build and test suite before shipping,
+      # so the toolchain has to be present before Claude starts.
+      - run: npm ci
+      # Installs the blog-post skill (declared in skillfold.yaml) into
+      # .claude/skills, which is where the prompt below reads it from.
+      - run: npx tsx src/cli.ts install --frozen
+
+      - name: Write the next post
+        uses: anthropics/claude-code-action@v1
+        env:
+          GH_TOKEN: ${{ github.token }}
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Explicit token instead of the Claude GitHub App (not installed on
+          # this repo). Known trade-off: events created with GITHUB_TOKEN do
+          # not trigger other workflows, so this run must verify the post
+          # itself (the skill's build/test steps) and dispatch the deploy.
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            Read .claude/skills/blog-post/SKILL.md and follow it end to end:
+            take the topmost unchecked topic from docs/blog-todo.md, verify
+            every claim against the source in src/ and the reference docs in
+            docs/ (never from memory, and run any command whose output you
+            quote), write the post as a markdown file in site/blog/posts/,
+            run npm run build:blog, verify the rendered pages and links,
+            update docs/blog-todo.md, then create branch blog/<slug>, commit
+            as "Blog: <title>", push, and open a pull request.
+
+            Before opening the PR, confirm npm run typecheck and npm test
+            both pass. Pull requests created with GITHUB_TOKEN do not trigger
+            CI, so this run is the only thing standing between a broken post
+            and the live site.
+
+            Then, if and only if the PR's diff is the post plus its sync
+            files (site/blog/posts/*, the generated block in site/index.html,
+            docs/blog-todo.md), merge it: gh pr merge --squash
+            --delete-branch, then dispatch the site deploy with:
+            gh workflow run docs.yml (a merge made with GITHUB_TOKEN does not
+            trigger it by itself). If the merge fails, or the diff touches
+            anything else, leave the PR open and say why.
+
+            If an open PR whose branch starts with blog/ already exists, stop
+            without writing anything and say so - one pending post at a time.
+          claude_args: |
+            --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebFetch,WebSearch"
+            --max-turns 60
