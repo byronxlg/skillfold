@@ -19,7 +19,10 @@ Declarative skill manager for Claude config. Declare skills and rules in `skillf
 - **Build**: `npm run build`
 - **Build the blog**: `npm run build:blog` (regenerates site/blog/, output is gitignored,
   except the marker-fenced block in site/index.html which is committed)
-- **Write a blog post**: follow `skills/blog-post/SKILL.md`; topics come from `docs/blog-todo.md`
+- **Write a blog post**: follow `skills/blog-post/SKILL.md`. The blog is
+  current-events-first (news in the agent config / skill distribution / supply chain
+  space), with an evergreen queue in `docs/blog-todo.md` as the quiet-week fallback.
+  It is not a product blog.
 
 ## Project Structure
 
@@ -52,7 +55,7 @@ scripts/
   build-blog.ts - renders site/blog/posts/*.md into site/blog/, feed.xml,
                   sitemap.xml, robots.txt, and the marker-fenced block in index.html
 skills/blog-post/ - repo-specific skill driving the weekly blog automation
-docs/blog-todo.md - blog topic queue and shipped log
+docs/blog-todo.md - blog editorial state: news beats, fallback queue, rollouts, shipped log
 docs/         - markdown docs (getting started, manifest, CLI, publishing)
 skillfold.yaml         - this repo's own manifest (dogfood; installs from library/)
 skillfold.schema.json  - JSON Schema for manifest validation and IDE autocompletion

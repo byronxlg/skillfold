@@ -24,7 +24,7 @@ const BLOG_DIR = join(SITE, "blog");
 const SITE_URL = "https://byronxlg.github.io/skillfold/";
 const BLOG_TITLE = "skillfold blog";
 const BLOG_DESC =
-  "Notes on managing Claude skills the way you manage dependencies: manifests, lockfiles, and reproducible installs.";
+  "On agent configuration, skill distribution, and the supply chain underneath them: what is happening in the ecosystem and what it means in practice.";
 
 const marked = new Marked({ gfm: true });
 
@@ -67,7 +67,17 @@ function splitFrontmatter(raw: string, file: string): { data: unknown; body: str
   const end = text.indexOf("\n---", 3);
   if (end === -1) throw new BuildError(`${file}: frontmatter is never closed with "---"`);
   const body = text.slice(text.indexOf("\n", end + 1) + 1);
-  return { data: parseYaml(text.slice(4, end)), body };
+  try {
+    return { data: parseYaml(text.slice(4, end)), body };
+  } catch (err: unknown) {
+    // The most common cause by far is an unquoted value containing ": ",
+    // which YAML reads as a nested mapping. Say so instead of leaking a stack.
+    const detail = err instanceof Error ? err.message : String(err);
+    throw new BuildError(
+      `${file}: frontmatter is not valid YAML - ${detail}\n` +
+        `  (a value containing ": " must be quoted, e.g. description: "Skills: a primer")`,
+    );
+  }
 }
 
 function requireString(data: Record<string, unknown>, key: string, file: string): string {
@@ -128,6 +138,7 @@ async function readPosts(): Promise<Post[]> {
     posts.push({
       // Filenames carry a date and an optional sequence number for ordering.
       // Neither is part of the URL: 2026-07-25-1-lockfiles.md -> /blog/lockfiles/
+      // so renumbering a post for ordering never breaks its permalink.
       slug:
         typeof fm.slug === "string" && fm.slug
           ? fm.slug
@@ -149,9 +160,11 @@ async function readPosts(): Promise<Post[]> {
     bySlug.set(p.slug, p.file);
   }
 
-  // Newest first. Same-day posts fall back to filename, so the sequence number
-  // in the filename decides the running order (lower number = higher on the page).
-  posts.sort((a, b) => b.date.getTime() - a.date.getTime() || a.file.localeCompare(b.file));
+  // Newest first. Same-day posts fall back to filename descending, so the
+  // sequence number reads naturally: a higher number was published later that
+  // day and sits higher on the page. A new same-day post takes the next number
+  // up and lands on top without renaming anything.
+  posts.sort((a, b) => b.date.getTime() - a.date.getTime() || b.file.localeCompare(a.file));
   return posts;
 }
 

@@ -52,14 +52,31 @@ jobs:
           # itself (the skill's build/test steps) and dispatch the deploy.
           github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
-            Read .claude/skills/blog-post/SKILL.md and follow it end to end:
-            take the topmost unchecked topic from docs/blog-todo.md, verify
-            every claim against the source in src/ and the reference docs in
-            docs/ (never from memory, and run any command whose output you
-            quote), write the post as a markdown file in site/blog/posts/,
-            run npm run build:blog, verify the rendered pages and links,
-            update docs/blog-todo.md, then create branch blog/<slug>, commit
-            as "Blog: <title>", push, and open a pull request.
+            Read .claude/skills/blog-post/SKILL.md and follow it end to end.
+
+            The blog is current-events-first: scan the beats in
+            docs/blog-todo.md for the week's strongest story in the agent
+            config / skill distribution / supply chain space, and write about
+            the story rather than about skillfold. Verify every external claim
+            against a primary source you actually fetched (vendor changelog,
+            spec commit, the security vendor's own writeup, the paper), never
+            an aggregator summary, and attribute every statistic with its
+            source and date. Verify every claim about skillfold's own behavior
+            against src/ and docs/, and run any command whose output you quote.
+
+            If no story qualifies, or the only honest connection to the topic
+            would be a forced one, write the topmost unchecked evergreen topic
+            from the Queue instead. A quiet week gets an evergreen post, not a
+            stretched take. If a large feature has landed, a release post
+            takes priority over both.
+
+            Every post must state plainly what skillfold does not solve about
+            its topic. Drafts without that do not ship.
+
+            Then write the post as a markdown file in site/blog/posts/, run
+            npm run build:blog, verify the rendered pages and links, update
+            docs/blog-todo.md, then create branch blog/<slug>, commit as
+            "Blog: <title>", push, and open a pull request.
 
             Before opening the PR, confirm npm run typecheck and npm test
             both pass. Pull requests created with GITHUB_TOKEN do not trigger
