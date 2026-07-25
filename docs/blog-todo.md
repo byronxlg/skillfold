@@ -74,6 +74,12 @@ here - they belong in `CHANGELOG.md`.
 Every published post lands here. `ecosystem` lines name the story so the
 repeat check can match it.
 
+- [x] MCP's stateless rewrite ships July 28: what actually changes
+  (story: the 2026-07-28 MCP specification revision - stateless protocol
+  core, formal Extensions framework, Tasks moved to an extension,
+  authorization hardening, and the first formal deprecation/lifecycle
+  policy) - 2026-07-25,
+  site/blog/posts/2026-07-25-5-mcp-stateless-rewrite.md
 - [x] What the skill supply-chain research actually recommends
   (story: Feb-May 2026 agent skill supply-chain disclosures from Snyk, Unit 42,
   Koi Security and Bitdefender, plus the CSA context-poisoning briefing) -
