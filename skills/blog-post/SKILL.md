@@ -224,6 +224,12 @@ avoids re-covering ground, so every published post lands there.
 Branch `blog/<slug>`, commit as `Blog: <title>`, push, and open a PR
 describing the story and why it is worth covering.
 
+**Open the PR in the same breath as the push.** A pushed branch with no PR is
+invisible: nothing reviews it, nothing deploys it, and the next run will not
+find it. The first unattended run did exactly this, pushing a finished post and
+then stopping before `gh pr create`. Push and open the PR as one step, then do
+any remaining polish on the PR.
+
 The PR is the audit trail and revert point, not a review gate. If the diff is
 only the post, the landing page's generated block, and `docs/blog-todo.md`,
 squash-merge it yourself:
