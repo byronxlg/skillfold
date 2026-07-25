@@ -33,9 +33,9 @@ client request, and the client can resume the exchange from any instance
 using a `requestState` payload it echoes back on retry.
 
 Three things are removed outright: the `initialize`/`initialized` handshake,
-the `Mcp-Session-Id` header, and the `tasks/list` method, which the spec
-blog says was "unsafe without sessions." A non-standard `-32002` error code
-for missing resources is replaced with the JSON-RPC standard `-32602`.
+the `Mcp-Session-Id` header, and the `tasks/list` method, which the spec blog
+says "can't be scoped safely without sessions". A non-standard `-32002` error
+code for missing resources is replaced with the JSON-RPC standard `-32602`.
 
 Three features that were part of the core are marked deprecated rather than
 removed: Roots, Sampling, and Logging. They still work.
