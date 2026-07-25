@@ -74,6 +74,11 @@ here - they belong in `CHANGELOG.md`.
 Every published post lands here. `ecosystem` lines name the story so the
 repeat check can match it.
 
+- [x] Microsoft ships stable Agent Skills for .NET and Python
+  (story: Microsoft's Agent Framework promoted Agent Skills from
+  experimental to stable for .NET on 2026-07-07 and Python on 2026-07-15,
+  both built on the agentskills.io SKILL.md spec) - 2026-07-25,
+  site/blog/posts/2026-07-25-6-microsoft-agent-skills-dotnet-python.md
 - [x] MCP's stateless rewrite ships July 28: what actually changes
   (story: the 2026-07-28 MCP specification revision - stateless protocol
   core, formal Extensions framework, Tasks moved to an extension,
