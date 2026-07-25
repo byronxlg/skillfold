@@ -97,6 +97,21 @@ every retelling. Rules:
 - Anything contested needs two independent sources.
 - Link the primary source inline so a reader can check you.
 
+Two failure modes have already shipped and both are subtle. Check for them
+explicitly before you commit:
+
+- **Quotation marks mean verbatim.** If text sits inside quotes it must match
+  the source character for character. A tighter paraphrase is fine as your own
+  words, outside quotes. One post rendered "can't be scoped safely without
+  sessions" as "unsafe without sessions" inside quotation marks: same meaning,
+  not the same sentence, and the quote marks made it a misattribution.
+- **A number measures exactly one thing.** The words around a statistic must
+  describe what was actually counted. One post reported a 99.55% figure for
+  "frontmatter with a name and description" when the source measured
+  frontmatter *presence* at 99.55%, with name and description counted
+  separately at 99.49% and 99.52%. Re-read each figure against the sentence
+  in the source that produced it, not against your summary of it.
+
 Claims about skillfold's own behavior are verified differently: never from
 memory, always from the repo.
 

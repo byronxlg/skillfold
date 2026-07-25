@@ -32,11 +32,12 @@ agent skill ecosystem published so far.
 
 ## Present, but not declared
 
-The paper's core finding is a pattern it names "activation-ready but
-governance-poor." Frontmatter with a name and description - the
-minimum an agent needs to *activate* a skill - is present in 99.55% of
-the corpus. Fields that would let a tool reason about what a skill
-*depends on* appear in only 1.40%. Name collisions compound the
+The paper's core finding is a pattern it names skill metadata that is
+"activation-ready but governance-poor". Frontmatter of some kind is
+present in 99.55% of the corpus, and the two fields an agent needs to
+*activate* a skill are almost as universal: a name in 99.49%, a
+description in 99.52%. Fields that would let a tool reason about what a
+skill *depends on* appear in only 1.40%. Name collisions compound the
 problem: 58.73% of skill names collide with at least one other skill in
 the corpus, which the paper notes makes identity resolution fragile
 even before dependencies enter the picture.
