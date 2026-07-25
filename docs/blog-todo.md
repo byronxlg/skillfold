@@ -74,6 +74,13 @@ here - they belong in `CHANGELOG.md`.
 Every published post lands here. `ecosystem` lines name the story so the
 repeat check can match it.
 
+- [x] A study mapped 1.4 million agent skills. Most declare no dependencies
+  at all. (story: "Skills Are Not Islands" (arXiv:2607.01136, submitted
+  2026-07-01) built SkillDepAnalyzer and ran it over 1,434,046 SkillsMP
+  skills, finding 99.55% have activation frontmatter but only 1.40% declare
+  any dependency-like field, plus transitive exposure to malicious skills,
+  dangerous code, axios, and vulnerable MCP services) - 2026-07-25,
+  site/blog/posts/2026-07-25-7-agent-skill-supply-chain-study.md
 - [x] Microsoft ships stable Agent Skills for .NET and Python
   (story: Microsoft's Agent Framework promoted Agent Skills from
   experimental to stable for .NET on 2026-07-07 and Python on 2026-07-15,
