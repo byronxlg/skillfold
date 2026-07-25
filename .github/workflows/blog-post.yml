@@ -29,7 +29,11 @@ jobs:
   write-post:
     runs-on: ubuntu-latest
     steps:
+      # Full history so the ship check below can compare this run's starting
+      # commit against main after a merge.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -93,6 +97,73 @@ jobs:
 
             If an open PR whose branch starts with blog/ already exists, stop
             without writing anything and say so - one pending post at a time.
+
+            Pace yourself: you have a turn budget and the job now fails if it
+            ends with no post, no PR, and no commit. Settle on the story early
+            and verify the handful of claims you actually intend to make rather
+            than surveying the whole beat list. Have the draft written by the
+            halfway point, leaving room to build, verify, and ship. Shipping a
+            solid post beats researching a perfect one you never commit.
+          # max-turns: the pipeline is research-heavy (scan the beats, fetch and
+          # verify primary sources, read src/ and docs/, write, build, verify,
+          # then git and gh). The first real run exhausted 60 turns before it
+          # could commit anything, and exhausting the cap is silent - the action
+          # still reports success - which is what the ship check below catches.
           claude_args: |
             --allowedTools "Bash,Read,Write,Edit,Glob,Grep,WebFetch,WebSearch"
-            --max-turns 60
+            --max-turns 150
+
+      # A run that produces nothing must fail, not go green. The action reports
+      # success when the agent exhausts --max-turns, so without this check an
+      # unattended weekly run could no-op forever and look healthy. Exactly one
+      # outcome is a legitimate no-op: a blog PR was already open.
+      - name: Verify the run shipped something
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          # An open PR is the success signal - either this run opened one, or one
+          # was already open and the run correctly declined to write a second.
+          # A pushed branch is NOT sufficient: the first real run pushed
+          # blog/mcp-stateless-rewrite and then exhausted its turns before
+          # calling gh pr create, leaving an orphan nobody would have noticed.
+          open_prs=$(gh pr list --state open --json number,title,headRefName \
+            --jq '[.[] | select(.headRefName | startswith("blog/"))]')
+          if [ "$(printf '%s' "$open_prs" | jq 'length')" -gt 0 ]; then
+            echo "An open blog PR exists:"
+            printf '%s' "$open_prs" | jq -r '.[] | "  #\(.number) \(.title) [\(.headRefName)]"'
+            exit 0
+          fi
+
+          # No open PR, so the run either merged its post or shipped nothing.
+          # Compare the post count on main against this run's starting commit.
+          git fetch --quiet origin main
+          before=$(git ls-tree -r --name-only "${{ github.sha }}" -- site/blog/posts | grep -c '\.md$' || true)
+          after=$(git ls-tree -r --name-only origin/main -- site/blog/posts | grep -c '\.md$' || true)
+          echo "posts on main before: $before, after: $after"
+
+          if [ "$after" -gt "$before" ]; then
+            echo "A post was written and merged."
+            git log --oneline "${{ github.sha }}..origin/main" || true
+            exit 0
+          fi
+
+          echo "::error::The run shipped no post: no open blog PR, and main gained nothing."
+          orphans=$(git ls-remote --heads origin 'refs/heads/blog/*' | awk '{print $2}' | sed 's#refs/heads/##')
+          if [ -n "$orphans" ]; then
+            echo "Orphan branch(es) pushed with no PR behind them:"
+            echo "$orphans" | sed 's/^/  /'
+            echo "The agent committed and pushed but never opened the PR, which"
+            echo "almost always means it ran out of turns at the last step."
+            echo "Recover by opening a PR for the branch rather than rerunning:"
+            echo "  gh pr create --head <branch> --fill"
+          fi
+          echo "Causes to check, in order:"
+          echo "  1. --max-turns exhausted. Compare num_turns in the run's"
+          echo "     result JSON against the cap in claude_args."
+          echo "  2. The agent found no story and did not fall back to the"
+          echo "     evergreen queue as the prompt requires."
+          echo "  3. It stopped deliberately and said why in its output."
+          exit 1
