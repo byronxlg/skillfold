@@ -259,43 +259,6 @@ function postMetaLine(p: Post): string {
   return `<time datetime="${p.dateRaw}">${displayDate(p.date)}</time> ${tags}`;
 }
 
-/**
- * Masthead band for the blog index. States the blog's subject - how skills
- * arrive, what gets recorded, what every machine ends up with - in the site's
- * own palette. Inline SVG so it needs no asset and no client-side script.
- */
-function renderHero(): string {
-  return `  <figure class="blog-hero">
-  <svg viewBox="0 0 760 116" role="img" aria-labelledby="hero-t hero-d" xmlns="http://www.w3.org/2000/svg">
-    <title id="hero-t">From scattered sources to a recorded, reproducible set of skills</title>
-    <desc id="hero-d">Skills arrive from github, npm, local directories, and pasted snippets. A lockfile records the resolved revision and a content hash for each. Every machine then installs the identical set.</desc>
-    <defs><marker id="hero-a" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#57626f"/></marker></defs>
-    <rect x="52" y="31" width="62" height="22" rx="3" fill="#0d1219" stroke="#29323f"/>
-    <text x="83" y="46" text-anchor="middle" font-family="monospace" font-size="9" fill="#828f9e">github</text>
-    <rect x="120" y="31" width="62" height="22" rx="3" fill="#0d1219" stroke="#29323f"/>
-    <text x="151" y="46" text-anchor="middle" font-family="monospace" font-size="9" fill="#828f9e">npm</text>
-    <rect x="52" y="61" width="62" height="22" rx="3" fill="#0d1219" stroke="#29323f"/>
-    <text x="83" y="76" text-anchor="middle" font-family="monospace" font-size="9" fill="#828f9e">local</text>
-    <rect x="120" y="61" width="62" height="22" rx="3" fill="#0d1219" stroke="#29323f"/>
-    <text x="151" y="76" text-anchor="middle" font-family="monospace" font-size="9" fill="#57626f">pasted</text>
-    <path d="M190 57 H274" fill="none" stroke="#57626f" marker-end="url(#hero-a)"/>
-    <rect x="290" y="30" width="180" height="54" rx="4" fill="#0d1219" stroke="#4d8bf5"/>
-    <text x="380" y="52" text-anchor="middle" font-family="monospace" font-size="10" fill="#c9d3df">resolved revision</text>
-    <text x="380" y="69" text-anchor="middle" font-family="monospace" font-size="10" fill="#4d8bf5">integrity: sha256</text>
-    <path d="M478 57 H540" fill="none" stroke="#57626f" marker-end="url(#hero-a)"/>
-    <rect x="556" y="46" width="56" height="22" rx="3" fill="#0d1219" stroke="#29323f"/>
-    <circle cx="584" cy="57" r="2.5" fill="#41b866"/>
-    <rect x="620" y="46" width="56" height="22" rx="3" fill="#0d1219" stroke="#29323f"/>
-    <circle cx="648" cy="57" r="2.5" fill="#41b866"/>
-    <rect x="684" y="46" width="56" height="22" rx="3" fill="#0d1219" stroke="#29323f"/>
-    <circle cx="712" cy="57" r="2.5" fill="#41b866"/>
-    <text x="117" y="104" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#57626f">how skills arrive</text>
-    <text x="380" y="104" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#57626f">what gets written down</text>
-    <text x="648" y="104" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#57626f">what every machine gets</text>
-  </svg>
-</figure>`;
-}
-
 function renderIndex(posts: Post[]): string {
   const rows = posts
     .map(
@@ -319,7 +282,6 @@ function renderIndex(posts: Post[]): string {
     <p class="lead">${escapeHtml(BLOG_DESC)}
       Subscribe via <a class="alink" href="../feed.xml">RSS</a>.</p>
   </div>
-${renderHero()}
 ${list}
 </section>`;
 }

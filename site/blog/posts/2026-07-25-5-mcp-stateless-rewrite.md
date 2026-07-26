@@ -5,41 +5,6 @@ date: 2026-07-25
 tags: [ecosystem]
 ---
 
-The Model Context Protocol - the wire format most agent tools now use to
-reach external tools and data sources - ships its largest revision since
-launch on July 28, 2026. The release candidate has been locked since May 21,
-giving SDK maintainers a ten-week window to catch up, according to the
-[official MCP specification blog](https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/).
-The headline change is not a new feature. It is the removal of the one thing
-every MCP deployment has depended on since the protocol's first release:
-the session.
-
-## What a stateless core actually removes
-
-Every MCP connection used to start with an `initialize` handshake that
-returned an `Mcp-Session-Id` header, and every request after that had to
-reach the same server instance that issued it. That is gone. Protocol
-version, client identity, and capabilities now travel in a `_meta` field on
-every request instead of being negotiated once and pinned to a session. Any
-server instance can now answer any request, per the specification blog,
-which means a remote MCP deployment that needed sticky routing, a shared
-session store, or packet inspection at the load balancer to keep requests on
-the right instance no longer needs any of that.
-
-Server-initiated requests - a confirmation prompt mid-task, for example -
-had to assume a persistent connection back to the client. They are
-restructured too: a server can only issue one while actively handling a
-client request, and the client can resume the exchange from any instance
-using a `requestState` payload it echoes back on retry.
-
-Three things are removed outright: the `initialize`/`initialized` handshake,
-the `Mcp-Session-Id` header, and the `tasks/list` method, which the spec blog
-says "can't be scoped safely without sessions". A non-standard `-32002` error
-code for missing resources is replaced with the JSON-RPC standard `-32602`.
-
-Three features that were part of the core are marked deprecated rather than
-removed: Roots, Sampling, and Logging. They still work.
-
 <figure class="fig">
 <svg viewBox="0 0 440 226" role="img" aria-labelledby="fig5-t fig5-d" xmlns="http://www.w3.org/2000/svg">
 <title id="fig5-t">Session-pinned routing versus a stateless core</title>
@@ -75,6 +40,41 @@ removed: Roots, Sampling, and Logging. They still work.
 </svg>
 <figcaption>The removal is the feature: without a session to pin, a deployment that needed sticky routing or shared session state stops needing either.</figcaption>
 </figure>
+
+The Model Context Protocol - the wire format most agent tools now use to
+reach external tools and data sources - ships its largest revision since
+launch on July 28, 2026. The release candidate has been locked since May 21,
+giving SDK maintainers a ten-week window to catch up, according to the
+[official MCP specification blog](https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/).
+The headline change is not a new feature. It is the removal of the one thing
+every MCP deployment has depended on since the protocol's first release:
+the session.
+
+## What a stateless core actually removes
+
+Every MCP connection used to start with an `initialize` handshake that
+returned an `Mcp-Session-Id` header, and every request after that had to
+reach the same server instance that issued it. That is gone. Protocol
+version, client identity, and capabilities now travel in a `_meta` field on
+every request instead of being negotiated once and pinned to a session. Any
+server instance can now answer any request, per the specification blog,
+which means a remote MCP deployment that needed sticky routing, a shared
+session store, or packet inspection at the load balancer to keep requests on
+the right instance no longer needs any of that.
+
+Server-initiated requests - a confirmation prompt mid-task, for example -
+had to assume a persistent connection back to the client. They are
+restructured too: a server can only issue one while actively handling a
+client request, and the client can resume the exchange from any instance
+using a `requestState` payload it echoes back on retry.
+
+Three things are removed outright: the `initialize`/`initialized` handshake,
+the `Mcp-Session-Id` header, and the `tasks/list` method, which the spec blog
+says "can't be scoped safely without sessions". A non-standard `-32002` error
+code for missing resources is replaced with the JSON-RPC standard `-32602`.
+
+Three features that were part of the core are marked deprecated rather than
+removed: Roots, Sampling, and Logging. They still work.
 
 ## The part that is actually new: a deprecation clock
 

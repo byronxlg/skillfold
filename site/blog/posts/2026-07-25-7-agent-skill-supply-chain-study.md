@@ -5,6 +5,37 @@ date: 2026-07-25
 tags: [ecosystem]
 ---
 
+<figure class="fig">
+<svg viewBox="0 0 440 200" role="img" aria-labelledby="fig7-t fig7-d" xmlns="http://www.w3.org/2000/svg">
+<title id="fig7-t">Activation-ready but governance-poor metadata</title>
+<desc id="fig7-d">Across 1,434,046 skills: frontmatter present in 99.55 percent, a name in 99.49 percent, a description in 99.52 percent, but fields declaring dependencies in only 1.40 percent. Separately, 58.73 percent of skill names collide with at least one other skill.</desc>
+<text x="4" y="12" font-family="monospace" font-size="9" fill="#57626f">share of 1,434,046 skills</text>
+<text x="4" y="36" font-family="monospace" font-size="9.5" fill="#828f9e">frontmatter present</text>
+<rect x="152" y="26" width="228" height="13" fill="#1b232e"/>
+<rect x="152" y="26" width="226.9" height="13" fill="#4d8bf5"/>
+<text x="436" y="36" text-anchor="end" font-family="monospace" font-size="9.5" fill="#c9d3df">99.55%</text>
+<text x="4" y="60" font-family="monospace" font-size="9.5" fill="#828f9e">name</text>
+<rect x="152" y="50" width="228" height="13" fill="#1b232e"/>
+<rect x="152" y="50" width="226.8" height="13" fill="#4d8bf5"/>
+<text x="436" y="60" text-anchor="end" font-family="monospace" font-size="9.5" fill="#c9d3df">99.49%</text>
+<text x="4" y="84" font-family="monospace" font-size="9.5" fill="#828f9e">description</text>
+<rect x="152" y="74" width="228" height="13" fill="#1b232e"/>
+<rect x="152" y="74" width="226.9" height="13" fill="#4d8bf5"/>
+<text x="436" y="84" text-anchor="end" font-family="monospace" font-size="9.5" fill="#c9d3df">99.52%</text>
+<text x="4" y="108" font-family="monospace" font-size="9.5" fill="#c9d3df">declares dependencies</text>
+<rect x="152" y="98" width="228" height="13" fill="#1b232e"/>
+<rect x="152" y="98" width="3.2" height="13" fill="#e05a51"/>
+<text x="436" y="108" text-anchor="end" font-family="monospace" font-size="9.5" fill="#e05a51">1.40%</text>
+<path d="M4 128 H436" stroke="#29323f"/>
+<text x="4" y="154" font-family="monospace" font-size="9.5" fill="#828f9e">names that collide</text>
+<rect x="152" y="144" width="228" height="13" fill="#1b232e"/>
+<rect x="152" y="144" width="133.9" height="13" fill="#d9a032"/>
+<text x="436" y="154" text-anchor="end" font-family="monospace" font-size="9.5" fill="#d9a032">58.73%</text>
+<text x="4" y="184" font-family="monospace" font-size="9" fill="#57626f">enough metadata to load a skill, almost none to reason about what it pulls in</text>
+</svg>
+<figcaption>The corpus is 1,434,046 skills downloaded from the SkillsMP registry on 6 June 2026, 87.4% of the 1,640,440 the registry listed. The paper calls the pattern "activation-ready but governance-poor".</figcaption>
+</figure>
+
 Agent skills have quietly become software artifacts with dependencies:
 a `SKILL.md` can tell an agent to invoke another skill, shell out to an
 npm package, or call an external service. Almost none of them say so.
@@ -57,37 +88,6 @@ across the full corpus was:
 So more than a third of skills pull in something beyond their own
 files, and almost none of that is declared anywhere a tool could check
 without running an LLM-assisted extractor over the skill's prose first.
-
-<figure class="fig">
-<svg viewBox="0 0 440 200" role="img" aria-labelledby="fig7-t fig7-d" xmlns="http://www.w3.org/2000/svg">
-<title id="fig7-t">Activation-ready but governance-poor metadata</title>
-<desc id="fig7-d">Across 1,434,046 skills: frontmatter present in 99.55 percent, a name in 99.49 percent, a description in 99.52 percent, but fields declaring dependencies in only 1.40 percent. Separately, 58.73 percent of skill names collide with at least one other skill.</desc>
-<text x="4" y="12" font-family="monospace" font-size="9" fill="#57626f">share of 1,434,046 skills</text>
-<text x="4" y="36" font-family="monospace" font-size="9.5" fill="#828f9e">frontmatter present</text>
-<rect x="152" y="26" width="228" height="13" fill="#1b232e"/>
-<rect x="152" y="26" width="226.9" height="13" fill="#4d8bf5"/>
-<text x="436" y="36" text-anchor="end" font-family="monospace" font-size="9.5" fill="#c9d3df">99.55%</text>
-<text x="4" y="60" font-family="monospace" font-size="9.5" fill="#828f9e">name</text>
-<rect x="152" y="50" width="228" height="13" fill="#1b232e"/>
-<rect x="152" y="50" width="226.8" height="13" fill="#4d8bf5"/>
-<text x="436" y="60" text-anchor="end" font-family="monospace" font-size="9.5" fill="#c9d3df">99.49%</text>
-<text x="4" y="84" font-family="monospace" font-size="9.5" fill="#828f9e">description</text>
-<rect x="152" y="74" width="228" height="13" fill="#1b232e"/>
-<rect x="152" y="74" width="226.9" height="13" fill="#4d8bf5"/>
-<text x="436" y="84" text-anchor="end" font-family="monospace" font-size="9.5" fill="#c9d3df">99.52%</text>
-<text x="4" y="108" font-family="monospace" font-size="9.5" fill="#c9d3df">declares dependencies</text>
-<rect x="152" y="98" width="228" height="13" fill="#1b232e"/>
-<rect x="152" y="98" width="3.2" height="13" fill="#e05a51"/>
-<text x="436" y="108" text-anchor="end" font-family="monospace" font-size="9.5" fill="#e05a51">1.40%</text>
-<path d="M4 128 H436" stroke="#29323f"/>
-<text x="4" y="154" font-family="monospace" font-size="9.5" fill="#828f9e">names that collide</text>
-<rect x="152" y="144" width="228" height="13" fill="#1b232e"/>
-<rect x="152" y="144" width="133.9" height="13" fill="#d9a032"/>
-<text x="436" y="154" text-anchor="end" font-family="monospace" font-size="9.5" fill="#d9a032">58.73%</text>
-<text x="4" y="184" font-family="monospace" font-size="9" fill="#57626f">enough metadata to load a skill, almost none to reason about what it pulls in</text>
-</svg>
-<figcaption>The corpus is 1,434,046 skills downloaded from the SkillsMP registry on 6 June 2026, 87.4% of the 1,640,440 the registry listed. The paper calls the pattern "activation-ready but governance-poor".</figcaption>
-</figure>
 
 ## The security signal
 
