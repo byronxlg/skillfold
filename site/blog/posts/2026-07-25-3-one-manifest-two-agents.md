@@ -17,6 +17,34 @@ targets: [claude, codex]
 
 That is the whole feature from the user's side. One line, and `skillfold install` materializes every declared skill into both locations from the same pins.
 
+<figure class="fig">
+<svg viewBox="0 0 440 236" role="img" aria-labelledby="fig3-t fig3-d" xmlns="http://www.w3.org/2000/svg">
+<title id="fig3-t">One manifest installing to two agents</title>
+<desc id="fig3-d">skillfold.yaml fans out to a claude target and a codex target. Skills land in .claude/skills and .agents/skills in the same format. Rules diverge: one file per rule under .claude/rules, versus a managed block inside AGENTS.md.</desc>
+<rect x="163" y="6" width="160" height="30" rx="4" fill="#0d1219" stroke="#4d8bf5"/>
+<text x="243" y="26" text-anchor="middle" font-family="monospace" font-size="12" fill="#c9d3df">skillfold.yaml</text>
+<path d="M243 36 V54 M149 54 H337 M149 54 V78 M337 54 V78" fill="none" stroke="#57626f"/>
+<text x="149" y="88" text-anchor="middle" font-family="monospace" font-size="11" fill="#4d8bf5">target: claude</text>
+<text x="337" y="88" text-anchor="middle" font-family="monospace" font-size="11" fill="#4d8bf5">target: codex</text>
+<path d="M4 102 H436" stroke="#29323f"/>
+<text x="4" y="132" font-family="monospace" font-size="11" fill="#c9d3df">skills</text>
+<text x="4" y="147" font-family="monospace" font-size="9.5" fill="#57626f">identical</text>
+<rect x="66" y="116" width="166" height="30" rx="4" fill="#0d1219" stroke="#29323f"/>
+<text x="149" y="136" text-anchor="middle" font-family="monospace" font-size="11" fill="#828f9e">.claude/skills</text>
+<rect x="254" y="116" width="166" height="30" rx="4" fill="#0d1219" stroke="#29323f"/>
+<text x="337" y="136" text-anchor="middle" font-family="monospace" font-size="11" fill="#828f9e">.agents/skills</text>
+<text x="4" y="194" font-family="monospace" font-size="11" fill="#c9d3df">rules</text>
+<text x="4" y="209" font-family="monospace" font-size="9.5" fill="#d9a032">diverges</text>
+<rect x="66" y="174" width="166" height="46" rx="4" fill="#0d1219" stroke="#d9a032"/>
+<text x="149" y="194" text-anchor="middle" font-family="monospace" font-size="11" fill="#828f9e">.claude/rules/</text>
+<text x="149" y="210" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#57626f">one file per rule</text>
+<rect x="254" y="174" width="166" height="46" rx="4" fill="#0d1219" stroke="#d9a032"/>
+<text x="337" y="194" text-anchor="middle" font-family="monospace" font-size="11" fill="#828f9e">AGENTS.md</text>
+<text x="337" y="210" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#57626f">managed block</text>
+</svg>
+<figcaption>Skills copy cleanly to both targets. Rules do not: Codex has no rules directory, so they sync into a fenced block inside a file you also own.</figcaption>
+</figure>
+
 | Target | Skills | Rules |
 | --- | --- | --- |
 | `claude` | `.claude/skills` (or `skillsDir`) | `.claude/rules`, one file per rule |
