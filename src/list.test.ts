@@ -43,6 +43,22 @@ describe("skillRows", () => {
     assert.equal(byName.get("combo")?.source, "compose(here)");
   });
 
+  it("warns when an installed skill has no description", async () => {
+    const baseDir = join(tmp.path, "p-warn");
+    const skillsDir = join(baseDir, ".claude", "skills");
+    // A source skill with a valid name but no description.
+    writeFile(baseDir, "skills/nodesc/SKILL.md", "---\nname: nodesc\n---\n# No desc\n");
+    const manifest = parseManifest("skills:\n  nodesc: ./skills/nodesc", "t.yaml");
+    const { resolved, lock } = await resolveManifest(manifest, { baseDir });
+    syncSkillsDir({ skillsDir, resolved, previousLock: null });
+    const rows = skillRows(manifest, lock, baseDir, [
+      { target: "claude", skillsDir: skillsDir, rulesDir: join(baseDir, ".claude", "rules") },
+    ]);
+    assert.equal(rows[0].status, "ok");
+    assert.equal(rows[0].warning, "no description");
+    assert.match(renderRows(rows), /warn: no description/);
+  });
+
   it("reports not locked when the lock is missing", async () => {
     const baseDir = join(tmp.path, "p2");
     const skillsDir = join(baseDir, ".claude", "skills");
@@ -67,5 +83,15 @@ describe("renderRows", () => {
 
   it("hints at add when empty", () => {
     assert.match(renderRows([]), /skillfold add/);
+  });
+
+  it("shows a frontmatter warning only in place of an ok status", () => {
+    const text = renderRows([
+      { name: "a", kind: "local", source: "./a", status: "ok", warning: "no description" },
+      { name: "b", kind: "local", source: "./b", status: "modified", warning: "no description" },
+    ]);
+    assert.match(text, /warn: no description/);
+    // A worse status wins over the warning.
+    assert.match(text, /\bmodified\b/);
   });
 });

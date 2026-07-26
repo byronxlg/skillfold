@@ -53,6 +53,33 @@ export function parseFrontmatter(content: string): Frontmatter {
   return { attrs, body: trimmed.slice(match[0].length).trim() };
 }
 
+/**
+ * A short, human-readable frontmatter problem with a skill's SKILL.md, or
+ * null when it is well-formed. Non-fatal - surfaced as a warning by list and
+ * check so a mistake is visible without blocking installs. A skill with no
+ * description never triggers for the agent, and unparseable frontmatter is
+ * almost always a copy-paste or hand-edit slip.
+ */
+export function frontmatterIssue(skillMd: string): string | null {
+  const trimmed = skillMd.replace(/^\uFEFF/, "");
+  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(trimmed);
+  if (!match) return "no frontmatter";
+  let parsed: unknown;
+  try {
+    parsed = parseYaml(match[1]);
+  } catch {
+    return "invalid frontmatter";
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return "invalid frontmatter";
+  }
+  const description = (parsed as Record<string, unknown>).description;
+  if (typeof description !== "string" || !description.trim()) {
+    return "no description";
+  }
+  return null;
+}
+
 function walkFiles(root: string, dir: string, out: SkillFile[]): void {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     if (entry.isSymbolicLink()) continue;

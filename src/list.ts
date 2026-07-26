@@ -10,6 +10,7 @@ import { parseSource } from "./source.js";
 import {
   computeFileIntegrity,
   computeIntegrity,
+  frontmatterIssue,
   normalizeSkillName,
   readDirFiles,
 } from "./skill.js";
@@ -33,6 +34,23 @@ export interface SkillRow {
   /** Short pinned revision, e.g. "8f3a9c1" or "1.2.3". */
   pinned?: string;
   status: SkillStatus;
+  /** Non-fatal frontmatter problem with the installed SKILL.md, if any. */
+  warning?: string;
+}
+
+/**
+ * Frontmatter problem with a skill's installed SKILL.md, read from the first
+ * layout that has it. Rules are single markdown files with no frontmatter
+ * contract, so this is skills-only.
+ */
+function installedSkillWarning(name: string, layouts: TargetLayout[]): string | undefined {
+  for (const layout of layouts) {
+    const skillMd = join(layout.skillsDir, name, "SKILL.md");
+    if (existsSync(skillMd)) {
+      return frontmatterIssue(readFileSync(skillMd, "utf-8")) ?? undefined;
+    }
+  }
+  return undefined;
 }
 
 function shortPin(resolved: string | undefined): string | undefined {
@@ -145,6 +163,7 @@ export function skillRows(
       source: sourceString,
       pinned: entry && entry.source === sourceString ? shortPin(entry.resolved) : undefined,
       status,
+      warning: installedSkillWarning(name, layouts),
     });
   }
 
@@ -197,7 +216,9 @@ export function renderRows(rows: SkillRow[]): string {
     row.name,
     row.source,
     row.pinned ?? "-",
-    row.status,
+    // A frontmatter warning is only shown when nothing worse (drift, missing
+    // install) is going on - those statuses are more urgent.
+    row.status === "ok" && row.warning ? `warn: ${row.warning}` : row.status,
   ]);
   const widths = headers.map((header, i) =>
     Math.max(header.length, ...table.map((row) => row[i].length))

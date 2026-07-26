@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { ResolveError } from "./errors.js";
 import {
   computeIntegrity,
+  frontmatterIssue,
   normalizeSkillName,
   parseAllowedTools,
   parseFrontmatter,
@@ -17,6 +18,29 @@ import { makeTmpDir, writeFile, writeSkill } from "./testutil.js";
 
 const tmp = makeTmpDir();
 after(() => tmp.cleanup());
+
+describe("frontmatterIssue", () => {
+  it("returns null for a well-formed skill", () => {
+    assert.equal(frontmatterIssue("---\nname: a\ndescription: Does a thing.\n---\n# A\n"), null);
+  });
+
+  it("flags a SKILL.md with no frontmatter block", () => {
+    assert.equal(frontmatterIssue("# Just a body\nno frontmatter here\n"), "no frontmatter");
+  });
+
+  it("flags a missing or empty description", () => {
+    assert.equal(frontmatterIssue("---\nname: a\n---\n# A\n"), "no description");
+    assert.equal(frontmatterIssue("---\nname: a\ndescription: '   '\n---\n# A\n"), "no description");
+  });
+
+  it("flags unparseable frontmatter YAML", () => {
+    assert.equal(frontmatterIssue("---\nname: [this is: not valid\n---\n# A\n"), "invalid frontmatter");
+  });
+
+  it("tolerates a leading BOM", () => {
+    assert.equal(frontmatterIssue("\uFEFF---\nname: a\ndescription: Fine.\n---\n# A\n"), null);
+  });
+});
 
 describe("parseFrontmatter", () => {
   it("splits attrs and body", () => {

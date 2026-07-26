@@ -43,7 +43,7 @@ lockfile: skillfold.lock
 
 ```sh
 # a skill directory on GitHub (pin optional: tag, branch, or commit SHA)
-skillfold add github:anthropics/skills/frontend-design
+skillfold add github:anthropics/skills/skills/frontend-design
 
 # a skill from an npm package
 skillfold add npm:skillfold/code-review
@@ -96,7 +96,7 @@ After `skillfold install`, `.claude/skills/reviewer/SKILL.md` contains both bodi
 The same workflow works for your personal `~/.claude/skills`:
 
 ```sh
-skillfold add -g github:anthropics/skills/frontend-design
+skillfold add -g github:anthropics/skills/skills/frontend-design
 skillfold list -g
 ```
 
