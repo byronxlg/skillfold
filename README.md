@@ -2,19 +2,19 @@
 
 # Skillfold
 
-**Declarative skill manager for Claude config**
+**Declarative skill manager for Claude Code and Codex**
 
 [![npm](https://img.shields.io/npm/v/skillfold?style=flat-square)](https://www.npmjs.com/package/skillfold)
 [![CI](https://img.shields.io/github/actions/workflow/status/byronxlg/skillfold/ci.yml?style=flat-square&label=CI)](https://github.com/byronxlg/skillfold/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
-[Website](https://byronxlg.github.io/skillfold/) | [Blog](https://byronxlg.github.io/skillfold/blog/) | [Getting Started](docs/getting-started.md) | [Manifest Reference](docs/manifest.md) | [CLI Reference](docs/cli.md)
+[Website](https://byronxlg.github.io/skillfold/) &middot; [Blog](https://byronxlg.github.io/skillfold/blog/) &middot; [Getting Started](docs/getting-started.md) &middot; [Manifest](docs/manifest.md) &middot; [CLI](docs/cli.md)
 
 </div>
 
 Your `.claude/skills` directory is state with no source of truth. Skills get pasted in from blog posts, copied between machines, edited in place, and lost on the next laptop. Nobody knows which version of a skill a teammate is running, and "works on my machine" now applies to your agent.
 
-Skillfold treats skills like dependencies. Declare them in one YAML file, pin exact revisions in a lockfile, and install them reproducibly - like nix for skills, without the learning curve.
+Skillfold treats skills like dependencies. Declare them in one YAML file, pin exact revisions in a lockfile, install them reproducibly.
 
 ```yaml
 # skillfold.yaml
@@ -36,65 +36,69 @@ lockfile: skillfold.lock
 
 Commit `skillfold.yaml` and `skillfold.lock`. Anyone who clones the repo runs `skillfold install` and gets byte-identical skills.
 
-## Install
+## Get started
 
 ```sh
-npm install -g skillfold      # or: npx skillfold
-```
+npm install -g skillfold       # or: npx skillfold
 
-## Quickstart
-
-```sh
-skillfold init                # scaffold skillfold.yaml + an example skill
-skillfold install             # install into .claude/skills, write skillfold.lock
+skillfold init                 # scaffold a manifest and an example skill
 skillfold add github:anthropics/skills/skills/frontend-design
-skillfold list
+skillfold install              # install skills, write the lockfile
 ```
+
+Full walkthrough in [Getting Started](docs/getting-started.md).
 
 ## How it works
 
-**Manifest** - `skillfold.yaml` declares skills by name from three kinds of sources:
+```mermaid
+flowchart LR
+  L["./skills/local"] --> M
+  G["github:owner/repo"] --> M
+  N["npm:package/skill"] --> M
+  M["skillfold.yaml<br/>what you want"] --> K["skillfold.lock<br/>exact SHA + sha256"]
+  K --> I(["skillfold install"])
+  I -->|"target: claude"| C[".claude/skills"]
+  I -->|"target: codex"| X[".agents/skills"]
+```
 
-| Source | Example |
-| --- | --- |
-| Local directory | `./skills/commit-helper` |
-| GitHub | `github:owner/repo/path/to/skill@v1.2.0` |
-| npm | `npm:package/skill-name@1.0.0` |
+Skills come from local directories, GitHub, or npm. The manifest says what you want; the lockfile records exactly what you got. Installs read both.
 
-A trailing `@ref` pins a version: a tag, branch, or commit SHA for GitHub; an exact version or dist-tag for npm. Unpinned sources resolve to the default branch / latest at install time and are then held by the lockfile.
+**Reproducible.** The lockfile pins the commit SHA or version every remote skill resolved to, plus a sha256 of its contents. `skillfold install` never moves a pin - only `skillfold update` does. `skillfold install --frozen` is `npm ci` for skills: it fails on any drift and verifies every hash.
 
-**Lockfile** - `skillfold.lock` records the exact commit SHA or version every remote skill resolved to, plus a sha256 content hash. Installs are reproducible; tampering is detectable. `skillfold update` is the only thing that moves a pin.
+**Safe by default.** Skillfold only writes or prunes directories named in the lockfile. Hand-authored skills sitting next to managed ones are never touched.
 
-**Install** - `skillfold install` materializes every skill into `.claude/skills/` (configurable with `skillsDir`). Skillfold only ever touches directories named in the lockfile - hand-authored skills sitting next to managed ones are never overwritten or pruned.
+**Portable.** One manifest can install for more than one agent:
 
-**Check** - `skillfold check` verifies offline that manifest, lockfile, and installed files all agree. Run it in CI:
+```yaml
+targets: [claude, codex]
+```
+
+Skills are plain SKILL.md directories (the [agent skills standard](https://agentskills.io)), so supporting another tool is just another install location. With `codex`, skills also land in `.agents/skills`, and rules sync into a marker-fenced managed block in `AGENTS.md` that leaves your hand-written content alone.
+
+## Verify it in CI
 
 ```yaml
 - uses: byronxlg/skillfold@main   # runs: npx skillfold check
 ```
 
-or use `skillfold install --frozen` for npm-ci-style installs that fail on any drift.
+`skillfold check` verifies offline that the manifest, the lockfile, and what is actually installed all agree. It catches the case where someone edits a skill in place and forgets.
 
-## Composition
+## Compose skills together
 
-Composed skills concatenate other skills into one generated SKILL.md:
+Composed skills concatenate other skills into one generated SKILL.md, regenerated whenever an input changes:
 
 ```yaml
-skills:
-  code-review: npm:skillfold/code-review
-  testing: npm:skillfold/testing
-
 compose:
   reviewer:
     description: Review code changes together with their tests.
     use: [code-review, testing]
 ```
 
-`reviewer` is generated at install time and regenerated whenever its inputs change. Composed skills can use other composed skills; cycles are rejected at parse time. Supporting files (`references/`, `scripts/`, ...) of the used skills are carried into the composed skill, and its `allowed-tools` defaults to the union of the used skills' when all of them declare one (override with `allowed-tools:` on the entry).
+Supporting files come along, `allowed-tools` unions across the inputs, and cycles are rejected at parse time. See [Composition](docs/manifest.md#compose).
 
-## Rules
+## Manage rules too
 
-The same manifest also manages rules - single markdown files installed into `.claude/rules/`:
+The same manifest handles rules - single markdown files installed into `.claude/rules/`:
 
 ```yaml
 rules:
@@ -102,17 +106,7 @@ rules:
   security: github:acme/standards/rules/security.md@v3
 ```
 
-Rules pin in the lockfile and participate in `install`, `check`, `list`, and `remove` exactly like skills.
-
-## Codex and other tools
-
-Skills are plain SKILL.md directories (the [agent skills standard](https://agentskills.io)), so supporting another tool is just more install locations:
-
-```yaml
-targets: [claude, codex]
-```
-
-With the `codex` target, skills also install into `.agents/skills` (where Codex looks), and rules sync into a marker-fenced managed block in `AGENTS.md` - hand-written content around the block is never touched. One manifest, one lockfile, both tools.
+Rules pin in the lockfile and take part in `install`, `check`, `list`, and `remove` exactly like skills.
 
 ## Commands
 
@@ -129,42 +123,25 @@ With the `codex` target, skills also install into `.agents/skills` (where Codex 
 | `skillfold info <name>` | Show source, pin, hash, and install path for one skill |
 | `skillfold search [query]` | Search npm for published skills |
 
-Add `-g` / `--global` to any of these to manage your user-level config (`~/.claude/skills`, and with the codex target `~/.agents/skills` + `~/.codex/AGENTS.md`) with a manifest at `~/.claude/skillfold.yaml` instead of the current project. Project and global levels are independent - the tools themselves layer both at runtime - and `check`/`list` warn when a project skill name shadows a user-level one. See [Global vs project](docs/cli.md#global-vs-project).
+Add `-g` to manage your user-level config instead of the current project. See [Global vs project](docs/cli.md#global-vs-project) and the full [CLI reference](docs/cli.md).
 
-## Sharing skills
+## Share your skills
 
-Publish a skill collection as an npm package with an `agentskills` map in its package.json:
+Publish a collection as an npm package with an `agentskills` map, and anyone can `skillfold add npm:my-skills/tdd`:
 
 ```json
 {
   "name": "my-skills",
   "keywords": ["skillfold-skill"],
-  "agentskills": {
-    "tdd": "./skills/tdd",
-    "docs": "./skills/docs"
-  }
+  "agentskills": { "tdd": "./skills/tdd" }
 }
 ```
 
-Anyone can then run `skillfold add npm:my-skills/tdd`. The `skillfold-skill` keyword makes the package discoverable via `skillfold search`. See [docs/publishing.md](docs/publishing.md).
+The `skillfold-skill` keyword makes it discoverable through `skillfold search`. See [Publishing](docs/publishing.md).
 
-Skillfold itself ships a small library of general-purpose skills: `planning`, `research`, `code-review`, `testing`, `writing`, and more - `skillfold add npm:skillfold/<name>`.
+Skillfold ships its own library of general-purpose skills, each installable with `skillfold add npm:skillfold/<name>`:
 
-## Library
-
-| Skill | Description |
-| --- | --- |
-| `planning` | Break problems into steps, identify dependencies, estimate scope |
-| `research` | Gather information, evaluate sources, synthesize findings |
-| `decision-making` | Evaluate trade-offs, document options, justify recommendations |
-| `code-writing` | Write clean, correct, production-quality code |
-| `code-review` | Review code for correctness, clarity, and security |
-| `testing` | Write and reason about tests, behavior testing, edge cases |
-| `writing` | Produce clear, structured prose and documentation |
-| `summarization` | Condense information with audience-appropriate detail |
-| `github-workflow` | Work with branches, PRs, issues, and reviews via `gh` |
-| `file-management` | Read, create, edit, and organize files and directories |
-| `skillfold-cli` | Use skillfold itself to manage a project's skills |
+`planning` &middot; `research` &middot; `decision-making` &middot; `code-writing` &middot; `code-review` &middot; `testing` &middot; `writing` &middot; `summarization` &middot; `github-workflow` &middot; `file-management` &middot; `skillfold-cli`
 
 ## Programmatic API
 
