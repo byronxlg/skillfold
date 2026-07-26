@@ -79,15 +79,6 @@ h1.post-h1 {
 .prose td { color: var(--dim); }
 .prose img { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 4px; }
 
-/* ---- blog index masthead ---- */
-.blog-hero {
-  margin: 0 0 40px; padding: 20px 24px; overflow-x: auto;
-  background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px;
-}
-/* Scroll rather than shrink: below this width the labels stop being legible.
-   Matches how .prose pre and .prose table already overflow on narrow screens. */
-.blog-hero svg { display: block; width: 100%; min-width: 600px; height: auto; }
-
 /* ---- figures ---- */
 .fig {
   margin: 0 0 24px; padding: 18px 20px; overflow-x: auto;

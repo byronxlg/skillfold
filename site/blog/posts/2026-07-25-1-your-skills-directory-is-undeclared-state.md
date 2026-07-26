@@ -5,19 +5,6 @@ date: 2026-07-25
 tags: [concepts]
 ---
 
-Open `.claude/skills` on any machine that has been doing real work for a month. You will find a dozen directories. Some were written by hand. Some were pasted out of a blog post. Some were copied from a teammate over Slack, then edited in place because the original did not quite fit. At least one is a stale copy of something that has moved on three versions upstream.
-
-Now answer these questions about that directory:
-
-- Where did each skill come from?
-- Which version is it?
-- Has anyone edited it since it arrived?
-- Is your teammate running the same bytes?
-
-You cannot answer any of them from the filesystem, because none of that information is written down anywhere. The directory is the only record, and the directory records only its current contents.
-
-This is the exact problem `node_modules` had before `package.json`, and that `node_modules` still has without `package-lock.json`. We solved it in 2010. The solution is not novel and it does not need to be: **a manifest says what you want, a lockfile says what you got, and one command makes the filesystem match.**
-
 <figure class="fig">
 <svg viewBox="0 0 440 196" role="img" aria-labelledby="fig1-t fig1-d" xmlns="http://www.w3.org/2000/svg">
 <title id="fig1-t">Undeclared versus declared skill state</title>
@@ -44,6 +31,19 @@ This is the exact problem `node_modules` had before `package.json`, and that `no
 </svg>
 <figcaption>The manifest says what you want, the lockfile says what you got, and one command makes the filesystem match.</figcaption>
 </figure>
+
+Open `.claude/skills` on any machine that has been doing real work for a month. You will find a dozen directories. Some were written by hand. Some were pasted out of a blog post. Some were copied from a teammate over Slack, then edited in place because the original did not quite fit. At least one is a stale copy of something that has moved on three versions upstream.
+
+Now answer these questions about that directory:
+
+- Where did each skill come from?
+- Which version is it?
+- Has anyone edited it since it arrived?
+- Is your teammate running the same bytes?
+
+You cannot answer any of them from the filesystem, because none of that information is written down anywhere. The directory is the only record, and the directory records only its current contents.
+
+This is the exact problem `node_modules` had before `package.json`, and that `node_modules` still has without `package-lock.json`. We solved it in 2010. The solution is not novel and it does not need to be: **a manifest says what you want, a lockfile says what you got, and one command makes the filesystem match.**
 
 ## The manifest
 

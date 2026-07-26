@@ -5,18 +5,6 @@ date: 2026-07-25
 tags: [feature]
 ---
 
-Skills are portable. The [agent skills standard](https://agentskills.io) is a directory with a `SKILL.md` in it, and the tools that consume it agree on that much. What they do not agree on is where to look.
-
-Claude Code reads skills from `.claude/skills` and loads rules from `.claude/rules`. Codex reads skills from `.agents/skills` and has no rules directory at all: its instructions live in `AGENTS.md`, a single file you also write by hand.
-
-If you use both, you currently maintain the same skill in two places and the same standing instructions in two formats. That is a synchronization problem, and synchronization problems are what a manifest is for.
-
-```yaml
-targets: [claude, codex]
-```
-
-That is the whole feature from the user's side. One line, and `skillfold install` materializes every declared skill into both locations from the same pins.
-
 <figure class="fig">
 <svg viewBox="0 0 440 236" role="img" aria-labelledby="fig3-t fig3-d" xmlns="http://www.w3.org/2000/svg">
 <title id="fig3-t">One manifest installing to two agents</title>
@@ -44,6 +32,18 @@ That is the whole feature from the user's side. One line, and `skillfold install
 </svg>
 <figcaption>Skills copy cleanly to both targets. Rules do not: Codex has no rules directory, so they sync into a fenced block inside a file you also own.</figcaption>
 </figure>
+
+Skills are portable. The [agent skills standard](https://agentskills.io) is a directory with a `SKILL.md` in it, and the tools that consume it agree on that much. What they do not agree on is where to look.
+
+Claude Code reads skills from `.claude/skills` and loads rules from `.claude/rules`. Codex reads skills from `.agents/skills` and has no rules directory at all: its instructions live in `AGENTS.md`, a single file you also write by hand.
+
+If you use both, you currently maintain the same skill in two places and the same standing instructions in two formats. That is a synchronization problem, and synchronization problems are what a manifest is for.
+
+```yaml
+targets: [claude, codex]
+```
+
+That is the whole feature from the user's side. One line, and `skillfold install` materializes every declared skill into both locations from the same pins.
 
 | Target | Skills | Rules |
 | --- | --- | --- |

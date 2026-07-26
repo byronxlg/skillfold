@@ -5,25 +5,6 @@ date: 2026-07-25
 tags: [feature]
 ---
 
-You have a `code-review` skill and a `testing` skill. You want a third one that does both, because in review you always want the tests considered alongside the diff.
-
-Without tooling there are two options and both are bad. Write a `reviewer` skill that duplicates the bodies of the other two, and accept that it will drift from them within a month. Or write a `reviewer` skill that says "also follow the code-review and testing skills", and hope the agent goes and reads them.
-
-Composition is the third option: declare the combination and let the tool generate the file.
-
-```yaml
-skills:
-  code-review: npm:skillfold/code-review
-  testing: npm:skillfold/testing
-
-compose:
-  reviewer:
-    description: Review code changes together with their tests.
-    use: [code-review, testing]
-```
-
-After `skillfold install`, `.claude/skills/reviewer/SKILL.md` contains both bodies in order, with frontmatter stripped from the inputs and a fresh header on top. It installs like any other skill, it is hashed in the lockfile like any other skill, and it is regenerated whenever either input changes.
-
 <figure class="fig">
 <svg viewBox="0 0 440 208" role="img" aria-labelledby="fig2-t fig2-d" xmlns="http://www.w3.org/2000/svg">
 <title id="fig2-t">How a composed skill is generated</title>
@@ -48,6 +29,25 @@ After `skillfold install`, `.claude/skills/reviewer/SKILL.md` contains both bodi
 </svg>
 <figcaption>A composed skill is a build product, not a source file. Editing the generated SKILL.md is pointless: the next install overwrites it.</figcaption>
 </figure>
+
+You have a `code-review` skill and a `testing` skill. You want a third one that does both, because in review you always want the tests considered alongside the diff.
+
+Without tooling there are two options and both are bad. Write a `reviewer` skill that duplicates the bodies of the other two, and accept that it will drift from them within a month. Or write a `reviewer` skill that says "also follow the code-review and testing skills", and hope the agent goes and reads them.
+
+Composition is the third option: declare the combination and let the tool generate the file.
+
+```yaml
+skills:
+  code-review: npm:skillfold/code-review
+  testing: npm:skillfold/testing
+
+compose:
+  reviewer:
+    description: Review code changes together with their tests.
+    use: [code-review, testing]
+```
+
+After `skillfold install`, `.claude/skills/reviewer/SKILL.md` contains both bodies in order, with frontmatter stripped from the inputs and a fresh header on top. It installs like any other skill, it is hashed in the lockfile like any other skill, and it is regenerated whenever either input changes.
 
 ## What "concatenate" actually has to handle
 
