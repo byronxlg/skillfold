@@ -18,6 +18,33 @@ You cannot answer any of them from the filesystem, because none of that informat
 
 This is the exact problem `node_modules` had before `package.json`, and that `node_modules` still has without `package-lock.json`. We solved it in 2010. The solution is not novel and it does not need to be: **a manifest says what you want, a lockfile says what you got, and one command makes the filesystem match.**
 
+<figure class="fig">
+<svg viewBox="0 0 440 196" role="img" aria-labelledby="fig1-t fig1-d" xmlns="http://www.w3.org/2000/svg">
+<title id="fig1-t">Undeclared versus declared skill state</title>
+<desc id="fig1-d">Without a manifest, skills arrive by paste, copy, and in-place edit, and the directory is the only record. With skillfold, a manifest resolves into a lockfile which installs the directory, recording source, revision, and a sha256 for each skill.</desc>
+<defs><marker id="fig1-a" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#57626f"/></marker></defs>
+<text x="4" y="14" font-family="monospace" font-size="9.5" fill="#57626f">without a manifest</text>
+<rect x="4" y="24" width="184" height="34" rx="4" fill="#0d1219" stroke="#29323f"/>
+<text x="96" y="45" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#828f9e">pasted / copied / edited</text>
+<path d="M192 41 H222" stroke="#57626f" marker-end="url(#fig1-a)"/>
+<rect x="228" y="24" width="150" height="34" rx="4" fill="#0d1219" stroke="#29323f"/>
+<text x="303" y="45" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#828f9e">.claude/skills</text>
+<text x="4" y="80" font-family="monospace" font-size="9.5" fill="#d9a032">the directory is the only record: no origin, revision, or edit detection</text>
+<path d="M4 100 H436" stroke="#29323f"/>
+<text x="4" y="124" font-family="monospace" font-size="9.5" fill="#57626f">with skillfold</text>
+<rect x="4" y="134" width="118" height="34" rx="4" fill="#0d1219" stroke="#4d8bf5"/>
+<text x="63" y="155" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#c9d3df">skillfold.yaml</text>
+<path d="M126 151 H150" stroke="#57626f" marker-end="url(#fig1-a)"/>
+<rect x="156" y="134" width="118" height="34" rx="4" fill="#0d1219" stroke="#4d8bf5"/>
+<text x="215" y="155" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#c9d3df">skillfold.lock</text>
+<path d="M278 151 H302" stroke="#57626f" marker-end="url(#fig1-a)"/>
+<rect x="308" y="134" width="128" height="34" rx="4" fill="#0d1219" stroke="#29323f"/>
+<text x="372" y="155" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#828f9e">.claude/skills</text>
+<text x="4" y="190" font-family="monospace" font-size="9.5" fill="#4d8bf5">source, resolved revision, and a sha256 per skill, all written down</text>
+</svg>
+<figcaption>The manifest says what you want, the lockfile says what you got, and one command makes the filesystem match.</figcaption>
+</figure>
+
 ## The manifest
 
 `skillfold.yaml` is a mapping of names to sources. That is nearly all of it.
@@ -25,7 +52,7 @@ This is the exact problem `node_modules` had before `package.json`, and that `no
 ```yaml
 skills:
   commit-helper: ./skills/commit-helper
-  frontend-design: github:anthropics/skills/frontend-design@v1.2.0
+  frontend-design: github:anthropics/skills/skills/frontend-design@v1.2.0
   planning: npm:skillfold/planning@2.0.0
 ```
 
@@ -41,8 +68,8 @@ The name on the left is the installed directory name, not a property of the skil
 lockfileVersion: 1
 skills:
   frontend-design:
-    source: github:anthropics/skills/frontend-design@v1.2.0
-    resolved: github:anthropics/skills/frontend-design@8f3a9c1e...
+    source: github:anthropics/skills/skills/frontend-design@v1.2.0
+    resolved: github:anthropics/skills/skills/frontend-design@8f3a9c1e...
     integrity: sha256-...
 ```
 
@@ -57,7 +84,7 @@ The `integrity` field is what makes drift visible. It hashes the content, not th
 ```console
 $ skillfold install
   + commit-helper            ./skills/commit-helper
-  + frontend-design          github:anthropics/skills/frontend-design@v1.2.0 -> 8f3a9c1
+  + frontend-design          github:anthropics/skills/skills/frontend-design@v1.2.0 -> 8f3a9c1
   + planning                 npm:skillfold/planning -> 2.0.0
 
 3 installed, 0 unchanged -> .claude/skills
@@ -92,7 +119,7 @@ Nothing executes skill content, either. Skillfold copies files and hashes them. 
 
 ```sh
 npx skillfold init
-npx skillfold add github:anthropics/skills/frontend-design
+npx skillfold add github:anthropics/skills/skills/frontend-design
 npx skillfold install
 ```
 

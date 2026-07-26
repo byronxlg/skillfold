@@ -40,6 +40,42 @@ code for missing resources is replaced with the JSON-RPC standard `-32602`.
 Three features that were part of the core are marked deprecated rather than
 removed: Roots, Sampling, and Logging. They still work.
 
+<figure class="fig">
+<svg viewBox="0 0 440 226" role="img" aria-labelledby="fig5-t fig5-d" xmlns="http://www.w3.org/2000/svg">
+<title id="fig5-t">Session-pinned routing versus a stateless core</title>
+<desc id="fig5-d">Previously an initialize handshake returned an Mcp-Session-Id and every later request had to reach the instance that issued it, requiring sticky routing. Now protocol version, client identity, and capabilities travel in a _meta field on every request, so any instance can answer any request.</desc>
+<defs><marker id="fig5-a" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#57626f"/></marker></defs>
+<text x="4" y="14" font-family="monospace" font-size="9.5" fill="#d9a032">before: session pinned</text>
+<rect x="4" y="24" width="96" height="30" rx="4" fill="#0d1219" stroke="#29323f"/>
+<text x="52" y="43" text-anchor="middle" font-family="monospace" font-size="10" fill="#828f9e">client</text>
+<path d="M104 39 H150" stroke="#57626f" marker-end="url(#fig5-a)"/>
+<text x="127" y="33" text-anchor="middle" font-family="monospace" font-size="8.5" fill="#d9a032">session id</text>
+<rect x="156" y="24" width="110" height="30" rx="4" fill="#0d1219" stroke="#d9a032"/>
+<text x="211" y="43" text-anchor="middle" font-family="monospace" font-size="10" fill="#c9d3df">instance A</text>
+<rect x="156" y="62" width="110" height="24" rx="4" fill="#0d1219" stroke="#1b232e"/>
+<text x="211" y="78" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#57626f">instance B</text>
+<text x="278" y="45" font-family="monospace" font-size="9" fill="#57626f">every later request</text>
+<text x="278" y="58" font-family="monospace" font-size="9" fill="#57626f">must reach A</text>
+<text x="278" y="78" font-family="monospace" font-size="9" fill="#d9a032">sticky routing</text>
+<path d="M4 108 H436" stroke="#29323f"/>
+<text x="4" y="132" font-family="monospace" font-size="9.5" fill="#41b866">after: stateless core</text>
+<rect x="4" y="142" width="96" height="30" rx="4" fill="#0d1219" stroke="#29323f"/>
+<text x="52" y="161" text-anchor="middle" font-family="monospace" font-size="10" fill="#828f9e">client</text>
+<path d="M104 157 H140" fill="none" stroke="#57626f"/>
+<path d="M140 157 V149 H150" fill="none" stroke="#57626f" marker-end="url(#fig5-a)"/>
+<path d="M140 157 V181 H150" fill="none" stroke="#57626f" marker-end="url(#fig5-a)"/>
+<text x="127" y="145" text-anchor="middle" font-family="monospace" font-size="8.5" fill="#41b866">_meta</text>
+<rect x="156" y="136" width="110" height="26" rx="4" fill="#0d1219" stroke="#41b866"/>
+<text x="211" y="153" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#828f9e">instance A</text>
+<rect x="156" y="168" width="110" height="26" rx="4" fill="#0d1219" stroke="#41b866"/>
+<text x="211" y="185" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#828f9e">instance B</text>
+<text x="278" y="155" font-family="monospace" font-size="9" fill="#57626f">any instance can</text>
+<text x="278" y="168" font-family="monospace" font-size="9" fill="#57626f">answer any request</text>
+<text x="4" y="216" font-family="monospace" font-size="9.5" fill="#828f9e">version, identity, and capabilities ride on every request, not a handshake</text>
+</svg>
+<figcaption>The removal is the feature: without a session to pin, a deployment that needed sticky routing or shared session state stops needing either.</figcaption>
+</figure>
+
 ## The part that is actually new: a deprecation clock
 
 Protocol revisions have shipped breaking changes before. What has not existed

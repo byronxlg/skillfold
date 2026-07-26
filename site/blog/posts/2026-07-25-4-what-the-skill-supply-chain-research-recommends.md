@@ -105,8 +105,8 @@ SHA it resolved to plus a sha256 over every file in the directory:
 ```yaml
 skills:
   frontend-design:
-    source: github:anthropics/skills/frontend-design@v1.2.0
-    resolved: github:anthropics/skills/frontend-design@8f3a9c1e...
+    source: github:anthropics/skills/skills/frontend-design@v1.2.0
+    resolved: github:anthropics/skills/skills/frontend-design@8f3a9c1e...
     integrity: sha256-...
 ```
 
@@ -121,6 +121,31 @@ hash before writing anything and is the mode meant for CI, and
 It also means nothing gets fetched at agent runtime. Skills are materialized
 into place at install time from pinned sources, so the set of instructions an
 agent can load is a build product you can diff, not a live lookup.
+
+<figure class="fig">
+<svg viewBox="0 0 440 214" role="img" aria-labelledby="fig4-t fig4-d" xmlns="http://www.w3.org/2000/svg">
+<title id="fig4-t">What pinning and hashing cover, and what they do not</title>
+<desc id="fig4-d">A resolved revision and a content hash cover substitution, silent upstream changes, and local edits. They do not cover whether the pinned instructions were safe in the first place. A lockfile makes a compromise reproducible, not harmless.</desc>
+<rect x="4" y="6" width="212" height="132" rx="4" fill="#0d1219" stroke="#41b866"/>
+<text x="16" y="28" font-family="monospace" font-size="10.5" fill="#41b866">covered</text>
+<text x="16" y="52" font-family="monospace" font-size="9.5" fill="#828f9e">a moving tag silently</text>
+<text x="16" y="65" font-family="monospace" font-size="9.5" fill="#828f9e">becoming something else</text>
+<text x="16" y="86" font-family="monospace" font-size="9.5" fill="#828f9e">upstream changing the</text>
+<text x="16" y="99" font-family="monospace" font-size="9.5" fill="#828f9e">content after review</text>
+<text x="16" y="120" font-family="monospace" font-size="9.5" fill="#828f9e">an edit in your checkout</text>
+<rect x="224" y="6" width="212" height="132" rx="4" fill="#0d1219" stroke="#e05a51"/>
+<text x="236" y="28" font-family="monospace" font-size="10.5" fill="#e05a51">not covered</text>
+<text x="236" y="52" font-family="monospace" font-size="9.5" fill="#828f9e">whether the pinned bytes</text>
+<text x="236" y="65" font-family="monospace" font-size="9.5" fill="#828f9e">were safe to begin with</text>
+<text x="236" y="86" font-family="monospace" font-size="9.5" fill="#828f9e">hidden or obfuscated</text>
+<text x="236" y="99" font-family="monospace" font-size="9.5" fill="#828f9e">instructions</text>
+<text x="236" y="120" font-family="monospace" font-size="9.5" fill="#828f9e">publisher identity</text>
+<rect x="4" y="152" width="432" height="52" rx="4" fill="#0d1219" stroke="#29323f"/>
+<text x="220" y="174" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#c9d3df">a lockfile makes a compromise reproducible</text>
+<text x="220" y="191" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#d9a032">which is not the same thing as making it safe</text>
+</svg>
+<figcaption>Pinning turns a one-time read of a SKILL.md into a durable statement about what the agent runs. It is not a scanner, and treating it as a security control is a mistake worth naming.</figcaption>
+</figure>
 
 ## What a lockfile does not do
 

@@ -24,6 +24,31 @@ compose:
 
 After `skillfold install`, `.claude/skills/reviewer/SKILL.md` contains both bodies in order, with frontmatter stripped from the inputs and a fresh header on top. It installs like any other skill, it is hashed in the lockfile like any other skill, and it is regenerated whenever either input changes.
 
+<figure class="fig">
+<svg viewBox="0 0 440 208" role="img" aria-labelledby="fig2-t fig2-d" xmlns="http://www.w3.org/2000/svg">
+<title id="fig2-t">How a composed skill is generated</title>
+<desc id="fig2-d">The code-review and testing skills are inputs. Composition strips their frontmatter, orders their bodies, and writes a generated reviewer SKILL.md with a fresh header, regenerated whenever either input changes.</desc>
+<defs><marker id="fig2-a" markerWidth="7" markerHeight="7" refX="6" refY="3" orient="auto"><path d="M0 0 L6 3 L0 6 z" fill="#57626f"/></marker></defs>
+<text x="4" y="14" font-family="monospace" font-size="9.5" fill="#57626f">inputs</text>
+<rect x="4" y="24" width="150" height="36" rx="4" fill="#0d1219" stroke="#29323f"/>
+<text x="79" y="40" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#828f9e">code-review</text>
+<text x="79" y="53" text-anchor="middle" font-family="monospace" font-size="9" fill="#57626f">SKILL.md</text>
+<rect x="4" y="70" width="150" height="36" rx="4" fill="#0d1219" stroke="#29323f"/>
+<text x="79" y="86" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#828f9e">testing</text>
+<text x="79" y="99" text-anchor="middle" font-family="monospace" font-size="9" fill="#57626f">SKILL.md</text>
+<path d="M158 42 H186 V60 M158 88 H186 V70 M186 65 H214" fill="none" stroke="#57626f" marker-end="url(#fig2-a)"/>
+<rect x="220" y="46" width="216" height="38" rx="4" fill="#0d1219" stroke="#4d8bf5"/>
+<text x="328" y="63" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#c9d3df">reviewer/SKILL.md</text>
+<text x="328" y="77" text-anchor="middle" font-family="monospace" font-size="9" fill="#4d8bf5">generated</text>
+<path d="M4 122 H436" stroke="#29323f"/>
+<text x="4" y="144" font-family="monospace" font-size="9.5" fill="#828f9e">frontmatter stripped from each input, fresh header written on top</text>
+<text x="4" y="162" font-family="monospace" font-size="9.5" fill="#828f9e">input headings demoted to nest under one root, so sections cannot collide</text>
+<text x="4" y="180" font-family="monospace" font-size="9.5" fill="#828f9e">supporting files carried across, allowed-tools unioned</text>
+<text x="4" y="198" font-family="monospace" font-size="9.5" fill="#d9a032">regenerated whenever either input changes, and hashed in the lockfile</text>
+</svg>
+<figcaption>A composed skill is a build product, not a source file. Editing the generated SKILL.md is pointless: the next install overwrites it.</figcaption>
+</figure>
+
 ## What "concatenate" actually has to handle
 
 The word makes it sound trivial. It is not, and the interesting parts are the ones that are not string joining.
