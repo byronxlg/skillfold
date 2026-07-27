@@ -74,6 +74,13 @@ here - they belong in `CHANGELOG.md`.
 Every published post lands here. `ecosystem` lines name the story so the
 repeat check can match it.
 
+- [x] A valid provenance attestation shipped malware. Here is how. (story:
+  the July 14, 2026 AsyncAPI npm compromise - a hijacked `pull_request_target`
+  workflow exposed the asyncapi-bot PAT, letting an attacker push unauthorized
+  commits through the project's legitimate npm trusted-publishing pipeline;
+  the resulting five malicious versions carried fully valid provenance
+  attestations, per Microsoft Threat Intelligence's 2026-07-15 writeup) -
+  2026-07-27, site/blog/posts/2026-07-27-1-asyncapi-npm-provenance.md
 - [x] A study mapped 1.4 million agent skills. Most declare no dependencies
   at all. (story: "Skills Are Not Islands" (arXiv:2607.01136, submitted
   2026-07-01) built SkillDepAnalyzer and ran it over 1,434,046 SkillsMP
