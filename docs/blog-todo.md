@@ -74,6 +74,13 @@ here - they belong in `CHANGELOG.md`.
 Every published post lands here. `ecosystem` lines name the story so the
 repeat check can match it.
 
+- [x] NVIDIA is signing its agent skills. Here is what a signature buys you
+  (story: NVIDIA's May 19, 2026 Technical Blog post on NVIDIA-Verified Agent
+  Skills - a publishing pipeline for CUDA-X/AI Blueprint skills combining
+  catalog scanning via the open-sourced SkillSpector tool, OpenSSF Model
+  Signing signatures, and machine-readable skill cards, motivated by the
+  26.1%-vulnerable finding in arXiv:2601.10338) - 2026-08-03,
+  site/blog/posts/2026-08-03-1-nvidia-verified-agent-skills.md
 - [x] A valid provenance attestation shipped malware. Here is how. (story:
   the July 14, 2026 AsyncAPI npm compromise - a hijacked `pull_request_target`
   workflow exposed the asyncapi-bot PAT, letting an attacker push unauthorized
