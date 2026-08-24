@@ -74,6 +74,16 @@ here - they belong in `CHANGELOG.md`.
 Every published post lands here. `ecosystem` lines name the story so the
 repeat check can match it.
 
+- [x] Five vendors agreed on a plugin folder. Distribution is still your
+  problem. (story: Agent Plugins 1.0.0, published 2026-08-06 by a Technical
+  Steering Committee spanning Amazon, Cursor, Microsoft, OpenAI, and Vercel -
+  a vendor-neutral `plugin.json` + `skills/` + `mcp.json` folder format for
+  packaging Agent Skills and MCP servers together, adopted at launch by
+  ChatGPT, Codex, Cursor, GitHub Copilot, Kiro, and VS Code, notably without
+  Claude Code, whose own plugin manifest lives at a different path
+  (`.claude-plugin/plugin.json`); the spec explicitly leaves dependencies,
+  version pinning, registries, and installation out of scope) - 2026-08-24,
+  site/blog/posts/2026-08-24-1-agent-plugins-1.0.md
 - [x] NVIDIA is signing its agent skills. Here is what a signature buys you
   (story: NVIDIA's May 19, 2026 Technical Blog post on NVIDIA-Verified Agent
   Skills - a publishing pipeline for CUDA-X/AI Blueprint skills combining
