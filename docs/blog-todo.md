@@ -74,6 +74,16 @@ here - they belong in `CHANGELOG.md`.
 Every published post lands here. `ecosystem` lines name the story so the
 repeat check can match it.
 
+- [x] npm built a pause button for publishing. Most CI still skips it.
+  (story: npm's staged publishing feature - a human 2FA approval gate
+  before a package version goes live, GA per GitHub's 2026-05-22
+  changelog, compatible with OIDC trusted publishing via a "stage-only"
+  CI mode - set against the August 28, 2026 `@7nohe/openapi-react-query-codegen`
+  compromise, where a comment-triggered `release.yml` workflow let an
+  attacker publish a fork's contents under the repo's trusted-publishing
+  identity; per Socket's same-day writeup all ten malicious versions
+  carried valid npm provenance attestations) - 2026-08-31,
+  site/blog/posts/2026-08-31-1-npm-staged-publishing.md
 - [x] Five vendors agreed on a plugin folder. Distribution is still your
   problem. (story: Agent Plugins 1.0.0, published 2026-08-06 by a Technical
   Steering Committee spanning Amazon, Cursor, Microsoft, OpenAI, and Vercel -
