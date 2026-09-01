@@ -7,6 +7,10 @@ Declarative skill manager for Claude config. Declare skills and rules in `skillf
 - **Repo**: https://github.com/byronxlg/skillfold
 - Issues, PRs, releases, actions, and all other GitHub features are available for use
 
+## Operations
+
+- `runbook/` - how the package, site and blog cron ship, what healthy means, and how to roll back (fleet standard, tier 3)
+
 ## Quick Reference
 
 - **Run the CLI**: `npx tsx src/cli.ts <command>`
