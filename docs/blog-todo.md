@@ -74,6 +74,13 @@ here - they belong in `CHANGELOG.md`.
 Every published post lands here. `ecosystem` lines name the story so the
 repeat check can match it.
 
+- [x] Claude Code will tell you which skills are dead weight. It won't tell
+  you if they drifted. (story: Claude Code 2.1.261, shipped September 4,
+  2026 per the official changelog, added `/skill-doctor` - a per-session
+  report of which loaded skills went unused and what they cost in context,
+  documented in the "Find unused skills" section of the Claude Code skills
+  docs) - 2026-09-07,
+  site/blog/posts/2026-09-07-1-claude-code-skill-doctor.md
 - [x] npm built a pause button for publishing. Most CI still skips it.
   (story: npm's staged publishing feature - a human 2FA approval gate
   before a package version goes live, GA per GitHub's 2026-05-22
