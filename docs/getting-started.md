@@ -100,7 +100,7 @@ skillfold add -g github:anthropics/skills/skills/frontend-design
 skillfold list -g
 ```
 
-The global manifest lives at `~/.claude/skillfold.yaml`. Keep your dotfiles repo pointing at it and your skills follow you to every machine.
+The global manifest lives at `~/.config/skillfold/skillfold.yaml` (or `$XDG_CONFIG_HOME/skillfold/skillfold.yaml`). Track it and the adjacent lockfile in dotfiles; `skillfold install -g --frozen` reproduces the selection on another machine. Existing configs under `~/.claude` can be copied with `skillfold migrate -g`; see [migration](cli.md#migrate-an-existing-global-config).
 
 ## Next
 

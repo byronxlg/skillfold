@@ -123,7 +123,7 @@ Rules pin in the lockfile and take part in `install`, `check`, `list`, and `remo
 | `skillfold info <name>` | Show source, pin, hash, and install path for one skill |
 | `skillfold search [query]` | Search npm for published skills |
 
-Add `-g` to manage your user-level config instead of the current project. See [Global vs project](docs/cli.md#global-vs-project) and the full [CLI reference](docs/cli.md).
+Add `-g` to manage user-level config in `~/.config/skillfold/` (or `$XDG_CONFIG_HOME/skillfold/`). Migrate a legacy `~/.claude` config with `skillfold migrate -g`. See [Global vs project](docs/cli.md#global-vs-project) and the full [CLI reference](docs/cli.md).
 
 ## Share your skills
 

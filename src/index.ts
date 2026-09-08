@@ -126,3 +126,5 @@ export {
   type NpmOptions,
   type NpmResolveResult,
 } from "./npm.js";
+
+export { globalConfigDir, globalConfigRoot, migrateGlobalConfig } from "./config.js";

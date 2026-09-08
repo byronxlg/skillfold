@@ -2,6 +2,11 @@
 
 For the full release history with detailed notes, see [GitHub Releases](https://github.com/byronxlg/skillfold/releases).
 
+## v2.5.0
+
+- Global manifests and lockfiles now live in `~/.config/skillfold/`, honoring an absolute `XDG_CONFIG_HOME`. Agent install directories stay independent of config storage.
+- Existing `~/.claude` configs remain supported with a migration notice. `skillfold migrate -g` copies them to the new location, preserves remote pins, rebases local paths, and refuses to overwrite existing config.
+
 ## v2.4.1
 
 - Installed shebang scripts are executable on POSIX systems, including GitHub sources whose contents API does not expose file modes.

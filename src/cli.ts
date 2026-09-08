@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import { readFileSync, realpathSync } from "node:fs";
-import { homedir } from "node:os";
 import { join, relative, resolve as resolvePath } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import { syncAgentsMd } from "./agentsmd.js";
+import { globalConfigDir, globalConfigRoot, migrateGlobalConfig } from "./config.js";
 import { SkillfoldError } from "./errors.js";
 import { initProject } from "./init.js";
 import {
@@ -43,6 +43,7 @@ Usage
   skillfold <command> [options]
 
 Commands
+  migrate -g          Copy legacy global config to ~/.config/skillfold
   init                Create a starter ${MANIFEST_FILENAME}
   add <source>        Add a skill to the manifest and install it
   remove <name>       Remove a skill and uninstall it
@@ -55,7 +56,7 @@ Commands
 
 Options
   --dir <path>        Project directory (default: current directory)
-  -g, --global        Manage ~/.claude/skills instead of the project
+  -g, --global        Use global config in ~/.config/skillfold (or XDG_CONFIG_HOME)
   --name <name>       Skill name for "add" (default: from SKILL.md)
   --frozen            Install exactly what the lockfile pins; fail on drift (CI)
   --force             Overwrite skill directories skillfold does not manage
@@ -149,7 +150,7 @@ interface Paths {
 
 function projectPaths(flags: Flags): Paths {
   const root = flags.global
-    ? join(homedir(), ".claude")
+    ? globalConfigRoot()
     : resolvePath(flags.dir ?? process.cwd());
   return {
     root,
@@ -335,7 +336,7 @@ async function cmdRemove(paths: Paths, args: string[], flags: Flags): Promise<vo
 /** User-level shadowing notes for project mode; empty in global mode. */
 function shadowWarnings(paths: Paths, manifest: Manifest): string[] {
   if (paths.global) return [];
-  const globalRoot = join(homedir(), ".claude");
+  const globalRoot = globalConfigRoot();
   if (paths.root === globalRoot) return [];
   return shadowedSkillWarnings(manifest, targetLayouts(manifest, globalRoot, true));
 }
@@ -424,7 +425,7 @@ function cmdInit(paths: Paths): void {
   const result = initProject(paths.root);
   console.log(`created ${relative(paths.root, result.manifestPath) || MANIFEST_FILENAME}`);
   console.log(`created ${relative(paths.root, result.skillPath)}`);
-  console.log('\nnext: run "skillfold install"');
+  console.log(`\nnext: run "skillfold install${paths.global ? " -g" : ""}"`);
 }
 
 async function cmdSearch(args: string[]): Promise<void> {
@@ -445,7 +446,19 @@ export async function main(argv: string[] = process.argv.slice(2)): Promise<void
     return;
   }
 
+  if (command === "migrate") {
+    if (!flags.global || flags.dir || args.length > 0 || flags.frozen || flags.force) {
+      throw new SkillfoldError("usage: skillfold migrate -g");
+    }
+    const destination = migrateGlobalConfig();
+    console.log(`copied global config to ${destination}`);
+    console.log('legacy files retained; global commands now use the new config. Run "skillfold check -g".');
+    return;
+  }
   const paths = projectPaths(flags);
+  if (flags.global && paths.root !== globalConfigDir()) {
+    console.error('warning: using legacy ~/.claude/skillfold.yaml; run "skillfold migrate -g" to move config to ~/.config/skillfold (or XDG_CONFIG_HOME)');
+  }
 
   switch (command) {
     case "init":

@@ -11,7 +11,8 @@ const STARTER_MANIFEST = `# skillfold.yaml - declare the skills this project use
 #   github:owner/repo/path/to/skill@v1.2.0     GitHub repo (tag, branch, or commit)
 #   npm:package/skill-name@1.0.0               npm package
 #
-# Run "skillfold install" to install everything into .claude/skills
+# Run "skillfold install" (or "skillfold install -g" for user-level config)
+# to install everything into the selected agents' skill directories
 # and pin exact versions in skillfold.lock.
 
 skills:

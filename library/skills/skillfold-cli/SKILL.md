@@ -1,6 +1,6 @@
 ---
 name: skillfold-cli
-description: Use skillfold to manage a project's Claude skills. Declare skills in skillfold.yaml, pin them in skillfold.lock, and install them into .claude/skills.
+description: Use skillfold to manage project and user skills for Claude Code and Codex. Declare skills in skillfold.yaml, pin them in skillfold.lock, and install them into .claude/skills.
 ---
 
 # Skillfold CLI
@@ -40,7 +40,7 @@ skillfold info <name>         # source, pin, hash, and install path for one skil
 skillfold search [query]      # find skill packages on npm
 ```
 
-Add `-g` / `--global` to manage `~/.claude/skills` instead of the project.
+Add `-g` / `--global` to use `~/.config/skillfold/skillfold.yaml` (or `$XDG_CONFIG_HOME/skillfold/skillfold.yaml`). Global skills install into `~/.claude/skills` and/or `~/.agents/skills` according to `targets`. Run `skillfold migrate -g` to copy a legacy `~/.claude` config, preserving pins and relative source paths.
 
 ## Rules
 
