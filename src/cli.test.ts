@@ -440,3 +440,69 @@ describe("agent-independent global config", () => {
     await assert.rejects(main(["migrate", "-g", "--force"]), /usage/);
   });
 });
+
+describe("rule target and host selection", () => {
+  it("installs selected rules, preserves manual instructions, and prunes on host changes", async () => {
+    const dir = newProject();
+    writeFile(dir, "rules/shared.md", "Shared rule.\n");
+    writeFile(dir, "rules/codex.md", "Codex rule.\n");
+    writeFile(dir, "rules/host.md", "Host rule.\n");
+    writeFile(dir, "AGENTS.md", "Handwritten instructions.\n");
+    writeFile(dir, ".claude/rules/unmanaged.md", "Unmanaged rule.\n");
+    writeFile(dir, "skillfold.yaml", `targets: [claude, codex]
+rules:
+  shared: ./rules/shared.md
+  codex-only:
+    source: ./rules/codex.md
+    targets: [codex]
+  host-only:
+    source: ./rules/host.md
+    hosts: [first-host]
+`);
+    const original = process.env.SKILLFOLD_HOST;
+    try {
+      process.env.SKILLFOLD_HOST = "first-host";
+      await main(["install", "--dir", dir]);
+      assert.ok(!existsSync(join(dir, ".claude/rules/codex-only.md")));
+      assert.ok(existsSync(join(dir, ".claude/rules/host-only.md")));
+      assert.match(readFileSync(join(dir, "AGENTS.md"), "utf8"), /Handwritten instructions/);
+      assert.match(readFileSync(join(dir, "AGENTS.md"), "utf8"), /Codex rule/);
+      const lock = readFileSync(join(dir, "skillfold.lock"), "utf8");
+      await main(["check", "--dir", dir]);
+      assert.equal(process.exitCode, undefined);
+      logs = [];
+      await main(["info", "codex-only", "--dir", dir]);
+      assert.doesNotMatch(logs.join("\n"), /\.claude/);
+      process.env.SKILLFOLD_HOST = "second-host";
+      await main(["check", "--dir", dir]);
+      assert.equal(process.exitCode, 1);
+      process.exitCode = undefined;
+      await main(["install", "--frozen", "--dir", dir]);
+      assert.equal(readFileSync(join(dir, "skillfold.lock"), "utf8"), lock);
+      assert.ok(!existsSync(join(dir, ".claude/rules/host-only.md")));
+      assert.doesNotMatch(readFileSync(join(dir, "AGENTS.md"), "utf8"), /Host rule/);
+      assert.match(readFileSync(join(dir, "AGENTS.md"), "utf8"), /Handwritten instructions/);
+      assert.ok(existsSync(join(dir, ".claude/rules/unmanaged.md")));
+      await main(["check", "--dir", dir]);
+      assert.equal(process.exitCode, undefined);
+      logs = [];
+      await main(["list", "--dir", dir]);
+      assert.match(logs.join("\n"), /host-only.*not selected/);
+      process.env.SKILLFOLD_HOST = "first-host";
+      await main(["install", "--frozen", "--dir", dir]);
+      assert.ok(existsSync(join(dir, ".claude/rules/host-only.md")));
+      const manifestPath = join(dir, "skillfold.yaml");
+      writeFile(dir, "skillfold.yaml", readFileSync(manifestPath, "utf8").replace("targets: [codex]", "targets: [claude]").replace("hosts: [first-host]", "hosts: [second-host]"));
+      await assert.rejects(main(["install", "--frozen", "--dir", dir]), /changed targets|changed hosts/);
+      await main(["install", "--dir", dir]);
+      assert.ok(existsSync(join(dir, ".claude/rules/codex-only.md")));
+      assert.ok(!existsSync(join(dir, ".claude/rules/host-only.md")));
+      assert.doesNotMatch(readFileSync(join(dir, "AGENTS.md"), "utf8"), /Codex rule/);
+      await main(["check", "--dir", dir]);
+      assert.equal(process.exitCode, undefined);
+    } finally {
+      if (original === undefined) delete process.env.SKILLFOLD_HOST;
+      else process.env.SKILLFOLD_HOST = original;
+    }
+  });
+});

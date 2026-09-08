@@ -32,7 +32,7 @@ import {
 } from "./resolve.js";
 import { renderSearchHits, searchSkills } from "./search.js";
 import { defaultSkillName, parseSource } from "./source.js";
-import { lockForTarget, shadowedSkillWarnings, skillTargets, targetLayouts, type TargetLayout } from "./targets.js";
+import { lockForTarget, ruleApplies, shadowedSkillWarnings, skillTargets, targetLayouts, type TargetLayout } from "./targets.js";
 
 const HELP = `skillfold - declarative skill manager for Claude config
 
@@ -269,17 +269,17 @@ async function runInstall(paths: Paths, options: InstallRunOptions = {}): Promis
       ruleSyncs.push(
         syncRulesDir({
           rulesDir: layout.rulesDir,
-          rules,
+          rules: rules.filter((rule) => ruleApplies(manifest, rule.name, layout.target)),
           previousLock: layoutLock,
           force: options.force,
         })
       );
     }
     if (layout.agentsMdPath) {
-      ruleSyncs.push(syncAgentsMd(layout.agentsMdPath, rules));
+      ruleSyncs.push(syncAgentsMd(layout.agentsMdPath, rules.filter((rule) => ruleApplies(manifest, rule.name, layout.target))));
     }
   }
-  printSync(resolved, mergeSyncs(skillSyncs), rules, mergeSyncs(ruleSyncs), layouts, paths.root);
+  printSync(resolved, mergeSyncs(skillSyncs), rules.filter((rule) => layouts.some((layout) => ruleApplies(manifest, rule.name, layout.target))), mergeSyncs(ruleSyncs), layouts, paths.root);
   if (!options.frozen) {
     writeLockfile(paths.lockPath, newLock);
     console.log(`lockfile: ${relative(paths.root, paths.lockPath) || LOCK_FILENAME}`);
@@ -367,7 +367,7 @@ function cmdCheck(paths: Paths): void {
   }
   const skillCount =
     Object.keys(manifest.skills).length + Object.keys(manifest.compose).length;
-  const ruleCount = Object.keys(manifest.rules).length;
+  const ruleCount = Object.keys(manifest.rules).filter((name) => layouts.some((layout) => ruleApplies(manifest, name, layout.target))).length;
   const counts = [`${skillCount} skill${skillCount === 1 ? "" : "s"}`];
   if (ruleCount > 0) counts.push(`${ruleCount} rule${ruleCount === 1 ? "" : "s"}`);
   console.log(`ok: ${counts.join(", ")} in sync`);
@@ -406,6 +406,7 @@ function cmdInfo(paths: Paths, args: string[]): void {
   const lockEntry = row.kind === "rule" ? lock?.rules[name] : lock?.skills[name];
   const installPaths = layouts.flatMap((layout) => {
     if (row.kind !== "rule") return skillTargets(manifest, name).includes(layout.target) ? [join(layout.skillsDir, name)] : [];
+    if (!ruleApplies(manifest, name, layout.target)) return [];
     if (layout.rulesDir) return [ruleFile(layout.rulesDir, name)];
     if (layout.agentsMdPath) return [`${layout.agentsMdPath} (rules block)`];
     return [];
@@ -416,6 +417,7 @@ function cmdInfo(paths: Paths, args: string[]): void {
     ...(lockEntry?.resolved ? [`resolved:  ${lockEntry.resolved}`] : []),
     ...(lockEntry?.integrity ? [`integrity: ${lockEntry.integrity}`] : []),
     `status:    ${row.status}`,
+    ...(manifest.ruleOptions?.[name]?.hosts ? [`hosts:     ${manifest.ruleOptions[name].hosts.join(", ")}`] : []),
     ...installPaths.map((p, i) => `${i === 0 ? "installed:" : "          "} ${p}`),
   ];
   console.log(lines.join("\n"));

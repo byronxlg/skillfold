@@ -131,3 +131,23 @@ compose:
 `, "t.yaml"), /dependency "a" is not installed for codex/);
   });
 });
+
+describe("rule selection validation", () => {
+  it("rejects invalid hosts, targets and unknown keys", () => {
+    for (const option of ["hosts: []", "hosts: [3]", "hosts: ['']", "hosts: laptop", "targets: []", "targets: [cursor]", "targets: [codex]", "typo: true"]) {
+      assert.throws(() => parseManifest(`rules:\n  rule:\n    source: ./rule.md\n    ${option}`, "t.yaml"));
+    }
+  });
+  it("accepts mapping sources with version, target and host selectors", () => {
+    const manifest = parseManifest(`targets: [claude, codex]
+rules:
+  rule:
+    source: github:owner/repo/rule.md
+    version: v1
+    targets: [codex]
+    hosts: [laptop, laptop]
+`, "t.yaml");
+    assert.equal(manifest.rules.rule, "github:owner/repo/rule.md@v1");
+    assert.deepEqual(manifest.ruleOptions?.rule, { targets: ["codex"], hosts: ["laptop"] });
+  });
+});

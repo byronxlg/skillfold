@@ -1,5 +1,5 @@
 import { existsSync } from "node:fs";
-import { homedir } from "node:os";
+import { homedir, hostname } from "node:os";
 import { join, resolve as resolvePath } from "node:path";
 
 import type { Lockfile } from "./lock.js";
@@ -112,18 +112,27 @@ export function skillTargets(manifest: Manifest, name: string): TargetName[] {
   return manifest.skillTargets?.[name] ?? manifest.compose[name]?.targets ?? resolveTargets(manifest);
 }
 
+export function ruleApplies(manifest: Manifest, name: string, target: TargetName, host = process.env.SKILLFOLD_HOST || hostname()): boolean {
+  const options = manifest.ruleOptions?.[name];
+  return (options?.targets ?? resolveTargets(manifest)).includes(target) &&
+    (!options?.hosts || options.hosts.includes(host));
+}
+
 export function manifestForTarget(manifest: Manifest, target: TargetName): Manifest {
   const include = ([name]: [string, unknown]): boolean => skillTargets(manifest, name).includes(target);
   return { ...manifest,
     skills: Object.fromEntries(Object.entries(manifest.skills).filter(include)),
     compose: Object.fromEntries(Object.entries(manifest.compose).filter(include)),
+    rules: Object.fromEntries(Object.entries(manifest.rules).filter(([name]) => ruleApplies(manifest, name, target))),
   };
 }
 
-/** Only names previously installed for this target are owned here. */
+/** Names in the lock are owned on their declared targets, across all hosts. */
 export function lockForTarget(lock: Lockfile | null, target: TargetName): Lockfile | null {
   if (!lock?.targets.includes(target)) return null;
   return { ...lock,
+    rules: Object.fromEntries(Object.entries(lock.rules).filter(([, entry]) =>
+      (entry.targets ?? lock.targets).includes(target))),
     skills: Object.fromEntries(Object.entries(lock.skills).filter(([, entry]) =>
       (entry.targets ?? lock.targets).includes(target))),
     compose: Object.fromEntries(Object.entries(lock.compose).filter(([, entry]) =>

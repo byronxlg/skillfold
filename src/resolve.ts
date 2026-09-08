@@ -367,6 +367,7 @@ export async function resolveManifest(
   }
   for (const rule of rules) {
     lock.rules[rule.name] = {
+      ...manifest.ruleOptions?.[rule.name],
       source: rule.source,
       resolved: rule.resolved,
       integrity: rule.integrity,

@@ -319,10 +319,10 @@ describe("rules section", () => {
     assert.equal(manifest.rulesDir, undefined);
   });
 
-  it("rejects non-string rule sources", () => {
+  it("rejects invalid rule sources", () => {
     assert.throws(
-      () => parseManifest("rules:\n  bad: { source: x }", "t.yaml"),
-      /rules.bad: expected a source string/
+      () => parseManifest("rules:\n  bad: 42", "t.yaml"),
+      /rules.bad: expected a source string or mapping/
     );
   });
 

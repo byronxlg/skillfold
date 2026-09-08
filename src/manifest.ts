@@ -49,6 +49,11 @@ export interface ComposeEntry {
   allowedTools?: string[];
 }
 
+export interface RuleOptions {
+  targets?: TargetName[];
+  hosts?: string[];
+}
+
 export interface Manifest {
   /** Skill name -> normalized source string. */
   skills: Record<string, string>;
@@ -58,6 +63,7 @@ export interface Manifest {
   compose: Record<string, ComposeEntry>;
   /** Rule name -> normalized source string of a single markdown file. */
   rules: Record<string, string>;
+  ruleOptions?: Record<string, RuleOptions>;
   /** Install directory, relative to the manifest. Undefined = target default. */
   skillsDir?: string;
   /** Rules install directory, relative to the manifest. Undefined = target default. */
@@ -96,7 +102,15 @@ export function parseTargets(value: unknown, label: string): TargetName[] {
   return targets;
 }
 
-function normalizeSkillEntry(name: string, value: unknown): string {
+export function parseHosts(value: unknown, label: string): string[] {
+  if (!Array.isArray(value) || value.length === 0 ||
+      !value.every((host) => typeof host === "string" && host.trim().length > 0)) {
+    throw new ManifestError(`${label}: expected a non-empty list of hostnames`);
+  }
+  return [...new Set(value.map((host: string) => host.trim()))];
+}
+
+function normalizeSkillEntry(name: string, value: unknown, section = "skills"): string {
   if (typeof value === "string" && value.trim()) {
     return formatSource(parseSource(value));
   }
@@ -105,24 +119,24 @@ function normalizeSkillEntry(name: string, value: unknown): string {
     for (const key of Object.keys(entry)) {
       if (key !== "source" && key !== "version" && key !== "targets") {
         throw new ManifestError(
-          `skills.${name}: unknown key "${key}" (expected source, version, targets)`
+          `${section}.${name}: unknown key "${key}" (expected source, version, targets)`
         );
       }
     }
     if (typeof entry.source !== "string" || !entry.source.trim()) {
-      throw new ManifestError(`skills.${name}: missing "source"`);
+      throw new ManifestError(`${section}.${name}: missing "source"`);
     }
     let raw = entry.source.trim();
     if (entry.version !== undefined) {
       if (typeof entry.version !== "string" && typeof entry.version !== "number") {
-        throw new ManifestError(`skills.${name}: "version" must be a string`);
+        throw new ManifestError(`${section}.${name}: "version" must be a string`);
       }
       raw = `${raw}@${entry.version}`;
     }
     return formatSource(parseSource(raw));
   }
   throw new ManifestError(
-    `skills.${name}: expected a source string or { source, version }`
+    `${section}.${name}: expected a source string or { source, version }`
   );
 }
 
@@ -253,6 +267,7 @@ export function parseManifest(content: string, filePath: string): Manifest {
   }
 
   const rules: Record<string, string> = {};
+  const ruleOptions: Record<string, RuleOptions> = {};
   if (top.rules !== undefined && top.rules !== null) {
     if (typeof top.rules !== "object" || Array.isArray(top.rules)) {
       throw new ManifestError(`${filePath}: "rules" must be a mapping of name -> source`);
@@ -264,10 +279,23 @@ export function parseManifest(content: string, filePath: string): Manifest {
           `"${name}" is defined in both rules and ${skills[name] ? "skills" : "compose"}; names must be unique`
         );
       }
-      if (typeof value !== "string" || !value.trim()) {
-        throw new ManifestError(`rules.${name}: expected a source string`);
+      if (typeof value === "string" && value.trim()) {
+        rules[name] = formatSource(parseSource(value));
+      } else if (value && typeof value === "object" && !Array.isArray(value)) {
+        const entry = value as Record<string, unknown>;
+        for (const key of Object.keys(entry)) {
+          if (!["source", "version", "targets", "hosts"].includes(key)) {
+            throw new ManifestError(`rules.${name}: unknown key "${key}"`);
+          }
+        }
+        rules[name] = normalizeSkillEntry(name, { source: entry.source, version: entry.version }, "rules");
+        const options: RuleOptions = {};
+        if (entry.targets !== undefined) options.targets = parseTargets(entry.targets, `rules.${name}.targets`);
+        if (entry.hosts !== undefined) options.hosts = parseHosts(entry.hosts, `rules.${name}.hosts`);
+        if (Object.keys(options).length) ruleOptions[name] = options;
+      } else {
+        throw new ManifestError(`rules.${name}: expected a source string or mapping`);
       }
-      rules[name] = formatSource(parseSource(value));
     }
   }
 
@@ -320,6 +348,13 @@ export function parseManifest(content: string, filePath: string): Manifest {
   }
 
   const enabled: TargetName[] = targets ?? ["claude"];
+  for (const [name, options] of Object.entries(ruleOptions)) {
+    for (const target of options.targets ?? []) {
+      if (!enabled.includes(target)) {
+        throw new ManifestError(`rules.${name}: target "${target}" must be enabled in top-level targets`);
+      }
+    }
+  }
   const selected = (name: string): TargetName[] =>
     skillTargets[name] ?? compose[name]?.targets ?? enabled;
   for (const name of [...Object.keys(skills), ...Object.keys(compose)]) {
@@ -339,7 +374,8 @@ export function parseManifest(content: string, filePath: string): Manifest {
     }
   }
   return { skills, compose, rules, skillsDir, rulesDir, targets,
-    ...(Object.keys(skillTargets).length ? { skillTargets } : {}) };
+    ...(Object.keys(skillTargets).length ? { skillTargets } : {}),
+    ...(Object.keys(ruleOptions).length ? { ruleOptions } : {}) };
 }
 
 export function loadManifest(manifestPath: string): Manifest {
