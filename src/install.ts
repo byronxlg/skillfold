@@ -12,7 +12,7 @@ import { lockfileProblems, type Lockfile } from "./lock.js";
 import type { Manifest } from "./manifest.js";
 import { parseSource } from "./source.js";
 import type { ResolvedRule, ResolvedSkill } from "./resolve.js";
-import type { TargetLayout } from "./targets.js";
+import { manifestForTarget, type TargetLayout } from "./targets.js";
 import {
   computeFileIntegrity,
   computeIntegrity,
@@ -378,7 +378,7 @@ export function checkProject(
   if (!lock) return problems;
   for (const layout of layouts) {
     const label = layouts.length > 1 ? `[${layout.target}] ` : "";
-    checkSkillsDir(manifest, lock, baseDir, layout.skillsDir, label, problems);
+    checkSkillsDir(manifestForTarget(manifest, layout.target), lock, baseDir, layout.skillsDir, label, problems);
     if (layout.rulesDir) {
       checkRulesDir(manifest, lock, baseDir, layout.rulesDir, label, problems);
     }

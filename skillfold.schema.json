@@ -38,6 +38,18 @@
                   "number"
                 ],
                 "description": "Version pin: a git tag, branch, or commit SHA for GitHub sources; an exact version or dist-tag for npm sources."
+              },
+              "targets": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "claude",
+                    "codex"
+                  ]
+                },
+                "minItems": 1,
+                "uniqueItems": true,
+                "description": "Subset of top-level targets for this skill. Omitted: all enabled targets."
               }
             }
           }
@@ -87,6 +99,18 @@
                 "minItems": 1
               }
             ]
+          },
+          "targets": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "claude",
+                "codex"
+              ]
+            },
+            "minItems": 1,
+            "uniqueItems": true,
+            "description": "Subset of top-level targets for this skill. Omitted: all enabled targets."
           }
         }
       }

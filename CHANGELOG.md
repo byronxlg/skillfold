@@ -2,6 +2,12 @@
 
 For the full release history with detailed notes, see [GitHub Releases](https://github.com/byronxlg/skillfold/releases).
 
+## v2.4.0
+
+- Skills and compositions can select a subset of the manifest's targets with `targets: [claude]` or `targets: [codex]`.
+- Install, frozen verification, check, list, and info respect each skill's selection; target changes prune only previously managed copies and preserve unmanaged files.
+- Existing manifests and lockfiles continue to work without changes.
+
 ## v2.2.0
 
 - `targets` manifest key: `[claude, codex]` installs the same skills into `.claude/skills` and `.agents/skills` (where Codex discovers them) from one manifest and lockfile

@@ -352,11 +352,13 @@ export async function resolveManifest(
   for (const one of resolved) {
     if (one.kind === "compose") {
       lock.compose[one.name] = {
+        ...(manifest.compose[one.name].targets ? { targets: manifest.compose[one.name].targets } : {}),
         use: manifest.compose[one.name].use,
         integrity: one.integrity!,
       };
     } else {
       lock.skills[one.name] = {
+        ...(manifest.skillTargets?.[one.name] ? { targets: manifest.skillTargets[one.name] } : {}),
         source: one.source,
         resolved: one.resolved,
         integrity: one.integrity,

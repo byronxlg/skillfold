@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 import { LockError } from "./errors.js";
-import type { Manifest } from "./manifest.js";
+import { parseTargets, type Manifest, type TargetName } from "./manifest.js";
 
 /**
  * skillfold.lock pins every remote skill to an exact, verifiable revision:
@@ -34,6 +34,7 @@ import type { Manifest } from "./manifest.js";
 export const LOCK_FILENAME = "skillfold.lock";
 
 export interface LockSkillEntry {
+  targets?: TargetName[];
   /** Source string exactly as normalized from the manifest. */
   source: string;
   /** Exact pinned form (commit SHA / exact version). Absent for local sources. */
@@ -43,6 +44,7 @@ export interface LockSkillEntry {
 }
 
 export interface LockComposeEntry {
+  targets?: TargetName[];
   use: string[];
   /** Content hash of the generated skill files. */
   integrity: string;
@@ -100,6 +102,7 @@ export function readLockfile(lockPath: string): Lockfile | null {
       const skillEntry: LockSkillEntry = { source: entry.source };
       if (typeof entry.resolved === "string") skillEntry.resolved = entry.resolved;
       if (typeof entry.integrity === "string") skillEntry.integrity = entry.integrity;
+      if (entry.targets !== undefined) skillEntry.targets = parseTargets(entry.targets, `${lockPath}: ${section}.${name}.targets`);
       lock[section][name] = skillEntry;
     }
   }
@@ -116,6 +119,7 @@ export function readLockfile(lockPath: string): Lockfile | null {
         throw new LockError(`${lockPath}: compose.${name} needs "use" and "integrity"`);
       }
       lock.compose[name] = {
+        ...(entry.targets !== undefined ? { targets: parseTargets(entry.targets, `${lockPath}: compose.${name}.targets`) } : {}),
         use: entry.use.map(String),
         integrity: entry.integrity,
       };
@@ -208,6 +212,15 @@ export function lockfileProblems(manifest: Manifest, lock: Lockfile | null): str
       `targets changed (manifest: ${manifestTargets.join(", ")}; ` +
         `lockfile: ${lock.targets.join(", ")})`
     );
+  }
+  for (const name of [...Object.keys(manifest.skills), ...Object.keys(manifest.compose)]) {
+    const selected = manifest.skillTargets?.[name] ?? manifest.compose[name]?.targets ?? manifestTargets;
+    const entry = lock.skills[name] ?? lock.compose[name];
+    const hasOverride = manifest.skillTargets?.[name] || manifest.compose[name]?.targets || entry?.targets;
+    if (entry && hasOverride &&
+        [...selected].sort().join(",") !== [...(entry.targets ?? lock.targets)].sort().join(",")) {
+      problems.push(`"${name}" changed targets (run "skillfold install")`);
+    }
   }
   return problems;
 }

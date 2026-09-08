@@ -32,7 +32,7 @@ import {
 } from "./resolve.js";
 import { renderSearchHits, searchSkills } from "./search.js";
 import { defaultSkillName, parseSource } from "./source.js";
-import { shadowedSkillWarnings, targetLayouts, type TargetLayout } from "./targets.js";
+import { lockForTarget, shadowedSkillWarnings, skillTargets, targetLayouts, type TargetLayout } from "./targets.js";
 
 const HELP = `skillfold - declarative skill manager for Claude config
 
@@ -255,11 +255,11 @@ async function runInstall(paths: Paths, options: InstallRunOptions = {}): Promis
   for (const layout of layouts) {
     // A layout the lockfile has never installed for has no managed names:
     // whatever already sits there is hand-authored until skillfold owns it.
-    const layoutLock = lock?.targets.includes(layout.target) ? lock : null;
+    const layoutLock = lockForTarget(lock, layout.target);
     skillSyncs.push(
       syncSkillsDir({
         skillsDir: layout.skillsDir,
-        resolved,
+        resolved: resolved.filter((skill) => skillTargets(manifest, skill.name).includes(layout.target)),
         previousLock: layoutLock,
         force: options.force,
       })
@@ -404,7 +404,7 @@ function cmdInfo(paths: Paths, args: string[]): void {
   const row = rows[0];
   const lockEntry = row.kind === "rule" ? lock?.rules[name] : lock?.skills[name];
   const installPaths = layouts.flatMap((layout) => {
-    if (row.kind !== "rule") return [join(layout.skillsDir, name)];
+    if (row.kind !== "rule") return skillTargets(manifest, name).includes(layout.target) ? [join(layout.skillsDir, name)] : [];
     if (layout.rulesDir) return [ruleFile(layout.rulesDir, name)];
     if (layout.agentsMdPath) return [`${layout.agentsMdPath} (rules block)`];
     return [];

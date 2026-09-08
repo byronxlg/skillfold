@@ -20,6 +20,10 @@ skillfold add npm:skillfold/code-review --name reviewer
 skillfold add ./skills/commit-helper
 ```
 
+To limit a skill to one agent, use the mapping form with `targets` in
+`skillfold.yaml`, then run `skillfold install`. See
+[per-skill targets](manifest.md#per-skill-targets).
+
 ### `skillfold remove <name>` (alias: `rm`)
 
 Remove a skill, composed skill, or rule from the manifest, uninstall it, and update the lockfile.

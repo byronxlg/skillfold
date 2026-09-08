@@ -14,7 +14,7 @@ import {
   normalizeSkillName,
   readDirFiles,
 } from "./skill.js";
-import type { TargetLayout } from "./targets.js";
+import { skillTargets, type TargetLayout } from "./targets.js";
 
 /**
  * Status of one skill, computed offline from manifest + lockfile + disk.
@@ -154,8 +154,9 @@ export function skillRows(
   for (const [name, sourceString] of Object.entries(manifest.skills)) {
     const source = parseSource(sourceString);
     const entry = lock?.skills[name];
+    const selectedLayouts = layouts.filter((layout) => skillTargets(manifest, name).includes(layout.target));
     const status = worst(
-      layouts.map((layout) => skillStatus(name, sourceString, entry, baseDir, layout.skillsDir))
+      selectedLayouts.map((layout) => skillStatus(name, sourceString, entry, baseDir, layout.skillsDir))
     );
     rows.push({
       name,
@@ -163,14 +164,15 @@ export function skillRows(
       source: sourceString,
       pinned: entry && entry.source === sourceString ? shortPin(entry.resolved) : undefined,
       status,
-      warning: installedSkillWarning(name, layouts),
+      warning: installedSkillWarning(name, selectedLayouts),
     });
   }
 
   for (const [name, entry] of Object.entries(manifest.compose)) {
     const locked = lock?.compose[name];
+    const selectedLayouts = layouts.filter((layout) => skillTargets(manifest, name).includes(layout.target));
     const status = worst(
-      layouts.map((layout): SkillStatus => {
+      selectedLayouts.map((layout): SkillStatus => {
         const installedFiles = readDirFiles(join(layout.skillsDir, name));
         if (installedFiles.length === 0) return "not installed";
         if (!locked) return "not locked";
