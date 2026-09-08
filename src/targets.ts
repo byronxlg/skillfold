@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve as resolvePath } from "node:path";
 
+import type { Lockfile } from "./lock.js";
 import {
   DEFAULT_RULES_DIR,
   DEFAULT_SKILLS_DIR,
@@ -92,7 +93,7 @@ export function shadowedSkillWarnings(
     const locations = [
       ...new Set(
         globalLayouts
-          .filter((layout) => existsSync(join(layout.skillsDir, name)))
+          .filter((layout) => skillTargets(manifest, name).includes(layout.target) && existsSync(join(layout.skillsDir, name)))
           .map((layout) => displayPath(layout.skillsDir))
       ),
     ];
@@ -104,4 +105,28 @@ export function shadowedSkillWarnings(
     }
   }
   return warnings;
+}
+
+/** Effective targets for a source or composed skill. */
+export function skillTargets(manifest: Manifest, name: string): TargetName[] {
+  return manifest.skillTargets?.[name] ?? manifest.compose[name]?.targets ?? resolveTargets(manifest);
+}
+
+export function manifestForTarget(manifest: Manifest, target: TargetName): Manifest {
+  const include = ([name]: [string, unknown]): boolean => skillTargets(manifest, name).includes(target);
+  return { ...manifest,
+    skills: Object.fromEntries(Object.entries(manifest.skills).filter(include)),
+    compose: Object.fromEntries(Object.entries(manifest.compose).filter(include)),
+  };
+}
+
+/** Only names previously installed for this target are owned here. */
+export function lockForTarget(lock: Lockfile | null, target: TargetName): Lockfile | null {
+  if (!lock?.targets.includes(target)) return null;
+  return { ...lock,
+    skills: Object.fromEntries(Object.entries(lock.skills).filter(([, entry]) =>
+      (entry.targets ?? lock.targets).includes(target))),
+    compose: Object.fromEntries(Object.entries(lock.compose).filter(([, entry]) =>
+      (entry.targets ?? lock.targets).includes(target))),
+  };
 }

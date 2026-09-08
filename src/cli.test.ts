@@ -295,3 +295,58 @@ describe("cli", () => {
     await assert.rejects(main(["install", "--dir", dir]), /skillfold init/);
   });
 });
+
+describe("per-skill targets", () => {
+  it("installs, checks, lists, and reports paths only for selected targets", async () => {
+    const dir = newProject();
+    writeSkill(dir, "skills/shared", "shared", "Shared");
+    writeSkill(dir, "skills/only", "only", "Claude only");
+    writeFile(dir, "skillfold.yaml", `targets: [claude, codex]
+skills:
+  shared: ./skills/shared
+  only:
+    source: ./skills/only
+    targets: [claude]
+compose:
+  combined:
+    use: [shared, only]
+    targets: [claude]
+`);
+    await main(["install", "--dir", dir]);
+    assert.ok(existsSync(join(dir, ".claude/skills/only/SKILL.md")));
+    assert.ok(existsSync(join(dir, ".agents/skills/shared/SKILL.md")));
+    assert.ok(!existsSync(join(dir, ".agents/skills/only")));
+    assert.ok(!existsSync(join(dir, ".agents/skills/combined")));
+    await main(["install", "--frozen", "--dir", dir]);
+    await main(["check", "--dir", dir]);
+    assert.equal(process.exitCode, undefined);
+    await main(["list", "--dir", dir]);
+    assert.match(logs.join("\n"), /only.*ok/);
+    logs = [];
+    await main(["info", "only", "--dir", dir]);
+    assert.match(logs.join("\n"), /\.claude/);
+    assert.doesNotMatch(logs.join("\n"), /\.agents/);
+  });
+
+  it("prunes a deselected target, rejects frozen changes, and protects unowned copies", async () => {
+    const dir = newProject();
+    writeSkill(dir, "skills/example", "example", "Managed");
+    const manifest = (targets: string) => `targets: [claude, codex]\nskills:\n  example:\n    source: ./skills/example\n    targets: ${targets}\n`;
+    writeFile(dir, "skillfold.yaml", manifest("[claude, codex]"));
+    await main(["install", "--dir", dir]);
+    writeFile(dir, "skillfold.yaml", manifest("[claude]"));
+    await assert.rejects(main(["install", "--frozen", "--dir", dir]), /changed targets/);
+    await main(["install", "--dir", dir]);
+    assert.ok(!existsSync(join(dir, ".agents/skills/example")));
+    writeSkill(dir, ".agents/skills/example", "example", "Unowned");
+    await main(["install", "--dir", dir]);
+    assert.match(readFileSync(join(dir, ".agents/skills/example/SKILL.md"), "utf8"), /Unowned/);
+    writeFile(dir, "skillfold.yaml", manifest("[codex]"));
+    await assert.rejects(main(["install", "--dir", dir]), /not managed|unmanaged|--force/);
+    assert.match(readFileSync(join(dir, ".agents/skills/example/SKILL.md"), "utf8"), /Unowned/);
+    await main(["install", "--force", "--dir", dir]);
+    await main(["check", "--dir", dir]);
+    assert.equal(process.exitCode, undefined);
+    assert.ok(!existsSync(join(dir, ".claude/skills/example")));
+  });
+});

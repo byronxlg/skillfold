@@ -1,6 +1,6 @@
 {
   "name": "skillfold",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "description": "Declarative skill manager for Claude config. Declare skills in YAML, pin them in a lockfile, install them into .claude/skills.",
   "type": "module",
   "main": "./dist/index.js",

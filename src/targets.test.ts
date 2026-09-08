@@ -112,3 +112,22 @@ describe("shadowedSkillWarnings", () => {
     );
   });
 });
+
+describe("per-skill target validation", () => {
+  it("rejects invalid, empty, and disabled targets", () => {
+    for (const targets of ["[]", "[cursor]", "claude", "[codex]"]) {
+      assert.throws(() => parseManifest(`skills:\n  a:\n    source: ./a\n    targets: ${targets}`, "t.yaml"), /target|non-empty/);
+    }
+  });
+  it("rejects compositions whose inputs are unavailable on a selected target", () => {
+    assert.throws(() => parseManifest(`targets: [claude, codex]
+skills:
+  a:
+    source: ./a
+    targets: [claude]
+compose:
+  combined:
+    use: [a]
+`, "t.yaml"), /dependency "a" is not installed for codex/);
+  });
+});

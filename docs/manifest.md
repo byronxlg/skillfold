@@ -104,6 +104,30 @@ Everything outside the markers is yours and is never touched. The block is added
 
 `skillsDir` / `rulesDir` override the claude locations only; Codex scans fixed conventional paths.
 
+### Per-skill targets
+
+Use the mapping form to install a skill for a subset of the enabled targets:
+
+```yaml
+targets: [claude, codex]
+skills:
+  shared: npm:skillfold/planning
+  claude-only:
+    source: github:anthropics/skills/skills/docx
+    targets: [claude]
+```
+
+Omitting a skill's `targets` installs it for all top-level targets. Overrides must
+be non-empty subsets of the top-level list. Composed skills also accept `targets`;
+every dependency must be available on each target selected for the composition.
+
+The lockfile records overrides. Changing a selection requires `skillfold install`;
+`--frozen` rejects the change. Install removes copies previously managed on a
+deselected target, and treats existing copies on a newly selected target as
+unmanaged unless their content is identical (otherwise use `--force`). `check`,
+`list`, and `info` inspect only the selected locations for each skill.
+
+
 The lockfile records which targets it has installed for. A newly added target starts with nothing managed: files already sitting in its locations are treated as hand-authored (identical content is adopted silently; different content needs `--force`). Rules synced into AGENTS.md must be UTF-8 text and must not contain skillfold marker lines; install rejects them with a clear error otherwise.
 
 ## `skillsDir`

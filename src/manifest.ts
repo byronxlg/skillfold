@@ -39,6 +39,7 @@ export type TargetName = "claude" | "codex";
 export const TARGET_NAMES: readonly TargetName[] = ["claude", "codex"];
 
 export interface ComposeEntry {
+  targets?: TargetName[];
   description?: string;
   use: string[];
   /**
@@ -51,6 +52,8 @@ export interface ComposeEntry {
 export interface Manifest {
   /** Skill name -> normalized source string. */
   skills: Record<string, string>;
+  /** Per-skill target overrides; omitted entries inherit manifest targets. */
+  skillTargets?: Record<string, TargetName[]>;
   /** Composed skill name -> definition. */
   compose: Record<string, ComposeEntry>;
   /** Rule name -> normalized source string of a single markdown file. */
@@ -79,6 +82,20 @@ export function validateSkillName(name: string): void {
   }
 }
 
+export function parseTargets(value: unknown, label: string): TargetName[] {
+  if (!Array.isArray(value) || value.length === 0) {
+    throw new ManifestError(`${label}: must be a non-empty list (${TARGET_NAMES.join(", ")})`);
+  }
+  const targets: TargetName[] = [];
+  for (const item of value) {
+    if (item !== "claude" && item !== "codex") {
+      throw new ManifestError(`${label}: unknown target "${String(item)}" (expected claude, codex)`);
+    }
+    if (!targets.includes(item)) targets.push(item);
+  }
+  return targets;
+}
+
 function normalizeSkillEntry(name: string, value: unknown): string {
   if (typeof value === "string" && value.trim()) {
     return formatSource(parseSource(value));
@@ -86,9 +103,9 @@ function normalizeSkillEntry(name: string, value: unknown): string {
   if (value && typeof value === "object" && !Array.isArray(value)) {
     const entry = value as Record<string, unknown>;
     for (const key of Object.keys(entry)) {
-      if (key !== "source" && key !== "version") {
+      if (key !== "source" && key !== "version" && key !== "targets") {
         throw new ManifestError(
-          `skills.${name}: unknown key "${key}" (expected source, version)`
+          `skills.${name}: unknown key "${key}" (expected source, version, targets)`
         );
       }
     }
@@ -115,9 +132,9 @@ function normalizeComposeEntry(name: string, value: unknown): ComposeEntry {
   }
   const entry = value as Record<string, unknown>;
   for (const key of Object.keys(entry)) {
-    if (key !== "use" && key !== "description" && key !== "allowed-tools") {
+    if (key !== "use" && key !== "description" && key !== "allowed-tools" && key !== "targets") {
       throw new ManifestError(
-        `compose.${name}: unknown key "${key}" (expected use, description, allowed-tools)`
+        `compose.${name}: unknown key "${key}" (expected use, description, allowed-tools, targets)`
       );
     }
   }
@@ -160,6 +177,7 @@ function normalizeComposeEntry(name: string, value: unknown): ComposeEntry {
     }
   }
   const normalized: ComposeEntry = { description, use };
+  if (entry.targets !== undefined) normalized.targets = parseTargets(entry.targets, `compose.${name}.targets`);
   if (allowedTools) normalized.allowedTools = allowedTools;
   return normalized;
 }
@@ -204,6 +222,7 @@ export function parseManifest(content: string, filePath: string): Manifest {
   }
 
   const skills: Record<string, string> = {};
+  const skillTargets: Record<string, TargetName[]> = {};
   if (top.skills !== undefined && top.skills !== null) {
     if (typeof top.skills !== "object" || Array.isArray(top.skills)) {
       throw new ManifestError(`${filePath}: "skills" must be a mapping of name -> source`);
@@ -211,6 +230,9 @@ export function parseManifest(content: string, filePath: string): Manifest {
     for (const [name, value] of Object.entries(top.skills as Record<string, unknown>)) {
       validateSkillName(name);
       skills[name] = normalizeSkillEntry(name, value);
+      if (value && typeof value === "object" && "targets" in value && value.targets !== undefined) {
+        skillTargets[name] = parseTargets(value.targets, `skills.${name}.targets`);
+      }
     }
   }
 
@@ -297,7 +319,27 @@ export function parseManifest(content: string, filePath: string): Manifest {
     }
   }
 
-  return { skills, compose, rules, skillsDir, rulesDir, targets };
+  const enabled: TargetName[] = targets ?? ["claude"];
+  const selected = (name: string): TargetName[] =>
+    skillTargets[name] ?? compose[name]?.targets ?? enabled;
+  for (const name of [...Object.keys(skills), ...Object.keys(compose)]) {
+    for (const target of selected(name)) {
+      if (!enabled.includes(target)) {
+        throw new ManifestError(`${name}: target "${target}" must be enabled in top-level targets`);
+      }
+    }
+  }
+  for (const [name, entry] of Object.entries(compose)) {
+    for (const dep of entry.use) {
+      for (const target of selected(name)) {
+        if (!selected(dep).includes(target)) {
+          throw new ManifestError(`compose.${name}: dependency "${dep}" is not installed for ${target}`);
+        }
+      }
+    }
+  }
+  return { skills, compose, rules, skillsDir, rulesDir, targets,
+    ...(Object.keys(skillTargets).length ? { skillTargets } : {}) };
 }
 
 export function loadManifest(manifestPath: string): Manifest {
