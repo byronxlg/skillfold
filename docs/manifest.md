@@ -132,7 +132,7 @@ The lockfile records which targets it has installed for. A newly added target st
 
 ## `skillsDir`
 
-Where skills are installed, relative to the manifest. Defaults to `.claude/skills` (or `skills` for the global `~/.claude` manifest).
+Where skills are installed, relative to the manifest. Defaults to `.claude/skills` for projects and `~/.claude/skills` in global mode, independently of the global config location.
 
 ```yaml
 skillsDir: .claude/skills
@@ -142,7 +142,7 @@ Point it anywhere a tool expects SKILL.md directories.
 
 ## `rulesDir`
 
-Where rules are installed, relative to the manifest. Defaults to `.claude/rules` (or `rules` for the global `~/.claude` manifest).
+Where rules are installed, relative to the manifest. Defaults to `.claude/rules` for projects and `~/.claude/rules` in global mode, independently of the global config location.
 
 ## The lockfile
 

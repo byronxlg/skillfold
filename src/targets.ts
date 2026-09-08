@@ -47,8 +47,8 @@ export function targetLayouts(
 ): TargetLayout[] {
   return resolveTargets(manifest).map((target): TargetLayout => {
     if (target === "claude") {
-      const skills = manifest.skillsDir ?? (globalMode ? "skills" : DEFAULT_SKILLS_DIR);
-      const rules = manifest.rulesDir ?? (globalMode ? "rules" : DEFAULT_RULES_DIR);
+      const skills = manifest.skillsDir ?? (globalMode ? join(homedir(), ".claude", "skills") : DEFAULT_SKILLS_DIR);
+      const rules = manifest.rulesDir ?? (globalMode ? join(homedir(), ".claude", "rules") : DEFAULT_RULES_DIR);
       return {
         target,
         skillsDir: resolvePath(root, skills),

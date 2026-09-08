@@ -80,7 +80,7 @@ Skillfold manages two independent levels, mirroring how the tools themselves wor
 
 | | Project (default) | Global (`-g`) |
 | --- | --- | --- |
-| Manifest + lockfile | `./skillfold.yaml`, `./skillfold.lock` | `~/.claude/skillfold.yaml`, `~/.claude/skillfold.lock` |
+| Manifest + lockfile | `./skillfold.yaml`, `./skillfold.lock` | `~/.config/skillfold/skillfold.yaml`, `~/.config/skillfold/skillfold.lock` |
 | claude target | `.claude/skills`, `.claude/rules` | `~/.claude/skills`, `~/.claude/rules` |
 | codex target | `.agents/skills`, `AGENTS.md` | `~/.agents/skills`, `~/.codex/AGENTS.md` |
 
@@ -88,12 +88,38 @@ Skillfold manages two independent levels, mirroring how the tools themselves wor
 - **Layering is the tool's job, not skillfold's.** Claude Code and Codex both read user-level and project-level skills and instructions together at runtime, so there is nothing for skillfold to merge - each level stays independently reproducible.
 - **Same-named skills at both levels show up twice** in the tool (or shadow each other). Project-mode `check` and `list` print a warning when a project skill name is also installed at the user level. Warnings never fail `check`.
 
+### Migrate an existing global config
+
+Global manifests and lockfiles live in `~/.config/skillfold/`, or
+`$XDG_CONFIG_HOME/skillfold/` when `XDG_CONFIG_HOME` is an absolute path.
+Relative or empty values are ignored. Agent install locations are independent
+of this directory: `~/.claude/skills`, `~/.claude/rules`, `~/.agents/skills`,
+and `~/.codex/AGENTS.md` (or `CODEX_HOME`). Explicit `skillsDir` and `rulesDir`
+remain relative to the manifest.
+
+Existing `~/.claude/skillfold.yaml` configurations continue to work with a
+migration notice when there is no config in the new directory. The new location
+has precedence; the two configs are never merged.
+
+```sh
+skillfold migrate -g
+skillfold check -g
+skillfold install -g --frozen
+```
+
+Migration copies the manifest and optional lockfile, preserves remote pins,
+rebases local sources and explicit install paths, and leaves the original files
+as a backup. It refuses to overwrite either destination file. It does not fetch
+sources or move installed skills. After verification, dotfiles users should move
+the new files into their dotfiles repository, restow them at the new location,
+and remove the old manifest and lockfile links.
+
 ## Global options
 
 | Option | Effect |
 | --- | --- |
 | `--dir <path>` | Operate on a project other than the current directory |
-| `-g`, `--global` | Operate on `~/.claude` (manifest `~/.claude/skillfold.yaml`, skills in `~/.claude/skills`) |
+| `-g`, `--global` | Operate on the global config (manifest `~/.config/skillfold/skillfold.yaml`, skills in `~/.claude/skills`) |
 | `--name <name>` | Skill name for `add` |
 | `--frozen` | Lockfile-exact install (see `install`) |
 | `--force` | Overwrite unmanaged skill directories |
@@ -104,6 +130,7 @@ Skillfold manages two independent levels, mirroring how the tools themselves wor
 
 | Variable | Effect |
 | --- | --- |
+| `XDG_CONFIG_HOME` | Absolute config base; global config lives in its `skillfold/` subdirectory (default `~/.config`) |
 | `GITHUB_TOKEN` / `GH_TOKEN` | Auth for GitHub sources (private repos, higher rate limits) |
 | `SKILLFOLD_CACHE` | Override the download cache location (default `~/.cache/skillfold`) |
 

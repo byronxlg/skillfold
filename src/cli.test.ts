@@ -381,3 +381,62 @@ it("runs shebang helpers after install and repairs modes on frozen reinstall", {
   await main(["check", "--dir", dir]);
   assert.equal(process.exitCode, undefined);
 });
+
+async function withGlobalHome(run: (home: string) => Promise<void>): Promise<void> {
+  const dir = newProject();
+  const saved = { HOME: process.env.HOME, XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME, CODEX_HOME: process.env.CODEX_HOME };
+  process.env.HOME = dir;
+  process.env.XDG_CONFIG_HOME = join(dir, "xdg");
+  process.env.CODEX_HOME = join(dir, ".codex");
+  try { await run(dir); }
+  finally {
+    for (const [key, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+}
+
+describe("agent-independent global config", () => {
+  it("initializes in XDG config while installing into the agent directories", async () => {
+    await withGlobalHome(async (home) => {
+      await main(["init", "-g"]);
+      const root = join(home, "xdg/skillfold");
+      assert.ok(existsSync(join(root, "skillfold.yaml")));
+      writeFile(root, "skillfold.yaml", "targets: [claude, codex]\nskills:\n  hello-skillfold: ./skills/hello-skillfold\n");
+      await main(["install", "-g"]);
+      assert.ok(existsSync(join(home, ".claude/skills/hello-skillfold/SKILL.md")));
+      assert.ok(existsSync(join(home, ".agents/skills/hello-skillfold/SKILL.md")));
+      assert.ok(!existsSync(join(home, ".claude/skillfold.yaml")));
+      await main(["install", "-g", "--frozen"]);
+      await main(["check", "-g"]);
+      assert.equal(process.exitCode, undefined);
+    });
+  });
+  it("migrates a legacy local config and keeps frozen installs valid", async () => {
+    await withGlobalHome(async (home) => {
+      writeSkill(home, ".claude/source/alpha", "alpha");
+      writeFile(home, ".claude/source/style.md", "A rule.\n");
+      writeFile(home, ".claude/skillfold.yaml", "targets: [claude, codex]\nskills:\n  alpha: ./source/alpha\nrules:\n  style: ./source/style.md\n");
+      await main(["install", "-g"]);
+      assert.match(errors.join("\n"), /legacy/);
+      await main(["migrate", "-g"]);
+      errors = [];
+      await main(["install", "-g", "--frozen"]);
+      await main(["check", "-g"]);
+      assert.equal(process.exitCode, undefined);
+      assert.doesNotMatch(errors.join("\n"), /legacy/);
+      assert.ok(existsSync(join(home, ".claude/skills/alpha/SKILL.md")));
+      assert.ok(existsSync(join(home, ".agents/skills/alpha/SKILL.md")));
+      assert.equal(readFileSync(join(home, ".claude/rules/style.md"), "utf8"), "A rule.\n");
+      assert.match(readFileSync(join(home, ".codex/AGENTS.md"), "utf8"), /A rule/);
+      await main(["remove", "-g", "alpha"]);
+      assert.ok(!existsSync(join(home, ".claude/skills/alpha")));
+      assert.ok(!existsSync(join(home, ".agents/skills/alpha")));
+    });
+  });
+  it("requires the explicit global migration command", async () => {
+    await assert.rejects(main(["migrate"]), /usage: skillfold migrate -g/);
+    await assert.rejects(main(["migrate", "-g", "--force"]), /usage/);
+  });
+});
