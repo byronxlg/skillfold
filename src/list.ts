@@ -14,7 +14,7 @@ import {
   normalizeSkillName,
   readDirFiles,
 } from "./skill.js";
-import { skillTargets, type TargetLayout } from "./targets.js";
+import { ruleApplies, skillTargets, type TargetLayout } from "./targets.js";
 
 /**
  * Status of one skill, computed offline from manifest + lockfile + disk.
@@ -24,7 +24,7 @@ import { skillTargets, type TargetLayout } from "./targets.js";
  *   modified      installed files differ from the lock / source
  *   not locked    manifest entry has no lockfile pin yet
  */
-export type SkillStatus = "ok" | "not installed" | "modified" | "not locked";
+export type SkillStatus = "ok" | "not installed" | "modified" | "not locked" | "not selected";
 
 export interface SkillRow {
   name: string;
@@ -64,6 +64,7 @@ function shortPin(resolved: string | undefined): string | undefined {
 /** Later statuses are worse; rows show the worst status across layouts. */
 const SEVERITY: Record<SkillStatus, number> = {
   ok: 0,
+  "not selected": 0,
   "not locked": 1,
   modified: 2,
   "not installed": 3,
@@ -193,11 +194,12 @@ export function skillRows(
   const perLayoutRules = layouts.map((layout) => installedRules(layout, ruleNames));
   for (const [name, sourceString] of Object.entries(manifest.rules)) {
     const entry = lock?.rules[name];
-    const status = worst(
-      perLayoutRules.map((installed) =>
+    const selectedRules = perLayoutRules.filter((_, index) => ruleApplies(manifest, name, layouts[index].target));
+    const status = selectedRules.length ? worst(
+      selectedRules.map((installed) =>
         ruleStatus(name, sourceString, entry, baseDir, installed.get(name))
       )
-    );
+    ) : "not selected";
     rows.push({
       name,
       kind: "rule",

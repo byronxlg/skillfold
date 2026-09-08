@@ -12,7 +12,7 @@ import { lockfileProblems, type Lockfile } from "./lock.js";
 import type { Manifest } from "./manifest.js";
 import { parseSource } from "./source.js";
 import type { ResolvedRule, ResolvedSkill } from "./resolve.js";
-import { manifestForTarget, type TargetLayout } from "./targets.js";
+import { lockForTarget, manifestForTarget, type TargetLayout } from "./targets.js";
 import {
   computeFileIntegrity,
   computeIntegrity,
@@ -315,6 +315,11 @@ function checkRulesDir(
   label: string,
   problems: string[]
 ): void {
+  for (const name of Object.keys(lock.rules)) {
+    if (!manifest.rules[name] && existsSync(ruleFile(rulesDir, name))) {
+      problems.push(`${label}rule "${name}" is installed but not selected (run "skillfold install")`);
+    }
+  }
   for (const [name, sourceString] of Object.entries(manifest.rules)) {
     const target = ruleFile(rulesDir, name);
     if (!existsSync(target)) {
@@ -406,12 +411,14 @@ export function checkProject(
   if (!lock) return problems;
   for (const layout of layouts) {
     const label = layouts.length > 1 ? `[${layout.target}] ` : "";
-    checkSkillsDir(manifestForTarget(manifest, layout.target), lock, baseDir, layout.skillsDir, label, problems);
+    const selected = manifestForTarget(manifest, layout.target);
+    const selectedLock = lockForTarget(lock, layout.target) ?? { ...lock, rules: {} };
+    checkSkillsDir(selected, lock, baseDir, layout.skillsDir, label, problems);
     if (layout.rulesDir) {
-      checkRulesDir(manifest, lock, baseDir, layout.rulesDir, label, problems);
+      checkRulesDir(selected, selectedLock, baseDir, layout.rulesDir, label, problems);
     }
     if (layout.agentsMdPath) {
-      checkAgentsMdRules(manifest, lock, baseDir, layout.agentsMdPath, label, problems);
+      checkAgentsMdRules(selected, lock, baseDir, layout.agentsMdPath, label, problems);
     }
   }
   return problems;

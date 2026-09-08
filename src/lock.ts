@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 import { LockError } from "./errors.js";
-import { parseTargets, type Manifest, type TargetName } from "./manifest.js";
+import { parseHosts, parseTargets, type Manifest, type TargetName } from "./manifest.js";
 
 /**
  * skillfold.lock pins every remote skill to an exact, verifiable revision:
@@ -34,6 +34,8 @@ import { parseTargets, type Manifest, type TargetName } from "./manifest.js";
 export const LOCK_FILENAME = "skillfold.lock";
 
 export interface LockSkillEntry {
+  /** Host selection for rule entries only. */
+  hosts?: string[];
   targets?: TargetName[];
   /** Source string exactly as normalized from the manifest. */
   source: string;
@@ -103,6 +105,7 @@ export function readLockfile(lockPath: string): Lockfile | null {
       if (typeof entry.resolved === "string") skillEntry.resolved = entry.resolved;
       if (typeof entry.integrity === "string") skillEntry.integrity = entry.integrity;
       if (entry.targets !== undefined) skillEntry.targets = parseTargets(entry.targets, `${lockPath}: ${section}.${name}.targets`);
+      if (section === "rules" && entry.hosts !== undefined) skillEntry.hosts = parseHosts(entry.hosts, `${lockPath}: rules.${name}.hosts`);
       lock[section][name] = skillEntry;
     }
   }
@@ -220,6 +223,18 @@ export function lockfileProblems(manifest: Manifest, lock: Lockfile | null): str
     if (entry && hasOverride &&
         [...selected].sort().join(",") !== [...(entry.targets ?? lock.targets)].sort().join(",")) {
       problems.push(`"${name}" changed targets (run "skillfold install")`);
+    }
+  }
+  for (const name of Object.keys(manifest.rules)) {
+    const entry = lock.rules[name];
+    if (!entry) continue;
+    const options = manifest.ruleOptions?.[name];
+    const same = (a: string[], b: string[]): boolean => [...a].sort().join("\0") === [...b].sort().join("\0");
+    if (!same(options?.targets ?? manifestTargets, entry.targets ?? lock.targets)) {
+      problems.push(`rule "${name}" changed targets (run "skillfold install")`);
+    }
+    if (!same(options?.hosts ?? [], entry.hosts ?? [])) {
+      problems.push(`rule "${name}" changed hosts (run "skillfold install")`);
     }
   }
   return problems;

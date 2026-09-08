@@ -52,6 +52,7 @@ export {
   validateSkillName,
   type ComposeEntry,
   type Manifest,
+  type RuleOptions,
   type TargetName,
 } from "./manifest.js";
 export {
@@ -100,6 +101,7 @@ export {
 } from "./agentsmd.js";
 export {
   resolveTargets,
+  ruleApplies,
   shadowedSkillWarnings,
   targetLayouts,
   type TargetLayout,

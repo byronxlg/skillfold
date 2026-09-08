@@ -30,7 +30,7 @@ Remove a skill, composed skill, or rule from the manifest, uninstall it, and upd
 
 ### `skillfold install` (aliases: `i`, `sync`)
 
-Resolve every manifest entry, honoring existing lockfile pins; materialize all skills (including composed ones) into the skills directory and all rules into the rules directory; prune entries that left the manifest; write the lockfile.
+Resolve every manifest entry, honoring existing lockfile pins; materialize all skills (including composed ones) into the skills directory and matching rules into each selected target; prune entries that left the manifest; write the lockfile.
 
 - `--frozen` - CI mode. Requires manifest and lockfile to agree exactly, installs precisely the pinned revisions, verifies content hashes, and never rewrites the lockfile. Like `npm ci`.
 - `--force` - allow overwriting a skill directory that skillfold does not manage (i.e. not named in the lockfile).
@@ -132,6 +132,7 @@ and remove the old manifest and lockfile links.
 | --- | --- |
 | `XDG_CONFIG_HOME` | Absolute config base; global config lives in its `skillfold/` subdirectory (default `~/.config`) |
 | `GITHUB_TOKEN` / `GH_TOKEN` | Auth for GitHub sources (private repos, higher rate limits) |
+| `SKILLFOLD_HOST` | Override the exact hostname used by rule `hosts` selectors (default Node `os.hostname()`) |
 | `SKILLFOLD_CACHE` | Override the download cache location (default `~/.cache/skillfold`) |
 
 ## Exit codes

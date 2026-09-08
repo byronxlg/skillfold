@@ -2,6 +2,12 @@
 
 For the full release history with detailed notes, see [GitHub Releases](https://github.com/byronxlg/skillfold/releases).
 
+## 2.6.0
+
+- Rule source mappings support per-rule `targets` and exact `hosts` selectors, with `SKILLFOLD_HOST` as an optional hostname override.
+- Keep all rules pinned in one portable lockfile while installing and checking only the current host's selection. Frozen installs can switch hosts and prune inactive managed rules.
+- Show inactive rules as `not selected` and preserve handwritten content outside Codex's managed rules block.
+
 ## v2.5.0
 
 - Global manifests and lockfiles now live in `~/.config/skillfold/`, honoring an absolute `XDG_CONFIG_HOME`. Agent install directories stay independent of config storage.

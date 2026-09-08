@@ -128,9 +128,51 @@
         "maxLength": 64
       },
       "additionalProperties": {
-        "type": "string",
-        "description": "Source string of a markdown file: a local path (./rules/style.md), github:owner/repo/path/file.md@ref, or npm:package/path/file.md@version.",
-        "minLength": 1
+        "oneOf": [
+          {
+            "type": "string",
+            "minLength": 1
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "source"
+            ],
+            "properties": {
+              "source": {
+                "type": "string",
+                "minLength": 1
+              },
+              "version": {
+                "type": [
+                  "string",
+                  "number"
+                ]
+              },
+              "targets": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "claude",
+                    "codex"
+                  ]
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "hosts": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              }
+            }
+          }
+        ]
       }
     },
     "rulesDir": {

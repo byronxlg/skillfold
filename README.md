@@ -106,7 +106,7 @@ rules:
   security: github:acme/standards/rules/security.md@v3
 ```
 
-Rules pin in the lockfile and take part in `install`, `check`, `list`, and `remove` exactly like skills.
+Rules pin in the lockfile and take part in `install`, `check`, `list`, and `remove` exactly like skills. Rule mappings support `targets: [codex]` and `hosts: [my-workstation]` to share one config across agents and machines. See [rule selection](docs/manifest.md#rules) for examples and ownership behavior.
 
 ## Commands
 

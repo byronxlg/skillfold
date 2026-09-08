@@ -75,7 +75,37 @@ rules:
   conventions: npm:acme-standards/rules/conventions.md@1.2.0
 ```
 
-Rules pin in the lockfile exactly like skills and participate in `install`, `check`, `list`, `info`, and `remove`. There is no compose for rules - they stay a name -> file mapping.
+Rules pin in the lockfile exactly like skills and participate in `install`, `check`, `list`, `info`, and `remove`. There is no compose for rules - each source remains a single file.
+
+
+Rule mappings can restrict installation to enabled targets and exact hostnames:
+
+```yaml
+targets: [claude, codex]
+rules:
+  shared: github:acme/standards/rules/shared.md
+  codex-compatibility:
+    source: github:acme/standards/rules/codex.md
+    targets: [codex]
+  workstation:
+    source: github:acme/standards/rules/workstation.md
+    hosts: [my-workstation]
+```
+
+Omitted selectors inherit all enabled targets and all hosts. `targets` and `hosts`
+must be nonempty lists; hostnames match exactly, including case. The hostname
+comes from Node's `os.hostname()`; set `SKILLFOLD_HOST` to override it. A mapping
+also accepts `version`, just like a skill source mapping.
+
+All declared rules are resolved and pinned, including rules inactive on this
+host, so one manifest and lockfile work across machines. `install` applies only
+matching rules and removes previously managed rules that no longer match.
+Rule names in the lockfile are reserved on their declared targets across hosts;
+use different names for unmanaged rules. Handwritten content outside Codex's
+managed block is preserved. `check` validates the current host's selection;
+`list` marks inactive rules as `not selected`. Selector changes require a normal
+`install`; `install --frozen` accepts a host switch with an unchanged manifest
+and lockfile. Run installation after changing rules or switching host selection.
 
 ## `targets`
 
