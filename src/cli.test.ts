@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync, rmSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { chmodSync, existsSync, readFileSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { after, afterEach, beforeEach, describe, it } from "node:test";
 
@@ -349,4 +350,34 @@ compose:
     assert.equal(process.exitCode, undefined);
     assert.ok(!existsSync(join(dir, ".claude/skills/example")));
   });
+});
+
+
+it("runs shebang helpers after install and repairs modes on frozen reinstall", {
+  skip: process.platform === "win32",
+}, async () => {
+  const dir = newProject();
+  writeSkill(dir, "source", "helper");
+  writeFile(dir, "source/scripts/hello.sh", "#!/bin/sh\nprintf 'hello\\n'\n");
+  writeFile(dir, "source/reference.md", "Not executable.\n");
+  writeFile(dir, "skillfold.yaml", "skills:\n  helper: ./source\n");
+  await main(["install", "--dir", dir]);
+  const installed = join(dir, ".claude/skills/helper");
+  const script = join(installed, "scripts/hello.sh");
+  assert.equal(execFileSync(script, { encoding: "utf8" }), "hello\n");
+  assert.equal(statSync(join(installed, "reference.md")).mode & 0o111, 0);
+  const lock = readFileSync(join(dir, "skillfold.lock"), "utf8");
+  chmodSync(script, 0o644);
+  await main(["check", "--dir", dir]);
+  assert.equal(process.exitCode, 1);
+  assert.match(errors.join("\n"), /not executable/);
+  logs = [];
+  await main(["list", "--dir", dir]);
+  assert.match(logs.join("\n"), /helper.*modified/);
+  process.exitCode = undefined;
+  await main(["install", "--frozen", "--dir", dir]);
+  assert.equal(execFileSync(script, { encoding: "utf8" }), "hello\n");
+  assert.equal(readFileSync(join(dir, "skillfold.lock"), "utf8"), lock);
+  await main(["check", "--dir", dir]);
+  assert.equal(process.exitCode, undefined);
 });

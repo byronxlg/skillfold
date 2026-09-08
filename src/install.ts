@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve as resolvePath } from "node:path";
 
 import { extractRulesBlock } from "./agentsmd.js";
@@ -42,12 +42,33 @@ export interface SyncOptions {
   force?: boolean;
 }
 
+/** GitHub's contents API has no mode metadata; shebangs identify runnable helpers. */
+export function nonExecutableScripts(dir: string, files: SkillFile[]): string[] {
+  if (process.platform === "win32") return [];
+  return files.filter((file) =>
+    file.content[0] === 35 && file.content[1] === 33 &&
+    (statSync(join(dir, file.path)).mode & 0o100) === 0
+  ).map((file) => file.path);
+}
+
+function makeScriptsExecutable(dir: string, files: SkillFile[]): boolean {
+  const scripts = nonExecutableScripts(dir, files);
+  for (const script of scripts) {
+    const path = join(dir, script);
+    const mode = statSync(path).mode;
+    // Grant execution to the owner and anyone already allowed to read the script.
+    chmodSync(path, mode | 0o100 | ((mode & 0o444) >> 2));
+  }
+  return scripts.length > 0;
+}
+
 function writeSkillFiles(dir: string, files: SkillFile[]): void {
   for (const file of files) {
     const target = join(dir, ...file.path.split("/"));
     mkdirSync(dirname(target), { recursive: true });
     writeFileSync(target, file.content);
   }
+  makeScriptsExecutable(dir, files);
 }
 
 /**
@@ -71,7 +92,8 @@ export function syncSkillsDir(options: SyncOptions): SyncResult {
       const existingIntegrity = computeIntegrity(readDirFiles(target));
       const newIntegrity = computeIntegrity(skill.skill.files);
       if (existingIntegrity === newIntegrity) {
-        result.unchanged.push(skill.name);
+        const repaired = makeScriptsExecutable(target, skill.skill.files);
+        (repaired ? result.installed : result.unchanged).push(skill.name);
         continue;
       }
       if (!managed.has(skill.name) && !force) {
@@ -201,6 +223,9 @@ function checkSkillsDir(
       problems.push(`${label}"${name}" is not installed (run "skillfold install")`);
       continue;
     }
+    for (const script of nonExecutableScripts(target, installedFiles)) {
+      problems.push(`${label}"${name}/${script}" is not executable (run "skillfold install")`);
+    }
     const installedIntegrity = computeIntegrity(installedFiles);
     const source = parseSource(sourceString);
     if (source.kind === "local") {
@@ -245,6 +270,9 @@ function checkSkillsDir(
     if (installedFiles.length === 0) {
       problems.push(`${label}composed skill "${name}" is not installed (run "skillfold install")`);
       continue;
+    }
+    for (const script of nonExecutableScripts(target, installedFiles)) {
+      problems.push(`${label}"${name}/${script}" is not executable (run "skillfold install")`);
     }
     const inputs: ComposeInput[] = [];
     let missingInput = false;

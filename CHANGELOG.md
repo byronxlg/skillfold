@@ -2,6 +2,11 @@
 
 For the full release history with detailed notes, see [GitHub Releases](https://github.com/byronxlg/skillfold/releases).
 
+## v2.4.1
+
+- Installed shebang scripts are executable on POSIX systems, including GitHub sources whose contents API does not expose file modes.
+- Install repairs missing script permissions without changing lockfile hashes; check and list detect scripts that cannot be executed.
+
 ## v2.4.0
 
 - Skills and compositions can select a subset of the manifest's targets with `targets: [claude]` or `targets: [codex]`.
