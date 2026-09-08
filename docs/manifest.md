@@ -28,7 +28,7 @@ skills:
 
 ### Sources
 
-Every source points at a directory containing a `SKILL.md` (plus any supporting files - all files in the directory are installed).
+Every source points at a directory containing a `SKILL.md` (plus any supporting files - all files in the directory are installed). On POSIX systems, files beginning with a shebang (`#!`) are made executable so script helpers can be invoked directly. Reinstall repairs missing executable permissions, including with `--frozen`, without changing content hashes.
 
 | Kind | Syntax | Notes |
 | --- | --- | --- |

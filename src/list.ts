@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, resolve as resolvePath } from "node:path";
 
 import { extractRulesBlock } from "./agentsmd.js";
-import { ruleFile } from "./install.js";
+import { nonExecutableScripts, ruleFile } from "./install.js";
 import type { Lockfile, LockSkillEntry } from "./lock.js";
 import type { Manifest } from "./manifest.js";
 import { parseSource } from "./source.js";
@@ -83,6 +83,7 @@ function skillStatus(
   const source = parseSource(sourceString);
   const installedFiles = readDirFiles(join(skillsDir, name));
   if (installedFiles.length === 0) return "not installed";
+  if (nonExecutableScripts(join(skillsDir, name), installedFiles).length) return "modified";
   if (source.kind === "local") {
     const sourceFiles = readDirFiles(resolvePath(baseDir, source.path));
     return sourceFiles.length > 0 &&
@@ -175,6 +176,7 @@ export function skillRows(
       selectedLayouts.map((layout): SkillStatus => {
         const installedFiles = readDirFiles(join(layout.skillsDir, name));
         if (installedFiles.length === 0) return "not installed";
+        if (nonExecutableScripts(join(layout.skillsDir, name), installedFiles).length) return "modified";
         if (!locked) return "not locked";
         return locked.integrity === computeIntegrity(installedFiles) ? "ok" : "modified";
       })
