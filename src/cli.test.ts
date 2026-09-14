@@ -225,6 +225,29 @@ describe("cli", () => {
     assert.ok(existsSync(join(dir, ".agents", "skills", "alpha", "SKILL.md")));
   });
 
+  it("supports the cursor target end to end", async () => {
+    const dir = newProject();
+    writeSkill(dir, "skills/alpha", "alpha");
+    writeFile(dir, "rules/style.md", "Always write tests.\n");
+    writeFile(
+      dir,
+      "skillfold.yaml",
+      "targets: [cursor]\nskills:\n  alpha: ./skills/alpha\nrules:\n  style: ./rules/style.md"
+    );
+
+    await main(["install", "--dir", dir]);
+
+    assert.ok(existsSync(join(dir, ".cursor", "skills", "alpha", "SKILL.md")));
+    assert.match(
+      readFileSync(join(dir, ".cursor", "rules", "style.mdc"), "utf-8"),
+      /alwaysApply: true[\s\S]*Always write tests\./
+    );
+
+    logs = [];
+    await main(["check", "--dir", dir]);
+    assert.match(logs.join("\n"), /ok: 1 skill, 1 rule in sync/);
+  });
+
   it("protects hand-authored files when a target is added later", async () => {
     const dir = newProject();
     writeSkill(dir, "skills/alpha", "alpha");
@@ -403,14 +426,30 @@ describe("agent-independent global config", () => {
       await main(["init", "-g"]);
       const root = join(home, "xdg/skillfold");
       assert.ok(existsSync(join(root, "skillfold.yaml")));
-      writeFile(root, "skillfold.yaml", "targets: [claude, codex]\nskills:\n  hello-skillfold: ./skills/hello-skillfold\n");
+      writeFile(root, "skillfold.yaml", "targets: [claude, codex, cursor]\nskills:\n  hello-skillfold: ./skills/hello-skillfold\n");
       await main(["install", "-g"]);
       assert.ok(existsSync(join(home, ".claude/skills/hello-skillfold/SKILL.md")));
       assert.ok(existsSync(join(home, ".agents/skills/hello-skillfold/SKILL.md")));
+      assert.ok(existsSync(join(home, ".cursor/skills/hello-skillfold/SKILL.md")));
       assert.ok(!existsSync(join(home, ".claude/skillfold.yaml")));
       await main(["install", "-g", "--frozen"]);
       await main(["check", "-g"]);
       assert.equal(process.exitCode, undefined);
+    });
+  });
+  it("explains that Cursor user rules are not file-based", async () => {
+    await withGlobalHome(async (home) => {
+      const root = join(home, "xdg/skillfold");
+      writeFile(root, "rule.md", "A rule.\n");
+      writeFile(
+        root,
+        "skillfold.yaml",
+        "targets: [cursor]\nrules:\n  style: ./rule.md\n"
+      );
+      await assert.rejects(
+        main(["install", "-g"]),
+        /Cursor user rules are managed in Customize > Rules/
+      );
     });
   });
   it("migrates a legacy local config and keeps frozen installs valid", async () => {

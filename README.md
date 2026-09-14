@@ -2,7 +2,7 @@
 
 # Skillfold
 
-**Declarative skill manager for Claude Code and Codex**
+**Declarative skill manager for Claude Code, Codex, and Cursor**
 
 [![npm](https://img.shields.io/npm/v/skillfold?style=flat-square)](https://www.npmjs.com/package/skillfold)
 [![CI](https://img.shields.io/github/actions/workflow/status/byronxlg/skillfold/ci.yml?style=flat-square&label=CI)](https://github.com/byronxlg/skillfold/actions/workflows/ci.yml)
@@ -59,6 +59,7 @@ flowchart LR
   K --> I(["skillfold install"])
   I -->|"target: claude"| C[".claude/skills"]
   I -->|"target: codex"| X[".agents/skills"]
+  I -->|"target: cursor"| U[".cursor/skills"]
 ```
 
 Skills come from local directories, GitHub, or npm. The manifest says what you want; the lockfile records exactly what you got. Installs read both.
@@ -70,10 +71,10 @@ Skills come from local directories, GitHub, or npm. The manifest says what you w
 **Portable.** One manifest can install for more than one agent:
 
 ```yaml
-targets: [claude, codex]
+targets: [claude, codex, cursor]
 ```
 
-Skills are plain SKILL.md directories (the [agent skills standard](https://agentskills.io)), so supporting another tool is just another install location. With `codex`, skills also land in `.agents/skills`, and rules sync into a marker-fenced managed block in `AGENTS.md` that leaves your hand-written content alone.
+Skills are plain SKILL.md directories (the [agent skills standard](https://agentskills.io)), so supporting another tool is just another install location. Codex uses `.agents/skills` and a marker-fenced rules block in `AGENTS.md`. Cursor uses `.cursor/skills` and always-on `.mdc` rules in `.cursor/rules`.
 
 ## Verify it in CI
 

@@ -81,7 +81,7 @@ Rules pin in the lockfile exactly like skills and participate in `install`, `che
 Rule mappings can restrict installation to enabled targets and exact hostnames:
 
 ```yaml
-targets: [claude, codex]
+targets: [claude, codex, cursor]
 rules:
   shared: github:acme/standards/rules/shared.md
   codex-compatibility:
@@ -112,7 +112,7 @@ and lockfile. Run installation after changing rules or switching host selection.
 Which tools to install for. Default: `[claude]`.
 
 ```yaml
-targets: [claude, codex]
+targets: [claude, codex, cursor]
 ```
 
 Skills use the same SKILL.md format everywhere (the [agent skills standard](https://agentskills.io)), so a target is just a set of install locations:
@@ -121,6 +121,7 @@ Skills use the same SKILL.md format everywhere (the [agent skills standard](http
 | --- | --- | --- |
 | `claude` | `.claude/skills` (or `skillsDir`) | `.claude/rules` (or `rulesDir`) as one file per rule |
 | `codex` | `.agents/skills` | a managed block in `AGENTS.md` |
+| `cursor` | `.cursor/skills` | `.cursor/rules` as always-on `.mdc` files |
 
 Codex reads instructions from `AGENTS.md` rather than a rules directory, so the codex target syncs rules into a marker-fenced block:
 
@@ -132,14 +133,16 @@ Codex reads instructions from `AGENTS.md` rather than a rules directory, so the 
 
 Everything outside the markers is yours and is never touched. The block is added, updated, and removed by `skillfold install`; `skillfold check` verifies it offline like any other installed file. In global mode (`-g`) the codex target manages `~/.agents/skills` and `~/.codex/AGENTS.md` (honoring `CODEX_HOME`).
 
-`skillsDir` / `rulesDir` override the claude locations only; Codex scans fixed conventional paths.
+Cursor rule sources remain plain Markdown. Skillfold adds the `.mdc` frontmatter needed to make each installed project rule always apply. In global mode, Cursor skills install to `~/.cursor/skills`; Cursor user rules are configured in **Customize > Rules** and are not file-based, so a global manifest cannot select rules for the `cursor` target.
+
+`skillsDir` / `rulesDir` override the claude locations only; Codex and Cursor scan fixed conventional paths.
 
 ### Per-skill targets
 
 Use the mapping form to install a skill for a subset of the enabled targets:
 
 ```yaml
-targets: [claude, codex]
+targets: [claude, codex, cursor]
 skills:
   shared: npm:skillfold/planning
   claude-only:

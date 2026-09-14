@@ -2,6 +2,11 @@
 
 For the full release history with detailed notes, see [GitHub Releases](https://github.com/byronxlg/skillfold/releases).
 
+## Unreleased
+
+- Add a `cursor` target for `.cursor/skills` and always-on `.cursor/rules/*.mdc` project rules.
+- Install global Cursor skills to `~/.cursor/skills`; global Cursor user rules remain UI-managed.
+
 ## 2.6.0
 
 - Rule source mappings support per-rule `targets` and exact `hosts` selectors, with `SKILLFOLD_HOST` as an optional hostname override.

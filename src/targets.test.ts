@@ -21,7 +21,7 @@ describe("manifest targets", () => {
   });
 
   it("rejects unknown targets", () => {
-    assert.throws(() => parseManifest("targets: [cursor]", "t.yaml"), /unknown target "cursor"/);
+    assert.throws(() => parseManifest("targets: [windsurf]", "t.yaml"), /unknown target "windsurf"/);
   });
 
   it("rejects an empty list", () => {
@@ -44,24 +44,29 @@ describe("targetLayouts", () => {
 
   it("honors skillsDir/rulesDir for claude only", () => {
     const manifest = parseManifest(
-      "targets: [claude, codex]\nskillsDir: custom/skills\nrulesDir: custom/rules",
+      "targets: [claude, codex, cursor]\nskillsDir: custom/skills\nrulesDir: custom/rules",
       "t.yaml"
     );
-    const [claude, codex] = targetLayouts(manifest, "/proj", false);
+    const [claude, codex, cursor] = targetLayouts(manifest, "/proj", false);
     assert.equal(claude.skillsDir, join("/proj", "custom", "skills"));
     assert.equal(claude.rulesDir, join("/proj", "custom", "rules"));
     assert.equal(codex.skillsDir, join("/proj", ".agents", "skills"));
     assert.equal(codex.rulesDir, undefined);
     assert.equal(codex.agentsMdPath, join("/proj", "AGENTS.md"));
+    assert.equal(cursor.skillsDir, join("/proj", ".cursor", "skills"));
+    assert.equal(cursor.rulesDir, join("/proj", ".cursor", "rules"));
+    assert.equal(cursor.cursorRules, true);
   });
 
   it("maps global mode to the home locations", () => {
-    const manifest = parseManifest("targets: [claude, codex]", "t.yaml");
-    const [claude, codex] = targetLayouts(manifest, join(homedir(), ".claude"), true, {});
+    const manifest = parseManifest("targets: [claude, codex, cursor]", "t.yaml");
+    const [claude, codex, cursor] = targetLayouts(manifest, join(homedir(), ".claude"), true, {});
     assert.equal(claude.skillsDir, join(homedir(), ".claude", "skills"));
     assert.equal(claude.rulesDir, join(homedir(), ".claude", "rules"));
     assert.equal(codex.skillsDir, join(homedir(), ".agents", "skills"));
     assert.equal(codex.agentsMdPath, join(homedir(), ".codex", "AGENTS.md"));
+    assert.equal(cursor.skillsDir, join(homedir(), ".cursor", "skills"));
+    assert.equal(cursor.rulesDir, undefined);
   });
 
   it("respects CODEX_HOME for the global AGENTS.md", () => {

@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join, resolve as resolvePath } from "node:path";
 
 import { extractRulesBlock } from "./agentsmd.js";
-import { nonExecutableScripts, ruleFile } from "./install.js";
+import { decodeCursorRule, nonExecutableScripts, ruleFile } from "./install.js";
 import type { Lockfile, LockSkillEntry } from "./lock.js";
 import type { Manifest } from "./manifest.js";
 import { parseSource } from "./source.js";
@@ -127,8 +127,14 @@ function installedRules(layout: TargetLayout, names: string[]): Map<string, Buff
   const map = new Map<string, Buffer>();
   if (layout.rulesDir) {
     for (const name of names) {
-      const target = ruleFile(layout.rulesDir, name);
-      if (existsSync(target)) map.set(name, readFileSync(target));
+      const target = ruleFile(layout.rulesDir, name, layout.cursorRules);
+      if (existsSync(target)) {
+        const installed = readFileSync(target);
+        const content = layout.cursorRules
+          ? decodeCursorRule(name, installed)
+          : installed;
+        if (content) map.set(name, content);
+      }
     }
   }
   if (layout.agentsMdPath && existsSync(layout.agentsMdPath)) {

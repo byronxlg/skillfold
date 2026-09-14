@@ -8,7 +8,7 @@ reviewed: 2026-09-01
 
 # skillfold runbook
 
-Skillfold is a declarative skill manager for Claude Code and Codex: `skillfold.yaml` declares
+Skillfold is a declarative skill manager for Claude Code, Codex, and Cursor: `skillfold.yaml` declares
 skills and rules, `skillfold.lock` pins them, `skillfold install` puts them in place. It ships
 as the npm package `skillfold`, a docs site with a weekly blog, and a composite GitHub Action
 (`byronxlg/skillfold@main`) that other repos run in CI. Tier 3: there is nothing to keep alive.

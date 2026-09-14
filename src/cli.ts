@@ -251,6 +251,18 @@ async function runInstall(paths: Paths, options: InstallRunOptions = {}): Promis
     update: options.update,
   });
   const layouts = targetLayouts(manifest, paths.root, paths.global);
+  const unsupportedRules = layouts.find(
+    (layout) =>
+      !layout.rulesDir &&
+      !layout.agentsMdPath &&
+      rules.some((rule) => ruleApplies(manifest, rule.name, layout.target))
+  );
+  if (unsupportedRules) {
+    throw new SkillfoldError(
+      `${unsupportedRules.target} rules cannot be installed in global mode; ` +
+        "Cursor user rules are managed in Customize > Rules"
+    );
+  }
   const skillSyncs: SyncResult[] = [];
   const ruleSyncs: SyncResult[] = [];
   for (const layout of layouts) {
@@ -271,6 +283,7 @@ async function runInstall(paths: Paths, options: InstallRunOptions = {}): Promis
           rulesDir: layout.rulesDir,
           rules: rules.filter((rule) => ruleApplies(manifest, rule.name, layout.target)),
           previousLock: layoutLock,
+          cursorRules: layout.cursorRules,
           force: options.force,
         })
       );
@@ -407,7 +420,7 @@ function cmdInfo(paths: Paths, args: string[]): void {
   const installPaths = layouts.flatMap((layout) => {
     if (row.kind !== "rule") return skillTargets(manifest, name).includes(layout.target) ? [join(layout.skillsDir, name)] : [];
     if (!ruleApplies(manifest, name, layout.target)) return [];
-    if (layout.rulesDir) return [ruleFile(layout.rulesDir, name)];
+    if (layout.rulesDir) return [ruleFile(layout.rulesDir, name, layout.cursorRules)];
     if (layout.agentsMdPath) return [`${layout.agentsMdPath} (rules block)`];
     return [];
   });

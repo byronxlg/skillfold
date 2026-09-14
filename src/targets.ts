@@ -19,17 +19,22 @@ import {
  *   codex   skills -> .agents/skills (~/.agents/skills in global mode),
  *           rules -> a managed block in AGENTS.md (~/.codex/AGENTS.md in
  *           global mode), which is what Codex reads instead of a rules dir
+ *   cursor  skills -> .cursor/skills (~/.cursor/skills in global mode),
+ *           rules -> .cursor/rules as .mdc (project only; Cursor user
+ *           rules are not file-based)
  *
  * skillsDir / rulesDir in the manifest override the claude locations only;
- * codex scans fixed conventional paths, so those stay put.
+ * codex and cursor scan fixed conventional paths, so those stay put.
  */
 
 export interface TargetLayout {
   target: TargetName;
   /** Absolute skills directory. */
   skillsDir: string;
-  /** Absolute rules directory (claude). */
+  /** Absolute rules directory (claude, cursor). */
   rulesDir?: string;
+  /** Cursor rules need .mdc metadata; omitted means plain .md files. */
+  cursorRules?: boolean;
   /** Absolute path of the AGENTS.md carrying the managed rules block (codex). */
   agentsMdPath?: string;
 }
@@ -53,6 +58,19 @@ export function targetLayouts(
         target,
         skillsDir: resolvePath(root, skills),
         rulesDir: resolvePath(root, rules),
+      };
+    }
+    if (target === "cursor") {
+      // Cursor user rules live in the app UI, not on disk, so global mode
+      // only manages skills.
+      return {
+        target,
+        skillsDir: globalMode
+          ? join(homedir(), ".cursor", "skills")
+          : resolvePath(root, ".cursor/skills"),
+        ...(globalMode
+          ? {}
+          : { rulesDir: resolvePath(root, ".cursor/rules"), cursorRules: true }),
       };
     }
     // codex
