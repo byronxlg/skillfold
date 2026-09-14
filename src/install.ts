@@ -125,30 +125,54 @@ export interface SyncRulesOptions {
   rulesDir: string;
   rules: ResolvedRule[];
   previousLock: Lockfile | null;
+  /** Write Cursor-compatible always-on .mdc files. */
+  cursorRules?: boolean;
   /** Overwrite files skillfold does not manage. */
   force?: boolean;
 }
 
 /** Rule file path inside the rules directory. */
-export function ruleFile(rulesDir: string, name: string): string {
-  return join(rulesDir, `${name}.md`);
+export function ruleFile(rulesDir: string, name: string, cursorRules = false): string {
+  return join(rulesDir, `${name}.${cursorRules ? "mdc" : "md"}`);
+}
+
+function cursorRulePrefix(name: string): Buffer {
+  return Buffer.from(
+    `---\ndescription: "Managed by skillfold: ${name}"\nalwaysApply: true\n---\n\n`,
+    "utf-8"
+  );
+}
+
+/** Encode plain rule source as an always-on Cursor project rule. */
+export function encodeCursorRule(name: string, content: Buffer): Buffer {
+  return Buffer.concat([cursorRulePrefix(name), content]);
+}
+
+/** Return the source body only when the generated Cursor metadata is intact. */
+export function decodeCursorRule(name: string, content: Buffer): Buffer | null {
+  const prefix = cursorRulePrefix(name);
+  return content.subarray(0, prefix.length).equals(prefix)
+    ? content.subarray(prefix.length)
+    : null;
 }
 
 /**
- * Materialize resolved rules as `<rulesDir>/<name>.md` and prune rules that
- * left the manifest, with the same managed-vs-hand-authored semantics as
- * syncSkillsDir. The rules directory is only created when rules exist.
+ * Materialize resolved rules and prune rules that left the manifest, with the
+ * same managed-vs-hand-authored semantics as syncSkillsDir. Cursor rules are
+ * written as always-on `.mdc`; other rule directories use plain `.md`. The
+ * rules directory is only created when rules exist.
  */
 export function syncRulesDir(options: SyncRulesOptions): SyncResult {
-  const { rulesDir, rules, previousLock, force } = options;
+  const { rulesDir, rules, previousLock, cursorRules = false, force } = options;
   const managed = new Set<string>(Object.keys(previousLock?.rules ?? {}));
   const result: SyncResult = { installed: [], unchanged: [], pruned: [] };
   const currentNames = new Set(rules.map((rule) => rule.name));
 
   for (const rule of rules) {
-    const target = ruleFile(rulesDir, rule.name);
+    const target = ruleFile(rulesDir, rule.name, cursorRules);
+    const content = cursorRules ? encodeCursorRule(rule.name, rule.content) : rule.content;
     if (existsSync(target)) {
-      if (readFileSync(target).equals(rule.content)) {
+      if (readFileSync(target).equals(content)) {
         result.unchanged.push(rule.name);
         continue;
       }
@@ -160,13 +184,13 @@ export function syncRulesDir(options: SyncRulesOptions): SyncResult {
       }
     }
     mkdirSync(rulesDir, { recursive: true });
-    writeFileSync(target, rule.content);
+    writeFileSync(target, content);
     result.installed.push(rule.name);
   }
 
   for (const name of managed) {
     if (currentNames.has(name)) continue;
-    const target = ruleFile(rulesDir, name);
+    const target = ruleFile(rulesDir, name, cursorRules);
     if (existsSync(target)) {
       rmSync(target, { force: true });
       result.pruned.push(name);
@@ -312,21 +336,28 @@ function checkRulesDir(
   lock: Lockfile,
   baseDir: string,
   rulesDir: string,
+  cursorRules: boolean,
   label: string,
   problems: string[]
 ): void {
   for (const name of Object.keys(lock.rules)) {
-    if (!manifest.rules[name] && existsSync(ruleFile(rulesDir, name))) {
+    if (!manifest.rules[name] && existsSync(ruleFile(rulesDir, name, cursorRules))) {
       problems.push(`${label}rule "${name}" is installed but not selected (run "skillfold install")`);
     }
   }
   for (const [name, sourceString] of Object.entries(manifest.rules)) {
-    const target = ruleFile(rulesDir, name);
+    const target = ruleFile(rulesDir, name, cursorRules);
     if (!existsSync(target)) {
       problems.push(`${label}rule "${name}" is not installed (run "skillfold install")`);
       continue;
     }
-    const problem = ruleProblem(name, sourceString, readFileSync(target), lock, baseDir, "the rules directory");
+    const installed = readFileSync(target);
+    const sourceContent = cursorRules ? decodeCursorRule(name, installed) : installed;
+    if (!sourceContent) {
+      problems.push(`${label}rule "${name}" has invalid Cursor metadata (run "skillfold install")`);
+      continue;
+    }
+    const problem = ruleProblem(name, sourceString, sourceContent, lock, baseDir, "the rules directory");
     if (problem) problems.push(label + problem);
   }
 }
@@ -415,10 +446,24 @@ export function checkProject(
     const selectedLock = lockForTarget(lock, layout.target) ?? { ...lock, rules: {} };
     checkSkillsDir(selected, lock, baseDir, layout.skillsDir, label, problems);
     if (layout.rulesDir) {
-      checkRulesDir(selected, selectedLock, baseDir, layout.rulesDir, label, problems);
+      checkRulesDir(
+        selected,
+        selectedLock,
+        baseDir,
+        layout.rulesDir,
+        layout.cursorRules ?? false,
+        label,
+        problems
+      );
     }
     if (layout.agentsMdPath) {
       checkAgentsMdRules(selected, lock, baseDir, layout.agentsMdPath, label, problems);
+    }
+    if (!layout.rulesDir && !layout.agentsMdPath && Object.keys(selected.rules).length > 0) {
+      problems.push(
+        `${label}${layout.target} rules cannot be installed in global mode; ` +
+          "Cursor user rules are managed in Customize > Rules"
+      );
     }
   }
   return problems;

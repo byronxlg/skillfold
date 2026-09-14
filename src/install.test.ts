@@ -272,6 +272,27 @@ describe("syncRulesDir", () => {
     assert.equal(readFileSync(join(rulesDir, "style.md"), "utf-8"), "Rule body.\n");
   });
 
+  it("installs Cursor rules as always-on .mdc files", async () => {
+    const { manifest, rules, lock, baseDir } = await ruleProject();
+    const rulesDir = join(baseDir, ".cursor", "rules");
+    syncRulesDir({ rulesDir, rules, previousLock: null, cursorRules: true });
+    assert.equal(
+      readFileSync(join(rulesDir, "style.mdc"), "utf-8"),
+      "---\ndescription: \"Managed by skillfold: style\"\nalwaysApply: true\n---\n\nRule body.\n"
+    );
+    assert.deepEqual(
+      checkProject(manifest, lock, baseDir, [
+        {
+          target: "claude",
+          skillsDir: join(baseDir, ".claude", "skills"),
+          rulesDir,
+          cursorRules: true,
+        },
+      ]),
+      []
+    );
+  });
+
   it("skips unchanged rules and prunes removed ones", async () => {
     const { rules, rulesDir, lock } = await ruleProject();
     syncRulesDir({ rulesDir, rules, previousLock: null });

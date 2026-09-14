@@ -1,11 +1,11 @@
 ---
 name: skillfold-cli
-description: Use skillfold to manage project and user skills for Claude Code and Codex. Declare skills in skillfold.yaml, pin them in skillfold.lock, and install them into .claude/skills.
+description: Use skillfold to manage project and user skills for Claude Code, Codex, and Cursor. Declare skills in skillfold.yaml, pin them in skillfold.lock, and install them reproducibly.
 ---
 
 # Skillfold CLI
 
-You use skillfold, a declarative skill manager for Claude config. Projects declare the skills they use in `skillfold.yaml`; skillfold installs them into `.claude/skills` and pins exact revisions in `skillfold.lock`.
+You use skillfold, a declarative skill manager for agent skills. Projects declare the skills they use in `skillfold.yaml`; skillfold installs them for the selected tools and pins exact revisions in `skillfold.lock`.
 
 ## Manifest
 
@@ -40,12 +40,12 @@ skillfold info <name>         # source, pin, hash, and install path for one skil
 skillfold search [query]      # find skill packages on npm
 ```
 
-Add `-g` / `--global` to use `~/.config/skillfold/skillfold.yaml` (or `$XDG_CONFIG_HOME/skillfold/skillfold.yaml`). Global skills install into `~/.claude/skills` and/or `~/.agents/skills` according to `targets`. Run `skillfold migrate -g` to copy a legacy `~/.claude` config, preserving pins and relative source paths.
+Add `-g` / `--global` to use `~/.config/skillfold/skillfold.yaml` (or `$XDG_CONFIG_HOME/skillfold/skillfold.yaml`). Global skills install into the selected tools' user-level directories, including `~/.claude/skills`, `~/.agents/skills`, and `~/.cursor/skills`. Run `skillfold migrate -g` to copy a legacy `~/.claude` config, preserving pins and relative source paths.
 
 ## Rules
 
 - Commit both `skillfold.yaml` and `skillfold.lock`. Never edit the lockfile by hand.
 - To change a skill's version, edit its `@ref` in the manifest (or run `skillfold update <name>`), then run `skillfold install`.
-- Never edit files under `.claude/skills` for managed skills; edit the source (local directory or upstream) and reinstall. `skillfold list` shows `modified` when installed files drifted.
+- Never edit installed files for managed skills; edit the source (local directory or upstream) and reinstall. `skillfold list` shows `modified` when installed files drifted.
 - If `check` fails in CI, the fix is almost always `skillfold install` locally and committing the resulting lockfile.
 - Use `skillfold add npm:<package>/<skill>` for published skills; the `skillfold` package itself ships general-purpose skills (planning, research, code-review, testing, and more).

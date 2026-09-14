@@ -83,9 +83,10 @@ Skillfold manages two independent levels, mirroring how the tools themselves wor
 | Manifest + lockfile | `./skillfold.yaml`, `./skillfold.lock` | `~/.config/skillfold/skillfold.yaml`, `~/.config/skillfold/skillfold.lock` |
 | claude target | `.claude/skills`, `.claude/rules` | `~/.claude/skills`, `~/.claude/rules` |
 | codex target | `.agents/skills`, `AGENTS.md` | `~/.agents/skills`, `~/.codex/AGENTS.md` |
+| cursor target | `.cursor/skills`, `.cursor/rules/*.mdc` | `~/.cursor/skills` (user rules are UI-managed) |
 
 - **One manifest manages one level.** The project manifest is committed and shared with the team; the global manifest is personal config that travels with your dotfiles (`skillfold install -g` materializes it on any machine).
-- **Layering is the tool's job, not skillfold's.** Claude Code and Codex both read user-level and project-level skills and instructions together at runtime, so there is nothing for skillfold to merge - each level stays independently reproducible.
+- **Layering is the tool's job, not skillfold's.** The supported tools read user-level and project-level configuration together at runtime, so there is nothing for skillfold to merge - each level stays independently reproducible.
 - **Same-named skills at both levels show up twice** in the tool (or shadow each other). Project-mode `check` and `list` print a warning when a project skill name is also installed at the user level. Warnings never fail `check`.
 
 ### Migrate an existing global config
@@ -94,8 +95,9 @@ Global manifests and lockfiles live in `~/.config/skillfold/`, or
 `$XDG_CONFIG_HOME/skillfold/` when `XDG_CONFIG_HOME` is an absolute path.
 Relative or empty values are ignored. Agent install locations are independent
 of this directory: `~/.claude/skills`, `~/.claude/rules`, `~/.agents/skills`,
-and `~/.codex/AGENTS.md` (or `CODEX_HOME`). Explicit `skillsDir` and `rulesDir`
-remain relative to the manifest.
+`~/.codex/AGENTS.md` (or `CODEX_HOME`), and `~/.cursor/skills`. Cursor user
+rules are configured in the app and cannot be installed from a global
+manifest. Explicit `skillsDir` and `rulesDir` remain relative to the manifest.
 
 Existing `~/.claude/skillfold.yaml` configurations continue to work with a
 migration notice when there is no config in the new directory. The new location

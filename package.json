@@ -1,7 +1,7 @@
 {
   "name": "skillfold",
   "version": "2.6.0",
-  "description": "Declarative skill manager for Claude config. Declare skills in YAML, pin them in a lockfile, install them into .claude/skills.",
+  "description": "Declarative skill manager for Claude Code, Codex, and Cursor.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -22,6 +22,8 @@
   "keywords": [
     "claude",
     "claude-code",
+    "cursor",
+    "codex",
     "skills",
     "agent-skills",
     "skill-manager",

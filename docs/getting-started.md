@@ -1,6 +1,6 @@
 # Getting Started
 
-Skillfold manages the skills in your Claude config the way a package manager manages dependencies: a manifest declares them, a lockfile pins them, one command installs them.
+Skillfold manages agent skills the way a package manager manages dependencies: a manifest declares them, a lockfile pins them, one command installs them for Claude Code, Codex, or Cursor.
 
 ## Install
 

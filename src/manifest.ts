@@ -35,8 +35,8 @@ export const DEFAULT_SKILLS_DIR = ".claude/skills";
 export const DEFAULT_RULES_DIR = ".claude/rules";
 
 /** Tools skillfold can install for. */
-export type TargetName = "claude" | "codex";
-export const TARGET_NAMES: readonly TargetName[] = ["claude", "codex"];
+export type TargetName = "claude" | "codex" | "cursor";
+export const TARGET_NAMES: readonly TargetName[] = ["claude", "codex", "cursor"];
 
 export interface ComposeEntry {
   targets?: TargetName[];
@@ -94,10 +94,13 @@ export function parseTargets(value: unknown, label: string): TargetName[] {
   }
   const targets: TargetName[] = [];
   for (const item of value) {
-    if (item !== "claude" && item !== "codex") {
-      throw new ManifestError(`${label}: unknown target "${String(item)}" (expected claude, codex)`);
+    if (typeof item !== "string" || !(TARGET_NAMES as readonly string[]).includes(item)) {
+      throw new ManifestError(
+        `${label}: unknown target "${String(item)}" (expected ${TARGET_NAMES.join(", ")})`
+      );
     }
-    if (!targets.includes(item)) targets.push(item);
+    const target = item as TargetName;
+    if (!targets.includes(target)) targets.push(target);
   }
   return targets;
 }
