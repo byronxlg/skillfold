@@ -74,6 +74,13 @@ here - they belong in `CHANGELOG.md`.
 Every published post lands here. `ecosystem` lines name the story so the
 repeat check can match it.
 
+- [x] Claude Code can score whether a plugin helps. It doesn't ask which
+  copy you ran. (story: Claude Code 2.1.269, shipped September 11, 2026 per
+  the official changelog, added `claude plugin eval` - a scored, no-plugin-
+  baseline eval runner for plugins with six grader types, CI gating via
+  `--threshold` and `--trust-plugin`, and a versioned JSON report, documented
+  at code.claude.com/docs/en/plugin-evals) - 2026-09-14,
+  site/blog/posts/2026-09-14-1-claude-plugin-eval.md
 - [x] Claude Code will tell you which skills are dead weight. It won't tell
   you if they drifted. (story: Claude Code 2.1.261, shipped September 4,
   2026 per the official changelog, added `/skill-doctor` - a per-session
