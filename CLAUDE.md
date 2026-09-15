@@ -61,7 +61,7 @@ scripts/
 skills/blog-post/ - repo-specific skill driving the weekly blog automation
 docs/blog-todo.md - blog editorial state: news beats, fallback queue, rollouts, shipped log
 docs/         - markdown docs (getting started, manifest, CLI, publishing)
-skillfold.yaml         - this repo's own manifest (dogfood; installs from library/)
+skillfold.yaml         - this repo's own manifest (dogfood: blog-post skill and the conventions rule)
 skillfold.schema.json  - JSON Schema for manifest validation and IDE autocompletion
 action.yml             - GitHub Action wrapper for skillfold check
 ```
