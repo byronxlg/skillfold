@@ -74,6 +74,8 @@ here - they belong in `CHANGELOG.md`.
 Every published post lands here. `ecosystem` lines name the story so the
 repeat check can match it.
 
+- [x] One manifest can now install skills and rules for Cursor - 2026-09-15,
+  site/blog/posts/2026-09-15-1-cursor-target.md
 - [x] Claude Code can score whether a plugin helps. It doesn't ask which
   copy you ran. (story: Claude Code 2.1.269, shipped September 11, 2026 per
   the official changelog, added `claude plugin eval` - a scored, no-plugin-
