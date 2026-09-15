@@ -31,8 +31,8 @@ uses Cursor's named path for the Cursor target:
 
 | Scope | Skills | Rules |
 | --- | --- | --- |
-| Project | `.cursor/skills/<name>/` | `.cursor/rules/<name>.mdc` |
-| User | `~/.cursor/skills/<name>/` | Managed in Cursor's UI |
+| Project | `.cursor/skills/{name}/` | `.cursor/rules/{name}.mdc` |
+| User | `~/.cursor/skills/{name}/` | Managed in Cursor's UI |
 
 Project skills keep the standard directory shape. Supporting files such as
 scripts, references, and assets travel with `SKILL.md`, and composed skills
