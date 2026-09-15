@@ -1,25 +1,17 @@
-# Skills used while developing skillfold itself, installed from the
-# in-repo library. Run "skillfold install" (or npx tsx src/cli.ts install)
-# after cloning.
+# This repo's own manifest. Only the repo-specific blog skill and the
+# conventions rule are installed; the generic library skills were removed
+# 2026-09-15 (management knowledge audit: generic dev practice does not
+# belong in one project). Run "skillfold install" (or npx tsx src/cli.ts
+# install) after cloning.
 
 # Dogfood both supported tools: Claude Code (.claude/skills, .claude/rules)
 # and Codex (.agents/skills, a managed block in AGENTS.md).
 targets: [claude, codex]
 
 skills:
-  code-review: ./library/skills/code-review
-  code-writing: ./library/skills/code-writing
-  testing: ./library/skills/testing
-  github-workflow: ./library/skills/github-workflow
-
   # Repo-specific, not part of the published library: drives the weekly
   # blog automation in .github/workflows/blog-post.yml.
   blog-post: ./skills/blog-post
-
-compose:
-  reviewer:
-    description: Review code changes together with their tests.
-    use: [code-review, testing]
 
 rules:
   skillfold-conventions: ./rules/skillfold-conventions.md
