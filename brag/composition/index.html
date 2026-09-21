@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=1920, height=1080" />
+<title>Skillfold - brag</title>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+<script src="assets/audio-rms.js"></script>
+<style>
+  @font-face { font-family: "Plex Mono"; src: url(assets/fonts/plexmono-400.woff2) format("woff2"); font-weight: 400; font-style: normal; }
+  @font-face { font-family: "Plex Mono"; src: url(assets/fonts/plexmono-500.woff2) format("woff2"); font-weight: 500; font-style: normal; }
+  @font-face { font-family: "Plex Mono"; src: url(assets/fonts/plexmono-600.woff2) format("woff2"); font-weight: 600; font-style: normal; }
+
+  :root {
+    --bg: #0a0e14; --bg-2: #0d1219; --line: #1b232e; --line-2: #29323f;
+    --ink: #c9d3df; --dim: #828f9e; --faint: #57626f;
+    --accent: #4d8bf5; --green: #41b866; --amber: #d9a032;
+    --mono: "Plex Mono", ui-monospace, Menlo, monospace;
+  }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--mono); }
+  #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: var(--bg); }
+  .clip { position: absolute; inset: 0; box-sizing: border-box; }
+
+  /* untimed layers: need their own positioning */
+  #vignette {
+    position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 40%, rgba(77,139,245,0.10), rgba(10,14,20,0) 62%);
+    opacity: 0.6;
+  }
+  #grid {
+    position: absolute; inset: 0; pointer-events: none; opacity: 0.35;
+    background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 96px 96px;
+    mask-image: radial-gradient(ellipse at 50% 50%, #000 30%, transparent 75%);
+    -webkit-mask-image: radial-gradient(ellipse at 50% 50%, #000 30%, transparent 75%);
+  }
+
+  /* scene 1: hook */
+  #s1 { display: flex; align-items: center; justify-content: center; padding: 0 200px; }
+  #hook { margin: 0; font-size: 62px; font-weight: 500; line-height: 1.3; letter-spacing: -1px; max-width: 1400px; text-align: center; }
+  #hook .a { color: var(--accent); }
+
+  /* scenes 2-3: terminal */
+  #s2 { display: flex; align-items: center; justify-content: center; }
+  #term {
+    width: 1600px; height: 760px; background: var(--bg-2);
+    border: 1px solid var(--line-2); border-radius: 10px; overflow: hidden;
+    box-shadow: 0 0 0 0 rgba(77,139,245,0), 0 40px 120px rgba(0,0,0,0.5);
+    display: flex; flex-direction: column;
+  }
+  .term-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 30px; border-bottom: 1px solid var(--line); font-size: 21px; color: var(--dim); flex: 0 0 auto;
+  }
+  .term-bar .t { color: var(--dim); }
+  .term-bar .rec { color: var(--green); margin-right: 12px; }
+  .term-body { padding: 34px 44px; flex: 1 1 auto; }
+  .ln { font-size: 26px; line-height: 1.65; white-space: pre; margin: 0; color: var(--ink); opacity: 0; }
+  .c-p { color: var(--accent); }
+  .c-key { color: var(--accent); }
+  .c-cmt { color: var(--faint); }
+  .c-dim { color: var(--dim); }
+  .c-add { color: var(--green); }
+  .c-pin { color: var(--amber); }
+  #cmd2 .ch { opacity: 0; }
+  #caret { display: inline-block; width: 14px; height: 30px; background: var(--dim); vertical-align: -5px; margin-left: 4px; opacity: 0; }
+
+  /* scene 4: the point */
+  #s4 { display: flex; align-items: center; justify-content: center; }
+  #point { position: relative; margin: 0; font-size: 60px; font-weight: 600; line-height: 1.3; letter-spacing: -1.2px; max-width: 1300px; text-align: center; opacity: 0; }
+  #point .a { color: var(--accent); }
+
+  /* scene 5: outro */
+  #s5 { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px; }
+  #mark { font-size: 96px; font-weight: 600; letter-spacing: -3px; line-height: 1.1; margin: 0; opacity: 0; }
+  #mark .p { color: var(--accent); font-weight: 400; margin-right: 26px; }
+  #tag { font-size: 38px; font-weight: 500; color: var(--ink); margin: 0; opacity: 0; }
+  #tag .a { color: var(--accent); }
+  #cta { font-size: 30px; color: var(--dim); margin: 26px 0 0; opacity: 0; }
+  #cta .p { color: var(--accent); margin-right: 14px; }
+  #url { font-size: 24px; color: var(--dim); margin: 0; opacity: 0; letter-spacing: 1.5px; }
+</style>
+</head>
+<body>
+<div id="root" data-composition-id="skillfold-brag" data-start="0" data-width="1920" data-height="1080" data-duration="20" data-fps="30">
+  <div id="grid"></div>
+  <div id="vignette"></div>
+
+  <section id="s1" class="clip" data-start="0" data-duration="3.5" data-track-index="1">
+    <h1 id="hook">Your <span class="a">.claude/skills</span> directory is state with no source of truth.</h1>
+  </section>
+
+  <section id="s2" class="clip" data-start="3.5" data-duration="11" data-track-index="1">
+    <div id="term">
+      <div class="term-bar">
+        <span class="t"><span class="rec">&#9679;</span>skillfold - declare, pin, install</span>
+        <span>skillfold.yaml &middot; skillfold.lock &middot; .claude/skills</span>
+      </div>
+      <div class="term-body">
+<p class="ln" id="l1"><span class="c-p">~/project $</span> cat skillfold.yaml</p>
+<p class="ln" id="l2"><span class="c-cmt"># skillfold.yaml</span></p>
+<p class="ln" id="l3"><span class="c-key">skills</span>:</p>
+<p class="ln" id="l4">  <span class="c-key">commit-helper</span>: ./skills/commit-helper</p>
+<p class="ln" id="l5">  <span class="c-key">frontend-design</span>: github:anthropics/skills/skills/frontend-design</p>
+<p class="ln" id="l6">  <span class="c-key">planning</span>: npm:skillfold/planning</p>
+<p class="ln" id="l7"> </p>
+<p class="ln" id="cmd2"><span class="c-p">~/project $</span> <span id="typed"></span><span id="caret"></span></p>
+<p class="ln" id="o1">  <span class="c-add">+</span> commit-helper            <span class="c-dim">./skills/commit-helper</span></p>
+<p class="ln" id="o2">  <span class="c-add">+</span> frontend-design          <span class="c-dim">github:anthropics/skills/skills/frontend-design -&gt;</span> <span class="c-pin">8f3a9c1</span></p>
+<p class="ln" id="o3">  <span class="c-add">+</span> planning                 <span class="c-dim">npm:skillfold/planning -&gt;</span> <span class="c-pin">2.0.0</span></p>
+<p class="ln" id="o4"> </p>
+<p class="ln" id="o5">3 installed, 0 unchanged <span class="c-dim">-&gt;</span> .claude/skills</p>
+<p class="ln" id="o6">lockfile: skillfold.lock</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="s4" class="clip" data-start="14.5" data-duration="2.9" data-track-index="2">
+    <h2 id="point">Commit the lockfile. Every clone gets <span class="a">byte-identical</span> skills.</h2>
+  </section>
+
+  <section id="s5" class="clip" data-start="17.4" data-duration="2.6" data-track-index="1">
+    <h1 id="mark"><span class="p">&gt;_</span>skillfold</h1>
+    <p id="tag">Your skills, declared. Installed anywhere<span class="a">_</span></p>
+    <p id="cta"><span class="p">$</span>npm install -g skillfold</p>
+    <p id="url">byronxlg.github.io/skillfold</p>
+  </section>
+
+  <audio id="music" data-start="0" data-duration="20" data-track-index="10" data-volume="0.30" src="assets/music/bed.mp3"></audio>
+  <audio id="sfx-land" data-start="9.80" data-duration="0.2" data-track-index="11" data-volume="0.50" src="assets/sfx/impact/impactSoft_medium_001.ogg"></audio>
+  <audio id="sfx-mark" data-start="17.45" data-duration="0.15" data-track-index="12" data-volume="0.55" src="assets/sfx/interface/bong_001.ogg"></audio>
+  <!-- key ticks: every other character of the typed command, seeded file choice, one track each so none share an index -->
+  <audio id="k1" data-start="8.74" data-duration="0.25" data-track-index="20" data-volume="0.32" src="assets/sfx/keyboard/keypress-003.wav"></audio>
+  <audio id="k2" data-start="8.85" data-duration="0.25" data-track-index="21" data-volume="0.30" src="assets/sfx/keyboard/keypress-011.wav"></audio>
+  <audio id="k3" data-start="8.96" data-duration="0.25" data-track-index="22" data-volume="0.32" src="assets/sfx/keyboard/keypress-018.wav"></audio>
+  <audio id="k4" data-start="9.07" data-duration="0.25" data-track-index="23" data-volume="0.30" src="assets/sfx/keyboard/keypress-007.wav"></audio>
+  <audio id="k5" data-start="9.18" data-duration="0.25" data-track-index="24" data-volume="0.32" src="assets/sfx/keyboard/keypress-026.wav"></audio>
+  <audio id="k6" data-start="9.29" data-duration="0.25" data-track-index="25" data-volume="0.30" src="assets/sfx/keyboard/keypress-014.wav"></audio>
+  <audio id="k7" data-start="9.40" data-duration="0.25" data-track-index="26" data-volume="0.32" src="assets/sfx/keyboard/keypress-030.wav"></audio>
+  <audio id="k8" data-start="9.51" data-duration="0.25" data-track-index="27" data-volume="0.30" src="assets/sfx/keyboard/keypress-022.wav"></audio>
+  <audio id="k9" data-start="9.62" data-duration="0.25" data-track-index="28" data-volume="0.32" src="assets/sfx/keyboard/keypress-003.wav"></audio>
+</div>
+
+<script>
+  // Typed command: one span per character so the reveal is seekable.
+  (function () {
+    var host = document.getElementById("typed");
+    var text = "skillfold install";
+    for (var i = 0; i < text.length; i++) {
+      var s = document.createElement("span");
+      s.className = "ch";
+      s.textContent = text[i];
+      host.appendChild(s);
+    }
+  })();
+
+  document.fonts.ready.then(function () {
+    var tl = gsap.timeline({ paused: true });
+    var rise = { y: 0, opacity: 1, duration: 0.6, ease: "power2.out" };
+
+    // Scene 1: hook (0 - 3.5). Sentence: 11 words, settled from 0.8 to 3.1.
+    tl.fromTo("#hook", { y: 18, opacity: 0 }, rise, 0.2);
+    tl.to("#hook", { opacity: 0, duration: 0.35, ease: "power1.in" }, 3.1);
+
+    // Scene 2: the manifest (3.5 - 8.5). Terminal fades in, then lines on the beat grid.
+    tl.fromTo("#term", { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.7, ease: "power2.out" }, 3.55);
+    tl.to("#l1", { opacity: 1, duration: 0.2 }, 3.95);
+    // beat-grid: yaml lines at 4.39, 4.91, 5.34, 6.00, 6.56
+    tl.to("#l2", { opacity: 1, duration: 0.2 }, 4.39);
+    tl.to("#l3", { opacity: 1, duration: 0.2 }, 4.91);
+    tl.to("#l4", { opacity: 1, duration: 0.2 }, 5.34);
+    tl.to("#l5", { opacity: 1, duration: 0.2 }, 6.00);
+    tl.to("#l6", { opacity: 1, duration: 0.2 }, 6.56);
+    tl.to("#l7", { opacity: 1, duration: 0.1 }, 8.0);
+
+    // Scene 3: install (8.5 - 14.5). Prompt, typed command, rows on the beat grid.
+    tl.to("#cmd2", { opacity: 1, duration: 0.15 }, 8.45);
+    tl.to("#caret", { opacity: 1, duration: 0.05 }, 8.5);
+    // beat-locked: 8.74s, first character of the typed command
+    var chars = document.querySelectorAll("#cmd2 .ch");
+    for (var i = 0; i < chars.length; i++) {
+      tl.set(chars[i], { opacity: 1 }, 8.74 + i * 0.055);
+    }
+    tl.to("#caret", { opacity: 0, duration: 0.05 }, 9.78);
+    // beat-grid: rows at 9.83, 10.37, 10.93, 12.02, 12.55
+    tl.to("#o1", { opacity: 1, duration: 0.15 }, 9.83);
+    tl.to("#o2", { opacity: 1, duration: 0.15 }, 10.37);
+    tl.to("#o3", { opacity: 1, duration: 0.15 }, 10.93);
+    tl.to("#o4", { opacity: 1, duration: 0.1 }, 11.5);
+    tl.to("#o5", { opacity: 1, duration: 0.15 }, 12.02);
+    tl.to("#o6", { opacity: 1, duration: 0.15 }, 12.55);
+
+    // Scene 4: the point (14.5 - 17.4). Terminal fades out first; the sentence holds from 15.1.
+    tl.to("#term", { opacity: 0, duration: 0.35, ease: "power1.in" }, 14.1);
+    tl.fromTo("#point", { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, ease: "power2.out" }, 14.55);
+    tl.to("#point", { opacity: 0, duration: 0.3, ease: "power1.in" }, 17.05);
+
+    // Scene 5: outro (17.4 - 20). beat-locked: 17.47s, wordmark.
+    tl.fromTo("#mark", { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, ease: "power2.out" }, 17.47);
+    tl.fromTo("#tag", { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, 17.8);
+    tl.fromTo("#cta", { y: 12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }, 18.1);
+    tl.to("#url", { opacity: 1, duration: 0.5 }, 18.4);
+
+    // Audio-reactive: music RMS breathes the vignette and the terminal's border glow.
+    // Pre-extracted, sampled per frame; no runtime analysis.
+    var vig = document.getElementById("vignette");
+    var term = document.getElementById("term");
+    var fps = 30;
+    var frames = AUDIO_RMS.length;
+    function draw(rms) {
+      var e = Math.min(1, rms * 3.2);
+      vig.style.opacity = (0.45 + e * 0.45).toFixed(3);
+      term.style.boxShadow = "0 0 " + (20 + e * 70).toFixed(1) + "px rgba(77,139,245," + (0.05 + e * 0.16).toFixed(3) + "), 0 40px 120px rgba(0,0,0,0.5)";
+    }
+    for (var f = 0; f < frames; f++) {
+      tl.call((function (v) { return function () { draw(v); }; })(AUDIO_RMS[f]), [], f / fps);
+    }
+
+    window.__timelines["skillfold-brag"] = tl;
+    if (window.__hfForceTimelineRebind) window.__hfForceTimelineRebind();
+  });
+</script>
+</body>
+</html>
