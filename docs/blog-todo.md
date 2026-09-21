@@ -74,6 +74,14 @@ here - they belong in `CHANGELOG.md`.
 Every published post lands here. `ecosystem` lines name the story so the
 repeat check can match it.
 
+- [x] Claude Code now labels what a subagent tells you as subagent output
+  (story: Claude Code 2.1.277, shipped September 18, 2026 per the official
+  changelog, marked subagent results under an explicit "subagent output"
+  header so their text can't pass as user instructions, framed workflow
+  scripts' computed `agent()` prompts as script-authored on Bedrock/Vertex/
+  Foundry, and started stripping invisible Unicode tag/formatting
+  characters from prompts before sending) - 2026-09-21,
+  site/blog/posts/2026-09-21-1-claude-code-subagent-injection-hardening.md
 - [x] One manifest can now install skills and rules for Cursor - 2026-09-15,
   site/blog/posts/2026-09-15-1-cursor-target.md
 - [x] Claude Code can score whether a plugin helps. It doesn't ask which
