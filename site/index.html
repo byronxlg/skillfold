@@ -48,6 +48,14 @@
   .hero-meta .lock { color: var(--amber); }
   .hero-meta .hm { white-space: nowrap; }
 
+  /* ---- launch video ---- */
+  .brag { margin: 46px 0 0; }
+  .brag video {
+    display: block; width: 100%; aspect-ratio: 16 / 9; height: auto;
+    border: 1px solid var(--line-2); border-radius: 6px; background: var(--bg-2);
+  }
+  .brag .term-caption { margin-top: 12px; }
+
   /* ---- terminal windows ---- */
   .term-shell { margin: 46px 0 0; padding-bottom: 56px; }
   .term {
@@ -203,6 +211,11 @@
     <span class="hm">offline check <span class="d">/</span></span>
     <span class="hm">open source</span>
   </p>
+
+  <div class="brag">
+    <video src="assets/brag.mp4" poster="assets/brag.jpg" width="1920" height="1080" muted autoplay loop playsinline controls preload="metadata"></video>
+    <p class="term-caption">Skillfold in 20 seconds: declare, install, commit the lockfile.</p>
+  </div>
 
   <div class="term-shell">
     <div class="term">

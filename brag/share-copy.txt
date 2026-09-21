@@ -1,0 +1,1 @@
+Introducing Skillfold: declare your agent skills in one YAML file, pin them in a lockfile, install them anywhere. Built in TypeScript, one dependency.

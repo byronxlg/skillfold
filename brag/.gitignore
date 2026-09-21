@@ -1,0 +1,6 @@
+# hyperframes working files; the composition source and the final render are committed
+composition/node_modules/
+composition/renders/
+composition/.hyperframes/
+composition/**/*.png
+draft.mp4

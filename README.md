@@ -10,6 +10,10 @@
 
 [Website](https://byronxlg.github.io/skillfold/) &middot; [Blog](https://byronxlg.github.io/skillfold/blog/) &middot; [Getting Started](docs/getting-started.md) &middot; [Manifest](docs/manifest.md) &middot; [CLI](docs/cli.md)
 
+[![Skillfold in 20 seconds](https://byronxlg.github.io/skillfold/assets/brag.jpg)](https://byronxlg.github.io/skillfold/assets/brag.mp4)
+
+<sub>Skillfold in 20 seconds: declare, install, commit the lockfile. Click for the video.</sub>
+
 </div>
 
 Your `.claude/skills` directory is state with no source of truth. Skills get pasted in from blog posts, copied between machines, edited in place, and lost on the next laptop. Nobody knows which version of a skill a teammate is running, and "works on my machine" now applies to your agent.
