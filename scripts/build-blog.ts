@@ -21,7 +21,7 @@ const SITE = join(ROOT, "site");
 const POSTS_DIR = join(SITE, "blog", "posts");
 const BLOG_DIR = join(SITE, "blog");
 
-const SITE_URL = "https://byronxlg.github.io/skillfold/";
+const SITE_URL = "https://byronxlg.com/skillfold/";
 const BLOG_TITLE = "skillfold blog";
 const BLOG_DESC =
   "On agent configuration, skill distribution, and the supply chain underneath them: what is happening in the ecosystem and what it means in practice.";
@@ -234,7 +234,8 @@ function page(opts: {
 <meta property="og:url" content="${escapeHtml(opts.canonical)}" />
 <meta property="og:title" content="${t}" />
 <meta property="og:description" content="${d}" />
-<meta name="twitter:card" content="summary" />
+<meta property="og:image" content="${SITE_URL}assets/brag.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
 <link rel="icon" href="${FAVICON}" />
 <link rel="alternate" type="application/rss+xml" title="${escapeHtml(BLOG_TITLE)}" href="${opts.root}feed.xml" />
 <link rel="stylesheet" href="${opts.root}assets/base.css" />
