@@ -5,7 +5,7 @@ description: Write and publish a new blog post for the skillfold site (site/blog
 
 # Writing a blog post
 
-The blog lives at `https://byronxlg.github.io/skillfold/blog/`, deployed by
+The blog lives at `https://byronxlg.com/skillfold/blog/`, deployed by
 `.github/workflows/docs.yml` on merge to main.
 
 **You write exactly one file.** A post is a markdown file in
