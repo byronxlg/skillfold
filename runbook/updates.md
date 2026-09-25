@@ -18,7 +18,7 @@ repos at `@main`, so it is live the moment it merges, with no release step at al
 | Change to | Pipeline | Trigger | Lands in prod when | Evidence |
 | --- | --- | --- | --- | --- |
 | `src/**`, `library/**`, `skillfold.schema.json` (the package) | `publish.yml`: `npm ci`, typecheck, tests, build, `npm publish --provenance` | GitHub release published (`gh release create vX.Y.Z --generate-notes`) | the publish step finishes, usually under 5 min | `npm view skillfold version`; provenance badge on npmjs.com; the run log |
-| `site/**`, `scripts/build-blog.ts` | `docs.yml`: `npm run build:blog`, upload `site/`, `deploy-pages` | push to `main` on those paths; `workflow_dispatch` | Pages deployment finishes, 1 to 2 min | `docs.yml` run green; `curl -sI https://byronxlg.github.io/skillfold/` |
+| `site/**`, `scripts/build-blog.ts` | `docs.yml`: `npm run build:blog`, upload `site/`, `deploy-pages` | push to `main` on those paths; `workflow_dispatch` | Pages deployment finishes, 1 to 2 min | `docs.yml` run green; `curl -sI https://byronxlg.com/skillfold/` |
 | `site/blog/posts/*.md` written by the bot | `blog-post.yml` merges its own PR, then `gh workflow run docs.yml` | Monday cron | the dispatched `docs.yml` run finishes | new post at `/blog/`; `docs/blog-todo.md` shipped log |
 | `action.yml` | none | merge to `main` | immediately, for every repo using `byronxlg/skillfold@main` | consumer repos' next CI run |
 | `docs/*.md`, `README.md` | none | merge to `main` | on GitHub immediately; on npm only after the next release | n/a |
@@ -54,7 +54,7 @@ cd "$(mktemp -d)" && npx --yes "skillfold@$V" init && npx --yes "skillfold@$V" i
 ```
 
 Pass: all three commands exit 0 and the printed version matches the tag. For the site:
-`curl -s -o /dev/null -w '%{http_code}\n' https://byronxlg.github.io/skillfold/blog/` is 200
+`curl -s -o /dev/null -w '%{http_code}\n' https://byronxlg.com/skillfold/blog/` is 200
 and the newest post is listed.
 
 ## Rollback

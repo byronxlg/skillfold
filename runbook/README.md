@@ -13,7 +13,7 @@ skills and rules, `skillfold.lock` pins them, `skillfold install` puts them in p
 as the npm package `skillfold`, a docs site with a weekly blog, and a composite GitHub Action
 (`byronxlg/skillfold@main`) that other repos run in CI. Tier 3: there is nothing to keep alive.
 "Live" means `npm view skillfold version` matches the latest `v*` tag and
-https://byronxlg.github.io/skillfold/ answers 200. If both hold, the project is healthy.
+https://byronxlg.com/skillfold/ answers 200. If both hold, the project is healthy.
 
 ## Where it runs
 
@@ -28,7 +28,7 @@ publishing uses OIDC trusted publishing, so there is no npm token anywhere.
 | Indicator | Target | Window | Measured by |
 | --- | --- | --- | --- |
 | A published GitHub release is on npm within 1 h | every release | per release | `npm view skillfold version` equals `git describe --tags --abbrev=0`; `publish.yml` run green |
-| https://byronxlg.github.io/skillfold/ returns 200 | 99% of checks | 30 days | `curl -s -o /dev/null -w '%{http_code}' https://byronxlg.github.io/skillfold/` |
+| https://byronxlg.com/skillfold/ returns 200 | 99% of checks | 30 days | `curl -s -o /dev/null -w '%{http_code}' https://byronxlg.com/skillfold/` |
 | The weekly blog post ran within 2x its cadence (14 days) | every fortnight | rolling | newest `blog-post.yml` run under 14 days old and not `failure` |
 
 Recovery targets: RTO 14 days (the `restore` SLA in `projects.yaml`). RPO not applicable: the
