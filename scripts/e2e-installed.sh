@@ -121,7 +121,7 @@ echo '{"name":"app","version":"1.0.0","private":true}' > package.json
 npm install -D --silent skillfold@2.6.0 >/dev/null 2>&1
 expect_ok "init: runs" $SF init
 grep -q 'skillfold: npm:skillfold/skillfold-cli@installed' skillfold.yaml && ok "init: declares @installed" || bad "init: manifest"
-[ ! -e skills ] && ok "init: no local copy scaffolded" || bad "init: local copy exists"
+[ -f skills/hello-skillfold/SKILL.md ] && ok "init: example skill scaffolded" || bad "init: example skill missing"
 expect_ok "init: install" $SF install
 grep -q 'skillfold-cli@2.6.0' skillfold.lock && ok "init: pinned to the dependency 2.6.0" || bad "init: pin"
 
