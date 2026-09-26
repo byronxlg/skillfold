@@ -60,6 +60,12 @@ skillfold add npm:my-skills/tdd
 skillfold add npm:my-skills/tdd@1.0.0     # exact pin
 ```
 
+If the package is a CLI or library and the skill documents it, tell users to follow the installed version, so the skill always matches the code they run:
+
+```sh
+skillfold add npm:my-cli/my-cli@installed
+```
+
 Notes:
 
 - The `skillfold-skill` keyword makes the package discoverable via `skillfold search`.

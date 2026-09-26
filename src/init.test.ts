@@ -32,6 +32,15 @@ describe("initProject", () => {
     assert.match(body, /skillfold install/);
   });
 
+  it("declares the usage skill as following the installed package when asked", () => {
+    const dir = join(tmp.path, "follow");
+    const result = initProject(dir, { followInstalled: true });
+    const manifest = loadManifest(result.manifestPath);
+    assert.equal(manifest.skills["skillfold"], "npm:skillfold/skillfold-cli@installed");
+    assert.equal(manifest.skills["hello-skillfold"], "./skills/hello-skillfold");
+    assert.ok(existsSync(result.skillPath));
+  });
+
   it("refuses to overwrite an existing manifest", () => {
     const dir = join(tmp.path, "twice");
     initProject(dir);

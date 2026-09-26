@@ -35,11 +35,29 @@ Every source points at a directory containing a `SKILL.md` (plus any supporting 
 | Local | `./skills/my-skill` | Relative to the manifest. Never pinned; you are editing it. |
 | GitHub | `github:owner/repo[/path][@ref]` | `ref` is a tag, branch, or commit SHA. Omitted = default branch. |
 | GitHub URL | `https://github.com/owner/repo/tree/ref/path` | Pasteable from the browser; canonicalized to the shorthand. |
-| npm | `npm:package[/skill][@version]` | `version` is exact or a dist-tag. Omitted = latest. |
+| npm | `npm:package[/skill][@version]` | `version` is exact, a dist-tag, or `installed`. Omitted = latest. |
 
 The `@ref` always goes after the last `/`, so scoped npm packages work: `npm:@scope/pkg/skill@1.0.0`.
 
 For npm sources, the `skill` segment is looked up in the package's `agentskills` map first, then treated as a literal subpath. A bare `npm:package` expects `SKILL.md` at the package root. Packages already present in `node_modules` are used directly; otherwise the exact version is downloaded from the registry into the cache.
+
+### Following an installed package (`@installed`)
+
+When a CLI or library ships its own skill in its npm package, the skill documents that exact version. Pin it with `@installed` and it follows the version your project has installed, instead of a second version number that drifts every time Dependabot bumps the dependency:
+
+```yaml
+skills:
+  skillfold: npm:skillfold/skillfold-cli@installed
+  playwright-cli: npm:@playwright/cli/skills/playwright-cli@installed
+  hyperframes-cli: npm:hyperframes/dist/skills/hyperframes-cli@installed
+```
+
+- The installed version comes from the nearest `package-lock.json`, `npm-shrinkwrap.json`, or `pnpm-lock.yaml` (walking up to the repository root, so workspaces use the root lockfile), then from `node_modules` (which covers yarn and bun). A fresh clone resolves before `npm ci`.
+- The lockfile still pins the exact version and content hash, so installs stay reproducible; the committed package lockfile is the other half of the pin.
+- `install` re-pins a following skill whenever the dependency moved, up or down. No `update` needed.
+- `check` and `install --frozen` fail when the lockfile pins a different version than the one installed, so a dependency bump that forgot `skillfold install` fails CI.
+- In global mode (`-g`) there is no project, so `@installed` follows the globally installed package (`npm root -g`), and for `skillfold` itself falls back to the running CLI.
+- The package must be a dependency; otherwise resolution fails and asks you to install it or pin a version. `@installed` is npm-only.
 
 Private GitHub repos work with a `GITHUB_TOKEN` (or `GH_TOKEN`) environment variable.
 

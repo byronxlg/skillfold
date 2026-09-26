@@ -4,6 +4,7 @@ import { join, resolve as resolvePath } from "node:path";
 
 import { extractRulesBlock } from "./agentsmd.js";
 import { decodeCursorRule, nonExecutableScripts, ruleFile } from "./install.js";
+import { installedDrift, type InstalledLookup } from "./installed.js";
 import type { Lockfile, LockSkillEntry } from "./lock.js";
 import type { Manifest } from "./manifest.js";
 import { parseSource } from "./source.js";
@@ -23,8 +24,16 @@ import { ruleApplies, skillTargets, type TargetLayout } from "./targets.js";
  *   not installed nothing at <skillsDir>/<name>
  *   modified      installed files differ from the lock / source
  *   not locked    manifest entry has no lockfile pin yet
+ *   stale         an `@installed` source pinned to a version other than the
+ *                 one the project has installed
  */
-export type SkillStatus = "ok" | "not installed" | "modified" | "not locked" | "not selected";
+export type SkillStatus =
+  | "ok"
+  | "not installed"
+  | "modified"
+  | "not locked"
+  | "not selected"
+  | "stale";
 
 export interface SkillRow {
   name: string;
@@ -65,9 +74,10 @@ function shortPin(resolved: string | undefined): string | undefined {
 const SEVERITY: Record<SkillStatus, number> = {
   ok: 0,
   "not selected": 0,
-  "not locked": 1,
-  modified: 2,
-  "not installed": 3,
+  stale: 1,
+  "not locked": 2,
+  modified: 3,
+  "not installed": 4,
 };
 
 function worst(statuses: SkillStatus[]): SkillStatus {
@@ -155,16 +165,25 @@ export function skillRows(
   manifest: Manifest,
   lock: Lockfile | null,
   baseDir: string,
-  layouts: TargetLayout[]
+  layouts: TargetLayout[],
+  installed: InstalledLookup = {}
 ): SkillRow[] {
   const rows: SkillRow[] = [];
+  // Installed files can match the lock while the lock trails the dependency.
+  const followStatus = (status: SkillStatus, sourceString: string, entry: LockSkillEntry | undefined): SkillStatus =>
+    status === "ok" && entry?.source === sourceString &&
+    installedDrift("", sourceString, entry.resolved, baseDir, installed)
+      ? "stale"
+      : status;
 
   for (const [name, sourceString] of Object.entries(manifest.skills)) {
     const source = parseSource(sourceString);
     const entry = lock?.skills[name];
     const selectedLayouts = layouts.filter((layout) => skillTargets(manifest, name).includes(layout.target));
-    const status = worst(
-      selectedLayouts.map((layout) => skillStatus(name, sourceString, entry, baseDir, layout.skillsDir))
+    const status = followStatus(
+      worst(selectedLayouts.map((layout) => skillStatus(name, sourceString, entry, baseDir, layout.skillsDir))),
+      sourceString,
+      entry
     );
     rows.push({
       name,
@@ -201,10 +220,14 @@ export function skillRows(
   for (const [name, sourceString] of Object.entries(manifest.rules)) {
     const entry = lock?.rules[name];
     const selectedRules = perLayoutRules.filter((_, index) => ruleApplies(manifest, name, layouts[index].target));
-    const status = selectedRules.length ? worst(
-      selectedRules.map((installed) =>
-        ruleStatus(name, sourceString, entry, baseDir, installed.get(name))
-      )
+    const status = selectedRules.length ? followStatus(
+      worst(
+        selectedRules.map((ruleFiles) =>
+          ruleStatus(name, sourceString, entry, baseDir, ruleFiles.get(name))
+        )
+      ),
+      sourceString,
+      entry
     ) : "not selected";
     rows.push({
       name,

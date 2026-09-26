@@ -21,6 +21,7 @@ export {
   extractRef,
   formatSource,
   isCommitSha,
+  INSTALLED_REF,
   isFullSha,
   parseSource,
   type GitHubSource,
@@ -128,5 +129,11 @@ export {
   type NpmOptions,
   type NpmResolveResult,
 } from "./npm.js";
+export {
+  installedDrift,
+  installedVersion,
+  type InstalledLookup,
+  type InstalledVersion,
+} from "./installed.js";
 
 export { globalConfigDir, globalConfigRoot, migrateGlobalConfig } from "./config.js";

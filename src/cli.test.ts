@@ -467,10 +467,17 @@ it("runs shebang helpers after install and repairs modes on frozen reinstall", {
 
 async function withGlobalHome(run: (home: string) => Promise<void>): Promise<void> {
   const dir = newProject();
-  const saved = { HOME: process.env.HOME, XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME, CODEX_HOME: process.env.CODEX_HOME };
+  const saved = {
+    HOME: process.env.HOME,
+    XDG_CONFIG_HOME: process.env.XDG_CONFIG_HOME,
+    CODEX_HOME: process.env.CODEX_HOME,
+    npm_config_prefix: process.env.npm_config_prefix,
+  };
   process.env.HOME = dir;
   process.env.XDG_CONFIG_HOME = join(dir, "xdg");
   process.env.CODEX_HOME = join(dir, ".codex");
+  // Global @installed lookups ask npm; keep them off this machine's real globals.
+  process.env.npm_config_prefix = join(dir, "npm-global");
   try { await run(dir); }
   finally {
     for (const [key, value] of Object.entries(saved)) {
@@ -486,7 +493,13 @@ describe("agent-independent global config", () => {
       await main(["init", "-g"]);
       const root = join(home, "xdg/skillfold");
       assert.ok(existsSync(join(root, "skillfold.yaml")));
-      writeFile(root, "skillfold.yaml", "targets: [claude, codex, cursor]\nskills:\n  hello-skillfold: ./skills/hello-skillfold\n");
+      // init -g follows the CLI; with nothing installed globally that is the running CLI.
+      assert.match(readFileSync(join(root, "skillfold.yaml"), "utf8"), /skillfold: npm:skillfold\/skillfold-cli@installed/);
+      writeFile(
+        root,
+        "skillfold.yaml",
+        "targets: [claude, codex, cursor]\nskills:\n  skillfold: npm:skillfold/skillfold-cli@installed\n  hello-skillfold: ./skills/hello-skillfold\n"
+      );
       await main(["install", "-g"]);
       assert.ok(existsSync(join(home, ".claude/skills/hello-skillfold/SKILL.md")));
       assert.ok(existsSync(join(home, ".agents/skills/hello-skillfold/SKILL.md")));
@@ -603,5 +616,126 @@ rules:
       if (original === undefined) delete process.env.SKILLFOLD_HOST;
       else process.env.SKILLFOLD_HOST = original;
     }
+  });
+});
+
+/** A fake skillfold package at `version` under `root`, shipping the skillfold-cli skill. */
+function fakeSkillfold(root: string, version: string): void {
+  writeFile(
+    root,
+    "skillfold/package.json",
+    JSON.stringify({ name: "skillfold", version, agentskills: { "skillfold-cli": "./library/skills/skillfold-cli" } })
+  );
+  writeSkill(root, "skillfold/library/skills/skillfold-cli", "skillfold-cli", `# skillfold ${version}\n\nFlags for ${version}.`);
+}
+
+describe("@installed sources", () => {
+  it("follows a project dependency through init, install, bump, check, and re-pin", async () => {
+    const dir = newProject();
+    writeFile(dir, ".git/HEAD", "");
+    fakeSkillfold(join(dir, "node_modules"), "1.0.0");
+
+    await main(["init", "--dir", dir]);
+    assert.match(readFileSync(join(dir, "skillfold.yaml"), "utf8"), /skillfold: npm:skillfold\/skillfold-cli@installed/);
+    writeFile(
+      dir,
+      "skillfold.yaml",
+      "targets: [claude, codex, cursor]\nskills:\n  skillfold: npm:skillfold/skillfold-cli@installed\n"
+    );
+
+    await main(["install", "--dir", dir]);
+    assert.match(readFileSync(join(dir, "skillfold.lock"), "utf8"), /resolved: npm:skillfold\/skillfold-cli@1\.0\.0/);
+    for (const skills of [".claude/skills", ".agents/skills", ".cursor/skills"]) {
+      assert.match(readFileSync(join(dir, skills, "skillfold/SKILL.md"), "utf8"), /Flags for 1\.0\.0/);
+    }
+    await main(["check", "--dir", dir]);
+    assert.equal(process.exitCode, undefined);
+
+    // Dependabot bumps the dependency; nothing touches skillfold.lock.
+    fakeSkillfold(join(dir, "node_modules"), "1.1.0");
+    await main(["check", "--dir", dir]);
+    assert.equal(process.exitCode, 1);
+    assert.match(
+      errors.join("\n"),
+      /"skillfold" follows skillfold@installed: 1\.1\.0 is installed \(node_modules\/skillfold\) but the lockfile pins 1\.0\.0/
+    );
+    process.exitCode = undefined;
+    await main(["list", "--dir", dir]);
+    assert.match(logs.join("\n"), /skillfold\s+npm:skillfold\/skillfold-cli@installed\s+1\.0\.0\s+stale/);
+    await assert.rejects(main(["install", "--frozen", "--dir", dir]), /lockfile pins 1\.0\.0 but 1\.1\.0 is installed/);
+
+    await main(["install", "--dir", dir]);
+    assert.match(readFileSync(join(dir, "skillfold.lock"), "utf8"), /resolved: npm:skillfold\/skillfold-cli@1\.1\.0/);
+    for (const skills of [".claude/skills", ".agents/skills", ".cursor/skills"]) {
+      assert.match(readFileSync(join(dir, skills, "skillfold/SKILL.md"), "utf8"), /Flags for 1\.1\.0/);
+    }
+    errors = [];
+    await main(["check", "--dir", dir]);
+    assert.equal(process.exitCode, undefined);
+    await main(["install", "--frozen", "--dir", dir]);
+  });
+
+  it("adds an @installed source", async () => {
+    const dir = newProject();
+    writeFile(dir, ".git/HEAD", "");
+    fakeSkillfold(join(dir, "node_modules"), "1.0.0");
+    writeFile(dir, "skillfold.yaml", "skills: {}\n");
+    await main(["add", "npm:skillfold/skillfold-cli@installed", "--dir", dir]);
+    assert.match(readFileSync(join(dir, "skillfold.yaml"), "utf8"), /skillfold-cli: npm:skillfold\/skillfold-cli@installed/);
+    assert.match(readFileSync(join(dir, "skillfold.lock"), "utf8"), /@1\.0\.0/);
+  });
+
+  it("init declares the latest usage skill when skillfold is not installed", async () => {
+    const dir = newProject();
+    writeFile(dir, ".git/HEAD", "");
+    await main(["init", "--dir", dir]);
+    assert.match(readFileSync(join(dir, "skillfold.yaml"), "utf8"), /^ {2}skillfold: npm:skillfold\/skillfold-cli$/m);
+  });
+
+  it("global mode follows the global install, then the running CLI, and warns on a mismatch", async () => {
+    await withGlobalHome(async (home) => {
+      const globalModules = join(home, "npm-global", "lib", "node_modules");
+      fakeSkillfold(globalModules, "0.0.1");
+      await main(["init", "-g"]);
+      const root = join(home, "xdg/skillfold");
+      assert.match(readFileSync(join(root, "skillfold.yaml"), "utf8"), /npm:skillfold\/skillfold-cli@installed/);
+
+      await main(["install", "-g"]);
+      assert.match(readFileSync(join(root, "skillfold.lock"), "utf8"), /@0\.0\.1/);
+      assert.match(readFileSync(join(home, ".claude/skills/skillfold/SKILL.md"), "utf8"), /Flags for 0\.0\.1/);
+      assert.match(errors.join("\n"), /"skillfold" is pinned to skillfold 0\.0\.1 but this CLI is \d+\.\d+\.\d+ \(it follows the globally installed skillfold/);
+
+      // No global install: the running CLI is what the skill should describe.
+      rmSync(join(globalModules, "skillfold"), { recursive: true });
+      errors = [];
+      await main(["check", "-g"]);
+      assert.equal(process.exitCode, 1);
+      assert.match(errors.join("\n"), /follows skillfold@installed: \d+\.\d+\.\d+ is installed \(the running skillfold CLI\)/);
+      process.exitCode = undefined;
+      errors = [];
+      await main(["install", "-g"]);
+      assert.doesNotMatch(errors.join("\n"), /pinned to skillfold/);
+      assert.match(readFileSync(join(home, ".claude/skills/skillfold/SKILL.md"), "utf8"), /skillfold install/);
+      await main(["check", "-g"]);
+      assert.equal(process.exitCode, undefined);
+    });
+  });
+
+  it("global check suggests @installed for a fixed skillfold pin on another version", async () => {
+    await withGlobalHome(async (home) => {
+      const root = join(home, "xdg/skillfold");
+      writeFile(root, "skillfold.yaml", "skills:\n  skillfold-cli: npm:skillfold/skillfold-cli@0.0.1\n");
+      writeFile(
+        root,
+        "skillfold.lock",
+        "lockfileVersion: 1\nskills:\n  skillfold-cli:\n    source: npm:skillfold/skillfold-cli@0.0.1\n    resolved: npm:skillfold/skillfold-cli@0.0.1\n"
+      );
+      await main(["check", "-g"]);
+      process.exitCode = undefined;
+      assert.match(
+        errors.join("\n"),
+        /"skillfold-cli" is pinned to skillfold 0\.0\.1 but this CLI is \d+\.\d+\.\d+; declare it as npm:skillfold\/skillfold-cli@installed/
+      );
+    });
   });
 });

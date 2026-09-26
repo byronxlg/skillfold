@@ -45,6 +45,8 @@ export interface NpmOptions {
   /** Injectable for tests: download+extract a tarball into destDir. */
   packDownloader?: (spec: string, destDir: string) => void;
   registryUrl?: string;
+  /** A directory already known to hold the package (e.g. a global install). */
+  installedDir?: string;
 }
 
 interface PackageJson {
@@ -103,7 +105,7 @@ async function resolvePackageDir(
   const env = options.env ?? process.env;
 
   // 1. The locally installed package, when it satisfies the request.
-  const installedDir = findInstalledPackage(source.pkg, baseDir);
+  const installedDir = options.installedDir ?? findInstalledPackage(source.pkg, baseDir);
   if (installedDir) {
     const installedVersion = readPackageJson(installedDir)?.version;
     const wanted = pinnedVersion ?? source.version;

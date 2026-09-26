@@ -9,13 +9,20 @@ import {
 import { LockError, ResolveError } from "./errors.js";
 import type { Fetcher } from "./github.js";
 import { fetchGitHubFile, fetchGitHubSkill, resolveGitHubRef } from "./github.js";
+import {
+  installedVersion,
+  notInstalledMessage,
+  type InstalledLookup,
+} from "./installed.js";
 import { emptyLockfile, lockfileProblems, type Lockfile } from "./lock.js";
 import type { Manifest } from "./manifest.js";
 import { resolveNpmFile, resolveNpmSkill, type NpmOptions } from "./npm.js";
 import {
   defaultSkillName,
   formatSource,
+  INSTALLED_REF,
   parseSource,
+  type NpmSource,
   type Source,
 } from "./source.js";
 import {
@@ -54,6 +61,8 @@ export interface ResolveOptions {
   fetcher?: Fetcher;
   env?: NodeJS.ProcessEnv;
   npmOptions?: NpmOptions;
+  /** Where `@installed` npm sources look up the installed package version. */
+  installed?: InstalledLookup;
   onProgress?: (message: string) => void;
 }
 
@@ -109,6 +118,36 @@ function pinnedNpmVersion(resolved: string, name: string): string {
     throw new LockError(`lockfile entry for "${name}" has an invalid resolved pin: ${resolved}`);
   }
   return source.version;
+}
+
+/**
+ * The exact version an npm source resolves at. `@installed` sources follow
+ * the project's installed package every time (a dependency bump re-pins on
+ * the next install); others reuse the lockfile pin when there is one.
+ */
+function npmPinnedVersion(
+  name: string,
+  source: NpmSource,
+  reused: string | undefined,
+  options: ResolveOptions,
+  label: string
+): { version?: string; dir?: string } {
+  if (source.version !== INSTALLED_REF) {
+    return { version: reused ? pinnedNpmVersion(reused, name) : undefined };
+  }
+  const found = installedVersion(source.pkg, options.baseDir, options.installed);
+  if (!found) throw new ResolveError(name, notInstalledMessage(source.pkg, options.installed));
+  if (options.frozen && reused) {
+    const locked = pinnedNpmVersion(reused, name);
+    if (locked !== found.version) {
+      throw new LockError(
+        `--frozen: ${label} follows ${source.pkg}@${INSTALLED_REF}: the lockfile pins ` +
+          `${locked} but ${found.version} is installed (${found.from}). ` +
+          'Run "skillfold install" and commit the lockfile.'
+      );
+    }
+  }
+  return { version: found.version, dir: found.dir };
 }
 
 async function resolveOne(
@@ -173,11 +212,12 @@ async function resolveOne(
   const reused = frozen
     ? lockEntry!.resolved
     : shouldReusePin(name, sourceString, lock, update);
-  const pinnedVersion = reused ? pinnedNpmVersion(reused, name) : undefined;
-  const result = await resolveNpmSkill(source, name, baseDir, pinnedVersion, {
+  const pin = npmPinnedVersion(name, source, reused, options, `"${name}"`);
+  const result = await resolveNpmSkill(source, name, baseDir, pin.version, {
     fetcher,
     env,
     ...npmOptions,
+    ...(pin.dir ? { installedDir: pin.dir } : {}),
   });
   const skill = normalize(result.skill);
   const integrity = computeIntegrity(skill.files);
@@ -248,11 +288,12 @@ async function resolveRule(
     content = result.content;
     fetched = result.fetched;
   } else {
-    const pinnedVersion = reused ? pinnedNpmVersion(reused, name) : undefined;
-    const result = await resolveNpmFile(source, name, options.baseDir, pinnedVersion, {
+    const pin = npmPinnedVersion(name, source, reused, options, `rule "${name}"`);
+    const result = await resolveNpmFile(source, name, options.baseDir, pin.version, {
       fetcher,
       env,
       ...npmOptions,
+      ...(pin.dir ? { installedDir: pin.dir } : {}),
     });
     resolved = formatSource({ ...source, version: result.version });
     content = result.content;

@@ -8,6 +8,7 @@ import {
   type ComposeInput,
 } from "./compose.js";
 import { InstallError } from "./errors.js";
+import { installedDrift, type InstalledLookup } from "./installed.js";
 import { lockfileProblems, type Lockfile } from "./lock.js";
 import type { Manifest } from "./manifest.js";
 import { parseSource } from "./source.js";
@@ -431,15 +432,26 @@ function checkAgentsMdRules(
  *   - composed skills on disk match what the installed inputs would generate
  *   - rules match their source / lock hash, in the rules directory and in
  *     the AGENTS.md managed block, per layout
+ *   - `@installed` npm sources are pinned to the installed package version
  */
 export function checkProject(
   manifest: Manifest,
   lock: Lockfile | null,
   baseDir: string,
-  layouts: TargetLayout[]
+  layouts: TargetLayout[],
+  installed: InstalledLookup = {}
 ): string[] {
   const problems = lockfileProblems(manifest, lock);
   if (!lock) return problems;
+  for (const section of ["skills", "rules"] as const) {
+    for (const [name, sourceString] of Object.entries(manifest[section])) {
+      const entry = lock[section][name];
+      if (!entry || entry.source !== sourceString) continue;
+      const label = section === "skills" ? `"${name}"` : `rule "${name}"`;
+      const drift = installedDrift(label, sourceString, entry.resolved, baseDir, installed);
+      if (drift) problems.push(drift);
+    }
+  }
   for (const layout of layouts) {
     const label = layouts.length > 1 ? `[${layout.target}] ` : "";
     const selected = manifestForTarget(manifest, layout.target);

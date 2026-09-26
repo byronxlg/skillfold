@@ -49,6 +49,25 @@ describe("parseManifest", () => {
     assert.equal(manifest.skills.a, "github:o/r/a@v2");
   });
 
+  it("accepts version: installed for npm sources", () => {
+    const manifest = parseManifest(
+      ["skills:", "  a:", "    source: npm:tool/a", "    version: installed"].join("\n"),
+      "test.yaml"
+    );
+    assert.equal(manifest.skills.a, "npm:tool/a@installed");
+  });
+
+  it("rejects version: installed for GitHub sources", () => {
+    assert.throws(
+      () =>
+        parseManifest(
+          ["skills:", "  a:", "    source: github:o/r/a", "    version: installed"].join("\n"),
+          "test.yaml"
+        ),
+      /only supported for npm/
+    );
+  });
+
   it("accepts an empty manifest", () => {
     const manifest = parseManifest("", "test.yaml");
     assert.deepEqual(manifest.skills, {});

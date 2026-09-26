@@ -17,7 +17,7 @@
         "oneOf": [
           {
             "type": "string",
-            "description": "Source string: a local path (./skills/my-skill), github:owner/repo/path@ref, or npm:package/skill-name@version.",
+            "description": "Source string: a local path (./skills/my-skill), github:owner/repo/path@ref, or npm:package/skill-name@version (@installed follows the installed package version).",
             "minLength": 1
           },
           {
@@ -37,7 +37,7 @@
                   "string",
                   "number"
                 ],
-                "description": "Version pin: a git tag, branch, or commit SHA for GitHub sources; an exact version or dist-tag for npm sources."
+                "description": "Version pin: a git tag, branch, or commit SHA for GitHub sources; an exact version, dist-tag, or \"installed\" (the version the project has installed) for npm sources."
               },
               "targets": {
                 "type": "array",

@@ -406,3 +406,146 @@ describe("rules resolution", () => {
     );
   });
 });
+
+describe("@installed npm sources", () => {
+  /** A fake "tool" package at `version` in <root>/node_modules, shipping a skill and a rule. */
+  function installTool(root: string, version: string): void {
+    writeFile(
+      root,
+      "node_modules/tool/package.json",
+      JSON.stringify({ name: "tool", version, agentskills: { "tool-cli": "./skills/tool-cli" } })
+    );
+    writeSkill(root, "node_modules/tool/skills/tool-cli", "tool-cli", `# tool ${version}\n\nFlags for ${version}.`);
+    writeFile(root, "node_modules/tool/rules/style.md", `# style for ${version}\n`);
+  }
+
+  /** A project directory marked as a repository root so lookups stay inside it. */
+  function repoDir(name: string): string {
+    const baseDir = join(tmp.path, name);
+    writeFile(baseDir, ".git/HEAD", "");
+    return baseDir;
+  }
+
+  function toolProject(name: string, version: string): { baseDir: string; env: NodeJS.ProcessEnv } {
+    const baseDir = repoDir(name);
+    installTool(baseDir, version);
+    return { baseDir, env: { SKILLFOLD_CACHE: join(baseDir, ".cache") } };
+  }
+
+  const FOLLOW = "skills:\n  tool-cli: npm:tool/tool-cli@installed";
+
+  it("pins the installed version and keeps the source string", async () => {
+    const { baseDir, env } = toolProject("inst1", "1.0.0");
+    const { resolved, lock } = await resolveManifest(parseManifest(FOLLOW, "t.yaml"), { baseDir, env });
+    assert.equal(lock.skills["tool-cli"].source, "npm:tool/tool-cli@installed");
+    assert.equal(lock.skills["tool-cli"].resolved, "npm:tool/tool-cli@1.0.0");
+    assert.equal(resolved[0].fetched, false);
+    assert.match(resolved[0].skill.body, /Flags for 1\.0\.0/);
+  });
+
+  it("re-pins on install when the dependency moves, without an update", async () => {
+    const { baseDir, env } = toolProject("inst2", "1.0.0");
+    const manifest = parseManifest(FOLLOW, "t.yaml");
+    const first = await resolveManifest(manifest, { baseDir, env });
+    installTool(baseDir, "1.1.0");
+    const second = await resolveManifest(manifest, { baseDir, env, lock: first.lock });
+    assert.equal(second.lock.skills["tool-cli"].resolved, "npm:tool/tool-cli@1.1.0");
+    assert.notEqual(second.lock.skills["tool-cli"].integrity, first.lock.skills["tool-cli"].integrity);
+    assert.match(second.resolved[0].skill.body, /Flags for 1\.1\.0/);
+  });
+
+  it("frozen fails when the lockfile trails the installed package", async () => {
+    const { baseDir, env } = toolProject("inst3", "1.0.0");
+    const manifest = parseManifest(FOLLOW, "t.yaml");
+    const { lock } = await resolveManifest(manifest, { baseDir, env });
+    installTool(baseDir, "2.0.0");
+    await assert.rejects(
+      resolveManifest(manifest, { baseDir, env, lock, frozen: true }),
+      (err: unknown) =>
+        err instanceof LockError &&
+        /"tool-cli" follows tool@installed: the lockfile pins 1\.0\.0 but 2\.0\.0 is installed/.test(err.message)
+    );
+  });
+
+  it("frozen passes when in step", async () => {
+    const { baseDir, env } = toolProject("inst4", "1.0.0");
+    const manifest = parseManifest(FOLLOW, "t.yaml");
+    const { lock } = await resolveManifest(manifest, { baseDir, env });
+    const again = await resolveManifest(manifest, { baseDir, env, lock, frozen: true });
+    assert.equal(again.lock.skills["tool-cli"].resolved, "npm:tool/tool-cli@1.0.0");
+  });
+
+  it("downloads the lockfile's version when node_modules is stale", async () => {
+    const { baseDir, env } = toolProject("inst5", "1.0.0");
+    writeFile(
+      baseDir,
+      "package-lock.json",
+      JSON.stringify({ lockfileVersion: 3, packages: { "": {}, "node_modules/tool": { version: "1.2.0" } } })
+    );
+    const specs: string[] = [];
+    const packDownloader = (spec: string, destDir: string) => {
+      specs.push(spec);
+      writeFile(
+        destDir,
+        "package.json",
+        JSON.stringify({ name: "tool", version: "1.2.0", agentskills: { "tool-cli": "./skills/tool-cli" } })
+      );
+      writeSkill(destDir, "skills/tool-cli", "tool-cli", "# tool 1.2.0\n\nFlags for 1.2.0.");
+    };
+    const { resolved, lock } = await resolveManifest(parseManifest(FOLLOW, "t.yaml"), {
+      baseDir,
+      env,
+      npmOptions: { packDownloader },
+    });
+    assert.deepEqual(specs, ["tool@1.2.0"]);
+    assert.equal(lock.skills["tool-cli"].resolved, "npm:tool/tool-cli@1.2.0");
+    assert.match(resolved[0].skill.body, /Flags for 1\.2\.0/);
+  });
+
+  it("errors clearly when the package is not installed", async () => {
+    const baseDir = repoDir("inst6");
+    await assert.rejects(
+      resolveManifest(parseManifest(FOLLOW, "t.yaml"), { baseDir, env: {} }),
+      /tool@installed needs tool as a dependency of this project/
+    );
+  });
+
+  it("follows the installed package for rules", async () => {
+    const { baseDir, env } = toolProject("inst7", "1.0.0");
+    const manifest = parseManifest("rules:\n  style: npm:tool/rules/style.md@installed", "t.yaml");
+    const first = await resolveManifest(manifest, { baseDir, env });
+    assert.equal(first.lock.rules.style.resolved, "npm:tool/rules/style.md@1.0.0");
+    installTool(baseDir, "1.3.0");
+    await assert.rejects(
+      resolveManifest(manifest, { baseDir, env, lock: first.lock, frozen: true }),
+      /rule "style" follows tool@installed/
+    );
+    const second = await resolveManifest(manifest, { baseDir, env, lock: first.lock });
+    assert.equal(second.lock.rules.style.resolved, "npm:tool/rules/style.md@1.3.0");
+    assert.equal(second.rules[0].content.toString(), "# style for 1.3.0\n");
+  });
+
+  it("reads a global install from its directory, offline", async () => {
+    const globalDir = join(tmp.path, "inst8-global");
+    installTool(globalDir, "3.0.0");
+    const baseDir = repoDir("inst8");
+    const { lock } = await resolveManifest(parseManifest(FOLLOW, "t.yaml"), {
+      baseDir,
+      env: { SKILLFOLD_CACHE: join(baseDir, ".cache") },
+      installed: { global: true, globalRoot: () => join(globalDir, "node_modules") },
+      npmOptions: {
+        packDownloader: () => {
+          throw new Error("must not download");
+        },
+      },
+    });
+    assert.equal(lock.skills["tool-cli"].resolved, "npm:tool/tool-cli@3.0.0");
+  });
+
+  it("resolveSingle resolves an @installed source for add", async () => {
+    const { baseDir, env } = toolProject("inst9", "1.0.0");
+    const single = await resolveSingle("npm:tool/tool-cli@installed", baseDir, { env });
+    assert.equal(single.source, "npm:tool/tool-cli@installed");
+    assert.equal(single.resolved, "npm:tool/tool-cli@1.0.0");
+  });
+});
