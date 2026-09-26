@@ -11,7 +11,7 @@ skillfold <command> [options]
 Scaffold a starter `skillfold.yaml` and an example skill at `skills/hello-skillfold/`. Refuses to overwrite an existing manifest.
 
 It then prints the active install targets with the directories they write to,
-how to change them, and the commands to run next:
+how to change them, and the immediate next commands:
 
 ```console
 $ skillfold init
@@ -24,22 +24,19 @@ targets: claude
   set "targets: [claude, codex, cursor]" in skillfold.yaml to change this
 
 next
-  skillfold install                              install every declared skill, write skillfold.lock
-  skillfold list                                 show declared skills and their status
-  skillfold check                                verify manifest, lockfile, and installed skills agree
-  skillfold update                               re-resolve pinned refs to their latest revision
+  skillfold install                     install every declared skill, write skillfold.lock
+  skillfold add npm:skillfold/planning  add a skill from the skillfold library
+  skillfold search <query>              find more published skills on npm
 
-add skills
-  skillfold search <query>                       find published skills on npm
-  skillfold add npm:skillfold/planning           break work into a plan before coding
-  skillfold add npm:skillfold/code-review        review a diff before it ships
-  skillfold add npm:skillfold/testing            write and run tests
-  skillfold add npm:skillfold/github-workflow    branches, commits, and pull requests
-  skillfold add github:owner/repo/path/to/skill  any skill directory in a GitHub repo
+skillfold.yaml lists every command, source format, and starter skill in its header.
 ```
 
 With `-g` the same listing names the user-level directories (`~/.claude/skills`)
 and every suggested command carries `-g`.
+
+The scaffolded manifest is the durable copy of that reference: its header
+comments list every command, the three source formats, the install targets with
+the directories each one uses, and a few library skills worth adding.
 
 ### `skillfold add <source> [--name <name>]`
 
