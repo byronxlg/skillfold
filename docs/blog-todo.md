@@ -74,6 +74,10 @@ here - they belong in `CHANGELOG.md`.
 Every published post lands here. `ecosystem` lines name the story so the
 repeat check can match it.
 
+- [x] A CLI's skill can now follow the version of the CLI you installed
+  (rollout: the `@installed` npm ref, #587, merged 2026-09-26 on `main`,
+  not yet in an npm release; latest release 2.7.0) - 2026-09-26,
+  site/blog/posts/2026-09-26-1-installed-skills.md
 - [x] Claude Code now labels what a subagent tells you as subagent output
   (story: Claude Code 2.1.277, shipped September 18, 2026 per the official
   changelog, marked subagent results under an explicit "subagent output"
