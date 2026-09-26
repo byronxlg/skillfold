@@ -8,7 +8,12 @@ skillfold <command> [options]
 
 ### `skillfold init`
 
-Scaffold a starter `skillfold.yaml` and, at `skills/skillfold/`, a skill teaching an agent how to drive this CLI, so the agent in the project can manage the manifest for you. Refuses to overwrite an existing manifest.
+Scaffold a starter `skillfold.yaml` and an example skill at `skills/hello-skillfold/`. Refuses to overwrite an existing manifest.
+
+The manifest declares two skills: `skillfold`, pulled from
+`npm:skillfold/skillfold-cli` so the agent in the project knows how to drive
+this CLI, and the local `hello-skillfold` example. The first `install`
+therefore needs the registry; drop the `skillfold` line to stay offline.
 
 It then prints the active install targets with the directories they write to,
 how to change them, and the immediate next commands:
@@ -16,12 +21,12 @@ how to change them, and the immediate next commands:
 ```console
 $ skillfold init
 created skillfold.yaml
-created skills/skillfold/SKILL.md
+created skills/hello-skillfold/SKILL.md
 
 targets: claude
   skills -> .claude/skills
   rules  -> .claude/rules
-  set "targets: [claude, codex, cursor]" in skillfold.yaml to change this
+  edit the "targets:" line in skillfold.yaml to add codex or cursor
 
 next
   skillfold install                     install every declared skill, write skillfold.lock
@@ -35,8 +40,13 @@ With `-g` the same listing names the user-level directories (`~/.claude/skills`)
 and every suggested command carries `-g`.
 
 The scaffolded manifest is the durable copy of that reference: its header
-comments list every command, the three source formats, the install targets with
-the directories each one uses, and a few library skills worth adding.
+comments list every command, the three source formats, and a few library skills
+worth adding. `targets` is written out explicitly rather than left to the
+default, so the agents in play are visible in the file:
+
+```yaml
+targets: [claude]  # codex, cursor
+```
 
 ### `skillfold add <source> [--name <name>]`
 

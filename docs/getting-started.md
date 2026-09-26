@@ -20,8 +20,10 @@ skillfold init
 
 This creates:
 
-- `skillfold.yaml` - the manifest, with one skill declared
-- `skills/skillfold/SKILL.md` - a skill that teaches an agent how to use this CLI, so it can edit the manifest and run installs for you. Remove it from the manifest if you do not want it.
+- `skillfold.yaml` - the manifest, declaring two skills: `skillfold`
+  (`npm:skillfold/skillfold-cli`, which teaches an agent to use this CLI so it
+  can manage the manifest for you) and the local `hello-skillfold` example
+- `skills/hello-skillfold/SKILL.md` - an example skill's source, yours to edit, rename, or drop
 
 The manifest header comments list every skillfold command, the three source
 formats, and the install targets, so the reference stays in the file rather than
@@ -32,12 +34,12 @@ and where each one writes:
 targets: claude
   skills -> .claude/skills
   rules  -> .claude/rules
-  set "targets: [claude, codex, cursor]" in skillfold.yaml to change this
+  edit the "targets:" line in skillfold.yaml to add codex or cursor
 ```
 
-Claude Code is the default. Add `targets: [claude, codex, cursor]` to
-`skillfold.yaml` (the scaffolded file has it commented out) to install for Codex
-and Cursor too, then run `skillfold install` again.
+Claude Code is the default, written out in the manifest as
+`targets: [claude]  # codex, cursor`. Add `codex` or `cursor` to that list and
+run `skillfold install` again to install for them too.
 
 ## 2. Install
 
@@ -49,9 +51,10 @@ Every declared skill is materialized into `.claude/skills/`, and `skillfold.lock
 
 ```console
 $ skillfold install
-  + skillfold                ./skills/skillfold
+  + skillfold                npm:skillfold/skillfold-cli -> 2.6.0
+  + hello-skillfold          ./skills/hello-skillfold
 
-1 installed, 0 unchanged -> .claude/skills
+2 installed, 0 unchanged -> .claude/skills
 lockfile: skillfold.lock
 ```
 
