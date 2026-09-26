@@ -12,24 +12,24 @@ const tmp = makeTmpDir();
 after(() => tmp.cleanup());
 
 describe("initProject", () => {
-  it("scaffolds a manifest and the skillfold skill that validate", () => {
+  it("scaffolds a manifest and example skill that validate", () => {
     const dir = join(tmp.path, "fresh");
     const result = initProject(dir);
     assert.ok(existsSync(result.manifestPath));
     assert.ok(existsSync(result.skillPath));
     const manifest = loadManifest(result.manifestPath);
-    assert.deepEqual(Object.keys(manifest.skills), ["skillfold"]);
-    assert.equal(result.skillPath, join(dir, "skills", "skillfold", "SKILL.md"));
+    assert.deepEqual(Object.keys(manifest.skills), ["skillfold", "hello-skillfold"]);
+    assert.equal(manifest.skills["skillfold"], "npm:skillfold/skillfold-cli");
+    assert.deepEqual(manifest.targets, ["claude"]);
+    assert.equal(result.skillPath, join(dir, "skills", "hello-skillfold", "SKILL.md"));
   });
 
-  it("scaffolds the library CLI skill under the skillfold name", () => {
-    const dir = join(tmp.path, "cli-skill");
+  it("scaffolds the example skill under the hello-skillfold name", () => {
+    const dir = join(tmp.path, "example-skill");
     const result = initProject(dir);
     const body = readFileSync(result.skillPath, "utf-8");
-    assert.match(body, /^name: skillfold$/m);
-    assert.doesNotMatch(body, /skillfold-cli/);
+    assert.match(body, /^name: hello-skillfold$/m);
     assert.match(body, /skillfold install/);
-    assert.match(body, /skillfold\.lock/);
   });
 
   it("refuses to overwrite an existing manifest", () => {

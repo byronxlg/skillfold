@@ -455,7 +455,7 @@ function renderTargets(layouts: TargetLayout[], root: string): string {
     }
   }
   lines.push(
-    `  set "targets: [claude, codex, cursor]" in ${MANIFEST_FILENAME} to change this`
+    `  edit the "targets:" line in ${MANIFEST_FILENAME} to add codex or cursor`
   );
   return lines.join("\n");
 }

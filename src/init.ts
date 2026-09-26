@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { ManifestError } from "./errors.js";
@@ -19,15 +19,6 @@ const STARTER_MANIFEST = `# skillfold.yaml - declare the skills this project use
 #   skillfold update [name...]    re-resolve pinned refs to their latest revision
 #   skillfold search <query>      find published skills on npm
 #
-# Install targets - the agents these skills are installed for. Claude Code only
-# when unset. Uncomment and edit the targets line below to change it:
-#
-#   claude  .claude/skills, .claude/rules
-#   codex   .agents/skills, a managed rules block in AGENTS.md
-#   cursor  .cursor/skills, .cursor/rules
-#
-# targets: [claude, codex, cursor]
-#
 # Sources:
 #   ./skills/my-skill                          local directory
 #   github:owner/repo/path/to/skill@v1.2.0     GitHub repo (tag, branch, or commit)
@@ -39,10 +30,23 @@ const STARTER_MANIFEST = `# skillfold.yaml - declare the skills this project use
 #   skillfold add npm:skillfold/testing            write and run tests
 #   skillfold add npm:skillfold/github-workflow    branches, commits, and pull requests
 
+# Install targets - the agents these skills are installed for:
+#
+#   claude  .claude/skills, .claude/rules
+#   codex   .agents/skills, a managed rules block in AGENTS.md
+#   cursor  .cursor/skills, .cursor/rules
+
+targets: [claude]  # codex, cursor
+
 skills:
-  # How to drive the skillfold CLI, installed for your agent so it can manage
-  # this file for you. Remove it once you would rather read the docs yourself.
-  skillfold: ./skills/skillfold
+  # How to drive this CLI, pulled from the skillfold package so your agent can
+  # manage this file for you. "skillfold update skillfold" moves it forward.
+  # Straight from the repo instead:
+  #   github:byronxlg/skillfold/library/skills/skillfold-cli
+  skillfold: npm:skillfold/skillfold-cli
+
+  # An example local skill. Edit it, rename it, or drop this line.
+  hello-skillfold: ./skills/hello-skillfold
 
 # Composed skills concatenate other skills into one:
 #
@@ -57,47 +61,30 @@ skills:
 #   style: ./rules/style.md
 `;
 
-/** Name the scaffolded skill is declared and installed under. */
-const STARTER_SKILL_NAME = "skillfold";
+/** Name and directory of the example skill scaffolded alongside the manifest. */
+const STARTER_SKILL_NAME = "hello-skillfold";
 
-/**
- * The scaffolded skill teaches an agent to drive this CLI, so it is the
- * library's skillfold-cli skill renamed. Reading the shipped copy keeps the
- * two from drifting; the fallback covers an install missing library/.
- */
-const FALLBACK_SKILL = `---
+const STARTER_SKILL = `---
 name: ${STARTER_SKILL_NAME}
-description: Use the skillfold CLI to manage this project's agent skills. Declare them in skillfold.yaml, install them, and commit skillfold.lock.
+description: Example skill scaffolded by skillfold init. Replace it with your own.
 ---
 
-# Skillfold
+# Hello from skillfold
 
-Skills for this project are declared in \`skillfold.yaml\` and pinned in
-\`skillfold.lock\`. Add one with \`skillfold add <source>\`, install everything
-with \`skillfold install\`, and commit both files. Never edit installed skills
-under the agent directories; edit the source and reinstall.
+This skill was created by \`skillfold init\`. Edit it, rename it, or remove it
+from skillfold.yaml. After any change, run:
 
-Full reference: https://byronxlg.com/skillfold/
+\`\`\`sh
+skillfold install
+\`\`\`
 `;
-
-function starterSkill(): string {
-  try {
-    const library = readFileSync(
-      new URL("../library/skills/skillfold-cli/SKILL.md", import.meta.url),
-      "utf-8"
-    );
-    return library.replace(/^name: .*$/m, `name: ${STARTER_SKILL_NAME}`);
-  } catch {
-    return FALLBACK_SKILL;
-  }
-}
 
 export interface InitResult {
   manifestPath: string;
   skillPath: string;
 }
 
-/** Scaffold a starter manifest and the skillfold usage skill in `dir`. */
+/** Scaffold a starter manifest and example skill in `dir`. */
 export function initProject(dir: string): InitResult {
   const manifestPath = join(dir, MANIFEST_FILENAME);
   if (existsSync(manifestPath)) {
@@ -107,7 +94,7 @@ export function initProject(dir: string): InitResult {
   mkdirSync(skillDir, { recursive: true });
   const skillPath = join(skillDir, "SKILL.md");
   if (!existsSync(skillPath)) {
-    writeFileSync(skillPath, starterSkill());
+    writeFileSync(skillPath, STARTER_SKILL);
   }
   writeFileSync(manifestPath, STARTER_MANIFEST);
   return { manifestPath, skillPath };
