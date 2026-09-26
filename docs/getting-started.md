@@ -20,7 +20,7 @@ skillfold init
 
 This creates:
 
-- `skillfold.yaml` - the manifest, declaring two skills: `skillfold`
+- `skillfold.yaml` - the manifest, declaring two skills: `skillfold-cli`
   (`npm:skillfold/skillfold-cli`, which teaches an agent to use this CLI so it
   can manage the manifest for you) and the local `hello-skillfold` example.
   When skillfold is already a dependency of the project, the first is declared
@@ -54,7 +54,7 @@ Every declared skill is materialized into `.claude/skills/`, and `skillfold.lock
 
 ```console
 $ skillfold install
-  + skillfold                npm:skillfold/skillfold-cli -> 2.7.0
+  + skillfold-cli            npm:skillfold/skillfold-cli -> 2.7.0
   + hello-skillfold          ./skills/hello-skillfold
 
 2 installed, 0 unchanged -> .claude/skills

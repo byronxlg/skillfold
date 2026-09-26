@@ -18,8 +18,8 @@ describe("initProject", () => {
     assert.ok(existsSync(result.manifestPath));
     assert.ok(existsSync(result.skillPath));
     const manifest = loadManifest(result.manifestPath);
-    assert.deepEqual(Object.keys(manifest.skills), ["skillfold", "hello-skillfold"]);
-    assert.equal(manifest.skills["skillfold"], "npm:skillfold/skillfold-cli");
+    assert.deepEqual(Object.keys(manifest.skills), ["skillfold-cli", "hello-skillfold"]);
+    assert.equal(manifest.skills["skillfold-cli"], "npm:skillfold/skillfold-cli");
     assert.deepEqual(manifest.targets, ["claude"]);
     assert.equal(result.skillPath, join(dir, "skills", "hello-skillfold", "SKILL.md"));
   });
@@ -36,7 +36,7 @@ describe("initProject", () => {
     const dir = join(tmp.path, "follow");
     const result = initProject(dir, { followInstalled: true });
     const manifest = loadManifest(result.manifestPath);
-    assert.equal(manifest.skills["skillfold"], "npm:skillfold/skillfold-cli@installed");
+    assert.equal(manifest.skills["skillfold-cli"], "npm:skillfold/skillfold-cli@installed");
     assert.equal(manifest.skills["hello-skillfold"], "./skills/hello-skillfold");
     assert.ok(existsSync(result.skillPath));
   });

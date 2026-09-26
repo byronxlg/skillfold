@@ -47,7 +47,7 @@ When a CLI or library ships its own skill in its npm package, the skill document
 
 ```yaml
 skills:
-  skillfold: npm:skillfold/skillfold-cli@installed
+  skillfold-cli: npm:skillfold/skillfold-cli@installed
   playwright-cli: npm:@playwright/cli/skills/playwright-cli@installed
   hyperframes-cli: npm:hyperframes/dist/skills/hyperframes-cli@installed
 ```
