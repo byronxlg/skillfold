@@ -10,7 +10,9 @@ import { SourceError } from "./errors.js";
  *                npm:@scope/package/skill-name@version
  *
  * A trailing `@ref` (after the last `/`) pins a version: a git tag, branch,
- * or commit SHA for GitHub; an exact version or dist-tag for npm.
+ * or commit SHA for GitHub; an exact version or dist-tag for npm. The npm
+ * ref `@installed` follows the version of the package the project has
+ * installed (see installed.ts).
  */
 
 export interface LocalSource {
@@ -38,11 +40,14 @@ export interface NpmSource {
    * package.json, or a literal subpath. Undefined = package root.
    */
   subpath?: string;
-  /** Exact version or dist-tag. Undefined = latest. */
+  /** Exact version, dist-tag, or "installed". Undefined = latest. */
   version?: string;
 }
 
 export type Source = LocalSource | GitHubSource | NpmSource;
+
+/** The npm ref that follows the version of the package the project has installed. */
+export const INSTALLED_REF = "installed";
 
 const GITHUB_TREE_RE =
   /^https:\/\/github\.com\/([^/]+)\/([^/]+)\/tree\/([^/]+)(?:\/(.*))?$/;
@@ -78,8 +83,16 @@ export function isFullSha(ref: string): boolean {
   return HEX_RE.test(ref) && ref.length === 40;
 }
 
+/** `@installed` follows an installed npm package; GitHub has no such thing. */
+function rejectInstalledRef(raw: string, ref: string | undefined): void {
+  if (ref === INSTALLED_REF) {
+    throw new SourceError(raw, `@${INSTALLED_REF} is only supported for npm: sources`);
+  }
+}
+
 function parseGitHubShorthand(raw: string): GitHubSource {
   const [base, ref] = extractRef(raw);
+  rejectInstalledRef(raw, ref);
   const parts = base.slice("github:".length).split("/").filter(Boolean);
   if (parts.length < 2) {
     throw new SourceError(raw, "expected github:owner/repo[/path][@ref]");
@@ -90,6 +103,7 @@ function parseGitHubShorthand(raw: string): GitHubSource {
 
 function parseGitHubUrl(raw: string): GitHubSource {
   const [base, pinnedRef] = extractRef(raw);
+  rejectInstalledRef(raw, pinnedRef);
   const match = GITHUB_TREE_RE.exec(base);
   if (!match) {
     throw new SourceError(

@@ -1,12 +1,13 @@
 #!/usr/bin/env node
 import { readFileSync, realpathSync } from "node:fs";
 import { join, relative, resolve as resolvePath } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { syncAgentsMd } from "./agentsmd.js";
 import { globalConfigDir, globalConfigRoot, migrateGlobalConfig } from "./config.js";
 import { SkillfoldError } from "./errors.js";
 import { initProject } from "./init.js";
+import { installedVersion, type InstalledLookup } from "./installed.js";
 import {
   checkProject,
   ruleFile,
@@ -31,7 +32,7 @@ import {
   type ResolvedSkill,
 } from "./resolve.js";
 import { renderSearchHits, searchSkills } from "./search.js";
-import { defaultSkillName, parseSource } from "./source.js";
+import { defaultSkillName, INSTALLED_REF, parseSource } from "./source.js";
 import { displayPath, lockForTarget, ruleApplies, shadowedSkillWarnings, skillTargets, targetLayouts, type TargetLayout } from "./targets.js";
 
 const HELP = `skillfold - declarative skill manager for Claude config
@@ -167,6 +168,35 @@ function version(): string {
   return pkg.version;
 }
 
+/** Where `@installed` npm sources find the installed package. */
+function installedLookup(paths: Paths): InstalledLookup {
+  if (!paths.global) return {};
+  const dir = fileURLToPath(new URL("..", import.meta.url));
+  return { global: true, self: { name: "skillfold", version: version(), dir } };
+}
+
+/**
+ * Global mode: skills from the skillfold package document this CLI, so a
+ * pin on another version teaches the agent flags it does not have.
+ */
+function selfVersionWarnings(paths: Paths, manifest: Manifest, lock: Lockfile | null): string[] {
+  if (!paths.global || !lock) return [];
+  const running = version();
+  const warnings: string[] = [];
+  for (const [name, sourceString] of Object.entries(manifest.skills)) {
+    const source = parseSource(sourceString);
+    const entry = lock.skills[name];
+    if (source.kind !== "npm" || source.pkg !== "skillfold" || !entry?.resolved) continue;
+    const pinned = parseSource(entry.resolved);
+    if (pinned.kind !== "npm" || !pinned.version || pinned.version === running) continue;
+    const hint = source.version === INSTALLED_REF
+      ? ` (it follows the globally installed skillfold; run "npm install -g skillfold@${running}" or use that CLI)`
+      : `; declare it as npm:skillfold/${source.subpath ?? ""}@${INSTALLED_REF} to keep them in step`;
+    warnings.push(`"${name}" is pinned to skillfold ${pinned.version} but this CLI is ${running}${hint}`);
+  }
+  return warnings;
+}
+
 function describePin(skill: ResolvedSkill | ResolvedRule): string {
   if (skill.kind === "compose") return "";
   if (!skill.resolved) return "";
@@ -249,6 +279,7 @@ async function runInstall(paths: Paths, options: InstallRunOptions = {}): Promis
     lock,
     frozen: options.frozen,
     update: options.update,
+    installed: installedLookup(paths),
   });
   const layouts = targetLayouts(manifest, paths.root, paths.global);
   const unsupportedRules = layouts.find(
@@ -297,6 +328,9 @@ async function runInstall(paths: Paths, options: InstallRunOptions = {}): Promis
     writeLockfile(paths.lockPath, newLock);
     console.log(`lockfile: ${relative(paths.root, paths.lockPath) || LOCK_FILENAME}`);
   }
+  for (const warning of selfVersionWarnings(paths, manifest, newLock)) {
+    console.error(`warning: ${warning}`);
+  }
 }
 
 
@@ -321,7 +355,9 @@ async function cmdAdd(paths: Paths, args: string[], flags: Flags): Promise<void>
     throw new SkillfoldError('usage: skillfold add <source> [--name <name>]');
   }
   const sourceString = args[0];
-  const single = await resolveSingle(sourceString, paths.root);
+  const single = await resolveSingle(sourceString, paths.root, {
+    installed: installedLookup(paths),
+  });
   const name =
     flags.name ??
     sanitizeName(single.skill.name) ??
@@ -358,8 +394,8 @@ function cmdCheck(paths: Paths): void {
   const manifest = loadManifest(paths.manifestPath);
   const lock = readLockfile(paths.lockPath);
   const layouts = targetLayouts(manifest, paths.root, paths.global);
-  const problems = checkProject(manifest, lock, paths.root, layouts);
-  for (const warning of shadowWarnings(paths, manifest)) {
+  const problems = checkProject(manifest, lock, paths.root, layouts, installedLookup(paths));
+  for (const warning of [...shadowWarnings(paths, manifest), ...selfVersionWarnings(paths, manifest, lock)]) {
     console.error(`warning: ${warning}`);
   }
   if (problems.length > 0) {
@@ -368,7 +404,7 @@ function cmdCheck(paths: Paths): void {
     process.exitCode = 1;
     return;
   }
-  const fmWarnings = skillRows(manifest, lock, paths.root, layouts).filter(
+  const fmWarnings = skillRows(manifest, lock, paths.root, layouts, installedLookup(paths)).filter(
     (row) => row.status === "ok" && row.warning
   );
   if (fmWarnings.length > 0) {
@@ -395,7 +431,7 @@ function cmdList(paths: Paths): void {
     // A broken lockfile should not stop listing; statuses degrade to "not locked".
   }
   const layouts = targetLayouts(manifest, paths.root, paths.global);
-  console.log(renderRows(skillRows(manifest, lock, paths.root, layouts)));
+  console.log(renderRows(skillRows(manifest, lock, paths.root, layouts, installedLookup(paths))));
   for (const warning of shadowWarnings(paths, manifest)) {
     console.error(`warning: ${warning}`);
   }
@@ -409,7 +445,7 @@ function cmdInfo(paths: Paths, args: string[]): void {
   const manifest = loadManifest(paths.manifestPath);
   const lock = readLockfile(paths.lockPath);
   const layouts = targetLayouts(manifest, paths.root, paths.global);
-  const rows = skillRows(manifest, lock, paths.root, layouts).filter(
+  const rows = skillRows(manifest, lock, paths.root, layouts, installedLookup(paths)).filter(
     (row) => row.name === name
   );
   if (rows.length === 0) {
@@ -481,7 +517,9 @@ function renderGettingStarted(global: boolean): string {
 }
 
 function cmdInit(paths: Paths): void {
-  const result = initProject(paths.root);
+  // With skillfold installed, the usage skill follows it rather than being copied.
+  const followInstalled = installedVersion("skillfold", paths.root, installedLookup(paths)) !== null;
+  const result = initProject(paths.root, { followInstalled });
   console.log(`created ${relative(paths.root, result.manifestPath) || MANIFEST_FILENAME}`);
   console.log(`created ${relative(paths.root, result.skillPath)}`);
   const layouts = targetLayouts(loadManifest(paths.manifestPath), paths.root, paths.global);

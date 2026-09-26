@@ -4,7 +4,21 @@ import { join } from "node:path";
 import { ManifestError } from "./errors.js";
 import { MANIFEST_FILENAME } from "./manifest.js";
 
-const STARTER_MANIFEST = `# skillfold.yaml - declare the skills this project uses, then run
+/** The usage skill when skillfold is not installed: resolved from the registry, moved by update. */
+const LATEST_STARTER = `  # How to drive this CLI, pulled from the skillfold package so your agent can
+  # manage this file for you. "skillfold update skillfold" moves it forward.
+  # Straight from the repo instead:
+  #   github:byronxlg/skillfold/library/skills/skillfold-cli
+  skillfold: npm:skillfold/skillfold-cli`;
+
+/** The usage skill when skillfold is installed: it follows that version. */
+const FOLLOWING_STARTER = `  # How to drive this CLI, pulled from the skillfold package so your agent can
+  # manage this file for you. @installed keeps it at the version of skillfold
+  # you have installed: upgrade skillfold, run "skillfold install", and the
+  # skill follows. "skillfold check" fails if the two drift apart.
+  skillfold: npm:skillfold/skillfold-cli@installed`;
+
+const starterManifest = (usageSkill: string): string => `# skillfold.yaml - declare the skills this project uses, then run
 # "skillfold install" to install them and pin exact revisions in skillfold.lock.
 # Commit both files: anyone who clones the repo gets byte-identical skills.
 #
@@ -23,6 +37,8 @@ const STARTER_MANIFEST = `# skillfold.yaml - declare the skills this project use
 #   ./skills/my-skill                          local directory
 #   github:owner/repo/path/to/skill@v1.2.0     GitHub repo (tag, branch, or commit)
 #   npm:package/skill-name@1.0.0               npm package
+#   npm:package/skill-name@installed           npm package, at the version this
+#                                              project has installed
 #
 # Skills worth starting with:
 #   skillfold add npm:skillfold/planning           break work into a plan before coding
@@ -39,11 +55,7 @@ const STARTER_MANIFEST = `# skillfold.yaml - declare the skills this project use
 targets: [claude]  # codex, cursor
 
 skills:
-  # How to drive this CLI, pulled from the skillfold package so your agent can
-  # manage this file for you. "skillfold update skillfold" moves it forward.
-  # Straight from the repo instead:
-  #   github:byronxlg/skillfold/library/skills/skillfold-cli
-  skillfold: npm:skillfold/skillfold-cli
+${usageSkill}
 
   # An example local skill. Edit it, rename it, or drop this line.
   hello-skillfold: ./skills/hello-skillfold
@@ -84,8 +96,17 @@ export interface InitResult {
   skillPath: string;
 }
 
+export interface InitOptions {
+  /**
+   * skillfold is installed (a project dependency, or globally): declare the
+   * usage skill as npm:skillfold/skillfold-cli@installed so it tracks the
+   * CLI version instead of whatever was latest on the day of init.
+   */
+  followInstalled?: boolean;
+}
+
 /** Scaffold a starter manifest and example skill in `dir`. */
-export function initProject(dir: string): InitResult {
+export function initProject(dir: string, options: InitOptions = {}): InitResult {
   const manifestPath = join(dir, MANIFEST_FILENAME);
   if (existsSync(manifestPath)) {
     throw new ManifestError(`${manifestPath} already exists`);
@@ -96,6 +117,6 @@ export function initProject(dir: string): InitResult {
   if (!existsSync(skillPath)) {
     writeFileSync(skillPath, STARTER_SKILL);
   }
-  writeFileSync(manifestPath, STARTER_MANIFEST);
+  writeFileSync(manifestPath, starterManifest(options.followInstalled ? FOLLOWING_STARTER : LATEST_STARTER));
   return { manifestPath, skillPath };
 }

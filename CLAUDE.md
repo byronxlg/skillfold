@@ -19,6 +19,7 @@ Declarative skill manager for Claude config. Declare skills and rules in `skillf
 - **Verify sync**: `npx tsx src/cli.ts check`
 - **List status**: `npx tsx src/cli.ts list`
 - **Tests**: `npm test` (node:test via tsx, no extra deps)
+- **E2E (network)**: `npm run test:e2e` - `@installed` against real CLIs (@playwright/cli, hyperframes, skillfold) under npm, pnpm, workspaces, and `-g`
 - **Type check**: `npm run typecheck` (src + scripts)
 - **Build**: `npm run build`
 - **Build the blog**: `npm run build:blog` (regenerates site/blog/, output is gitignored,
@@ -40,6 +41,7 @@ src/
   resolve.ts  - central resolver: manifest + lock -> concrete files, pin reuse, frozen mode
   github.ts   - GitHub ref -> SHA resolution and skill fetching (contents API, injectable fetch)
   npm.ts      - npm skill resolution: node_modules first, then registry via npm pack into cache
+  installed.ts - @installed refs: installed package version from lockfiles / node_modules / global root
   cache.ts    - shared content cache (~/.cache/skillfold), keyed by SHA / exact version
   compose.ts  - composed skill generation (body concatenation, topological ordering)
   targets.ts  - install-target layouts (claude, codex, cursor) mapping targets to locations
@@ -69,7 +71,7 @@ action.yml             - GitHub Action wrapper for skillfold check
 ## Core Concepts
 
 - **Manifest** (`skillfold.yaml`): `skills` (name -> source), `compose` (generated skills concatenating others), `rules` (name -> single markdown file), optional `targets` (`[claude, codex, cursor]`; Cursor installs to `.cursor/skills` and `.cursor/rules`), optional `skillsDir` / `rulesDir`.
-- **Sources**: local paths, `github:owner/repo/path@ref`, `npm:package/skill@version`. Trailing `@ref` after the last `/` pins a version.
+- **Sources**: local paths, `github:owner/repo/path@ref`, `npm:package/skill@version`. Trailing `@ref` after the last `/` pins a version. `npm:...@installed` follows the project's installed package version (re-pinned on install, drift fails check).
 - **Lockfile** (`skillfold.lock`): exact commit SHA / version plus sha256 content hash per remote skill. Local sources are recorded unpinned. Committed to the repo.
 - **Pin reuse**: `install` never moves an existing pin; only `update` (or a changed manifest source string) re-resolves. `--frozen` additionally fails on any manifest/lock drift and verifies content hashes.
 - **Managed directories**: skillfold only overwrites or prunes directories (and rule files) whose names appear in the lockfile. Hand-authored files are never touched without `--force`.

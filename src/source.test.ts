@@ -151,6 +151,23 @@ describe("parseSource: npm", () => {
     });
   });
 
+  it("parses the @installed ref as a version", () => {
+    assert.deepEqual(parseSource("npm:@playwright/cli/skills/playwright-cli@installed"), {
+      kind: "npm",
+      pkg: "@playwright/cli",
+      subpath: "skills/playwright-cli",
+      version: "installed",
+    });
+  });
+
+  it("rejects @installed on GitHub sources", () => {
+    assert.throws(() => parseSource("github:o/r/skills/x@installed"), /only supported for npm/);
+    assert.throws(
+      () => parseSource("https://github.com/o/r/tree/main/skills/x@installed"),
+      /only supported for npm/
+    );
+  });
+
   it("rejects a bare scope", () => {
     assert.throws(() => parseSource("npm:@scope"), SourceError);
     assert.throws(() => parseSource("npm:"), SourceError);

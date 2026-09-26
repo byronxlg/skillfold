@@ -22,7 +22,10 @@ This creates:
 
 - `skillfold.yaml` - the manifest, declaring two skills: `skillfold`
   (`npm:skillfold/skillfold-cli`, which teaches an agent to use this CLI so it
-  can manage the manifest for you) and the local `hello-skillfold` example
+  can manage the manifest for you) and the local `hello-skillfold` example.
+  When skillfold is already a dependency of the project, the first is declared
+  as `npm:skillfold/skillfold-cli@installed`, so it follows the CLI version you
+  have installed
 - `skills/hello-skillfold/SKILL.md` - an example skill's source, yours to edit, rename, or drop
 
 The manifest header comments list every skillfold command, the three source

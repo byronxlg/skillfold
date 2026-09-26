@@ -23,7 +23,7 @@ compose:
     use: [code-review, testing]
 ```
 
-A trailing `@ref` after the last `/` pins a version. Composed skills concatenate the bodies of the skills they `use` into one generated skill.
+A trailing `@ref` after the last `/` pins a version. For a skill shipped inside a tool's npm package, `@installed` (e.g. `npm:<package>/<skill>@installed`) follows the version the project has installed: bump the dependency, run `skillfold install`, and the skill re-pins. Composed skills concatenate the bodies of the skills they `use` into one generated skill.
 
 ## Commands
 
@@ -35,7 +35,7 @@ skillfold install             # install everything, write skillfold.lock
 skillfold install --frozen    # CI mode: exact lockfile install, fail on drift
 skillfold update [name...]    # re-resolve moving refs, then reinstall
 skillfold check               # verify manifest, lockfile, and installed files agree
-skillfold list                # status table (ok / modified / not installed / not locked)
+skillfold list                # status table (ok / modified / not installed / not locked / stale)
 skillfold info <name>         # source, pin, hash, and install path for one skill
 skillfold search [query]      # find skill packages on npm
 ```

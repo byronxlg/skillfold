@@ -15,6 +15,11 @@ The manifest declares two skills: `skillfold`, pulled from
 this CLI, and the local `hello-skillfold` example. The first `install`
 therefore needs the registry; drop the `skillfold` line to stay offline.
 
+When skillfold is a dependency of the project (or with `-g`), the usage skill is
+declared as `npm:skillfold/skillfold-cli@installed` instead, so it follows the
+installed CLI version (see [`@installed`](manifest.md#following-an-installed-package-installed)).
+With `-g` and a global npm install, nothing needs the registry.
+
 It then prints the active install targets with the directories they write to,
 how to change them, and the immediate next commands:
 
@@ -75,7 +80,7 @@ Resolve every manifest entry, honoring existing lockfile pins; materialize all s
 
 ### `skillfold update [name...]` (alias: `up`)
 
-Re-resolve refs past their lockfile pins - branches move to their new head, `latest` moves to the newest version - then reinstall and rewrite the lockfile. With no names, updates every skill.
+Re-resolve refs past their lockfile pins - branches move to their new head, `latest` moves to the newest version - then reinstall and rewrite the lockfile. With no names, updates every skill. Sources pinned with `@installed` need no update: `install` already re-pins them to the installed package version.
 
 ### `skillfold check`
 
@@ -86,6 +91,7 @@ Offline verification with a nonzero exit on any problem:
 - remote skills and rules on disk match the lockfile's content hash
 - local skills and rules on disk match their source
 - composed skills match what their installed inputs would generate
+- `@installed` npm sources are pinned to the version of the package that is installed
 
 It also prints a non-fatal `warning:` when an installed skill's `SKILL.md` is missing a `description` or has unparseable frontmatter - these do not fail the check (a description-less skill still installs, it just never triggers for the agent). Run `skillfold list` to see which skills.
 
@@ -102,7 +108,7 @@ Status table for every declared skill and rule:
   reviewer         compose(code-review, testing)              -        modified
 ```
 
-Statuses: `ok`, `not installed`, `modified` (installed files drifted), `not locked` (no lockfile pin yet). An otherwise-`ok` skill whose `SKILL.md` is missing a `description` or has unparseable frontmatter shows `warn: <issue>` instead.
+Statuses: `ok`, `not installed`, `modified` (installed files drifted), `not locked` (no lockfile pin yet), `stale` (an `@installed` source pinned to a version other than the installed one; run `skillfold install`). An otherwise-`ok` skill whose `SKILL.md` is missing a `description` or has unparseable frontmatter shows `warn: <issue>` instead.
 
 ### `skillfold info <name>`
 

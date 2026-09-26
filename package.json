@@ -67,6 +67,7 @@
     "postbuild": "chmod +x dist/cli.js",
     "prepare": "npm run build",
     "test": "tsx --test src/*.test.ts",
+    "test:e2e": "npm run build && bash scripts/e2e-installed.sh",
     "start": "node dist/cli.js"
   },
   "dependencies": {
