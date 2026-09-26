@@ -4,8 +4,13 @@ For the full release history with detailed notes, see [GitHub Releases](https://
 
 ## Unreleased
 
+## 2.7.0
+
 - Add a `cursor` target for `.cursor/skills` and always-on `.cursor/rules/*.mdc` project rules.
 - Install global Cursor skills to `~/.cursor/skills`; global Cursor user rules remain UI-managed.
+- `skillfold init` prints the active install targets with the directory each one writes to, and the commands to run next.
+- The scaffolded `skillfold.yaml` documents every command, the three source formats, and the install targets in its header, and writes `targets` out explicitly as `targets: [claude]  # codex, cursor`.
+- `init` scaffolds two skills: `skillfold` from `npm:skillfold/skillfold-cli`, so an agent in the project can drive the CLI and keep it current with `skillfold update`, and the local `hello-skillfold` example. The first install after `init` therefore reaches the registry; remove the `skillfold` line to stay offline.
 
 ## 2.6.0
 

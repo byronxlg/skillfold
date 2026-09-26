@@ -1,6 +1,6 @@
 {
   "name": "skillfold",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "description": "Declarative skill manager for Claude Code, Codex, and Cursor.",
   "type": "module",
   "main": "./dist/index.js",
