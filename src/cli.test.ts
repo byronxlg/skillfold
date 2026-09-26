@@ -40,7 +40,7 @@ function newProject(): string {
  */
 function dropRemoteSkill(root: string): void {
   const manifest = readFileSync(join(root, "skillfold.yaml"), "utf-8")
-    .replace(/^ {2}skillfold: npm:.*\n/m, "");
+    .replace(/^ {2}skillfold-cli: npm:.*\n/m, "");
   assert.doesNotMatch(manifest, /^ {2}\S+: npm:/m, "a remote source would take this test online");
   writeFile(root, "skillfold.yaml", manifest);
 }
@@ -108,7 +108,7 @@ describe("cli", () => {
     assert.match(manifest, /codex +\.agents\/skills/);
     assert.match(manifest, /github:owner\/repo\/path\/to\/skill@v1\.2\.0/);
     assert.match(manifest, /skillfold add npm:skillfold\/code-review/);
-    assert.match(manifest, /^ {2}skillfold: npm:skillfold\/skillfold-cli$/m);
+    assert.match(manifest, /^ {2}skillfold-cli: npm:skillfold\/skillfold-cli$/m);
     assert.match(manifest, /^ {2}hello-skillfold: \.\/skills\/hello-skillfold$/m);
     assert.match(manifest, /# rules:/);
   });
@@ -494,11 +494,11 @@ describe("agent-independent global config", () => {
       const root = join(home, "xdg/skillfold");
       assert.ok(existsSync(join(root, "skillfold.yaml")));
       // init -g follows the CLI; with nothing installed globally that is the running CLI.
-      assert.match(readFileSync(join(root, "skillfold.yaml"), "utf8"), /skillfold: npm:skillfold\/skillfold-cli@installed/);
+      assert.match(readFileSync(join(root, "skillfold.yaml"), "utf8"), /skillfold-cli: npm:skillfold\/skillfold-cli@installed/);
       writeFile(
         root,
         "skillfold.yaml",
-        "targets: [claude, codex, cursor]\nskills:\n  skillfold: npm:skillfold/skillfold-cli@installed\n  hello-skillfold: ./skills/hello-skillfold\n"
+        "targets: [claude, codex, cursor]\nskills:\n  skillfold-cli: npm:skillfold/skillfold-cli@installed\n  hello-skillfold: ./skills/hello-skillfold\n"
       );
       await main(["install", "-g"]);
       assert.ok(existsSync(join(home, ".claude/skills/hello-skillfold/SKILL.md")));
@@ -636,17 +636,17 @@ describe("@installed sources", () => {
     fakeSkillfold(join(dir, "node_modules"), "1.0.0");
 
     await main(["init", "--dir", dir]);
-    assert.match(readFileSync(join(dir, "skillfold.yaml"), "utf8"), /skillfold: npm:skillfold\/skillfold-cli@installed/);
+    assert.match(readFileSync(join(dir, "skillfold.yaml"), "utf8"), /skillfold-cli: npm:skillfold\/skillfold-cli@installed/);
     writeFile(
       dir,
       "skillfold.yaml",
-      "targets: [claude, codex, cursor]\nskills:\n  skillfold: npm:skillfold/skillfold-cli@installed\n"
+      "targets: [claude, codex, cursor]\nskills:\n  skillfold-cli: npm:skillfold/skillfold-cli@installed\n"
     );
 
     await main(["install", "--dir", dir]);
     assert.match(readFileSync(join(dir, "skillfold.lock"), "utf8"), /resolved: npm:skillfold\/skillfold-cli@1\.0\.0/);
     for (const skills of [".claude/skills", ".agents/skills", ".cursor/skills"]) {
-      assert.match(readFileSync(join(dir, skills, "skillfold/SKILL.md"), "utf8"), /Flags for 1\.0\.0/);
+      assert.match(readFileSync(join(dir, skills, "skillfold-cli/SKILL.md"), "utf8"), /Flags for 1\.0\.0/);
     }
     await main(["check", "--dir", dir]);
     assert.equal(process.exitCode, undefined);
@@ -657,17 +657,17 @@ describe("@installed sources", () => {
     assert.equal(process.exitCode, 1);
     assert.match(
       errors.join("\n"),
-      /"skillfold" follows skillfold@installed: 1\.1\.0 is installed \(node_modules\/skillfold\) but the lockfile pins 1\.0\.0/
+      /"skillfold-cli" follows skillfold@installed: 1\.1\.0 is installed \(node_modules\/skillfold\) but the lockfile pins 1\.0\.0/
     );
     process.exitCode = undefined;
     await main(["list", "--dir", dir]);
-    assert.match(logs.join("\n"), /skillfold\s+npm:skillfold\/skillfold-cli@installed\s+1\.0\.0\s+stale/);
+    assert.match(logs.join("\n"), /skillfold-cli\s+npm:skillfold\/skillfold-cli@installed\s+1\.0\.0\s+stale/);
     await assert.rejects(main(["install", "--frozen", "--dir", dir]), /lockfile pins 1\.0\.0 but 1\.1\.0 is installed/);
 
     await main(["install", "--dir", dir]);
     assert.match(readFileSync(join(dir, "skillfold.lock"), "utf8"), /resolved: npm:skillfold\/skillfold-cli@1\.1\.0/);
     for (const skills of [".claude/skills", ".agents/skills", ".cursor/skills"]) {
-      assert.match(readFileSync(join(dir, skills, "skillfold/SKILL.md"), "utf8"), /Flags for 1\.1\.0/);
+      assert.match(readFileSync(join(dir, skills, "skillfold-cli/SKILL.md"), "utf8"), /Flags for 1\.1\.0/);
     }
     errors = [];
     await main(["check", "--dir", dir]);
@@ -689,7 +689,7 @@ describe("@installed sources", () => {
     const dir = newProject();
     writeFile(dir, ".git/HEAD", "");
     await main(["init", "--dir", dir]);
-    assert.match(readFileSync(join(dir, "skillfold.yaml"), "utf8"), /^ {2}skillfold: npm:skillfold\/skillfold-cli$/m);
+    assert.match(readFileSync(join(dir, "skillfold.yaml"), "utf8"), /^ {2}skillfold-cli: npm:skillfold\/skillfold-cli$/m);
   });
 
   it("global mode follows the global install, then the running CLI, and warns on a mismatch", async () => {
@@ -702,8 +702,8 @@ describe("@installed sources", () => {
 
       await main(["install", "-g"]);
       assert.match(readFileSync(join(root, "skillfold.lock"), "utf8"), /@0\.0\.1/);
-      assert.match(readFileSync(join(home, ".claude/skills/skillfold/SKILL.md"), "utf8"), /Flags for 0\.0\.1/);
-      assert.match(errors.join("\n"), /"skillfold" is pinned to skillfold 0\.0\.1 but this CLI is \d+\.\d+\.\d+ \(it follows the globally installed skillfold/);
+      assert.match(readFileSync(join(home, ".claude/skills/skillfold-cli/SKILL.md"), "utf8"), /Flags for 0\.0\.1/);
+      assert.match(errors.join("\n"), /"skillfold-cli" is pinned to skillfold 0\.0\.1 but this CLI is \d+\.\d+\.\d+ \(it follows the globally installed skillfold/);
 
       // No global install: the running CLI is what the skill should describe.
       rmSync(join(globalModules, "skillfold"), { recursive: true });
@@ -715,7 +715,7 @@ describe("@installed sources", () => {
       errors = [];
       await main(["install", "-g"]);
       assert.doesNotMatch(errors.join("\n"), /pinned to skillfold/);
-      assert.match(readFileSync(join(home, ".claude/skills/skillfold/SKILL.md"), "utf8"), /skillfold install/);
+      assert.match(readFileSync(join(home, ".claude/skills/skillfold-cli/SKILL.md"), "utf8"), /skillfold install/);
       await main(["check", "-g"]);
       assert.equal(process.exitCode, undefined);
     });

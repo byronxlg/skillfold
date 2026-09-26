@@ -10,10 +10,10 @@ skillfold <command> [options]
 
 Scaffold a starter `skillfold.yaml` and an example skill at `skills/hello-skillfold/`. Refuses to overwrite an existing manifest.
 
-The manifest declares two skills: `skillfold`, pulled from
+The manifest declares two skills: `skillfold-cli`, pulled from
 `npm:skillfold/skillfold-cli` so the agent in the project knows how to drive
 this CLI, and the local `hello-skillfold` example. The first `install`
-therefore needs the registry; drop the `skillfold` line to stay offline.
+therefore needs the registry; drop the `skillfold-cli` line to stay offline.
 
 When skillfold is a dependency of the project (or with `-g`), the usage skill is
 declared as `npm:skillfold/skillfold-cli@installed` instead, so it follows the

@@ -6,17 +6,17 @@ import { MANIFEST_FILENAME } from "./manifest.js";
 
 /** The usage skill when skillfold is not installed: resolved from the registry, moved by update. */
 const LATEST_STARTER = `  # How to drive this CLI, pulled from the skillfold package so your agent can
-  # manage this file for you. "skillfold update skillfold" moves it forward.
+  # manage this file for you. "skillfold update skillfold-cli" moves it forward.
   # Straight from the repo instead:
   #   github:byronxlg/skillfold/library/skills/skillfold-cli
-  skillfold: npm:skillfold/skillfold-cli`;
+  skillfold-cli: npm:skillfold/skillfold-cli`;
 
 /** The usage skill when skillfold is installed: it follows that version. */
 const FOLLOWING_STARTER = `  # How to drive this CLI, pulled from the skillfold package so your agent can
   # manage this file for you. @installed keeps it at the version of skillfold
   # you have installed: upgrade skillfold, run "skillfold install", and the
   # skill follows. "skillfold check" fails if the two drift apart.
-  skillfold: npm:skillfold/skillfold-cli@installed`;
+  skillfold-cli: npm:skillfold/skillfold-cli@installed`;
 
 const starterManifest = (usageSkill: string): string => `# skillfold.yaml - declare the skills this project uses, then run
 # "skillfold install" to install them and pin exact revisions in skillfold.lock.
