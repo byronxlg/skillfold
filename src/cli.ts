@@ -460,32 +460,23 @@ function renderTargets(layouts: TargetLayout[], root: string): string {
   return lines.join("\n");
 }
 
-/** Command tour printed after init, so a fresh project knows what to run. */
+/**
+ * Short command tour after init. The scaffolded manifest carries the full
+ * list in its header comments, so this stays the immediate next steps.
+ */
 function renderGettingStarted(global: boolean): string {
   const g = global ? " -g" : "";
   const rows: [string, string][] = [
     [`skillfold install${g}`, `install every declared skill, write ${LOCK_FILENAME}`],
-    [`skillfold list${g}`, "show declared skills and their status"],
-    [`skillfold check${g}`, "verify manifest, lockfile, and installed skills agree"],
-    [`skillfold update${g}`, "re-resolve pinned refs to their latest revision"],
+    [`skillfold add${g} npm:skillfold/planning`, "add a skill from the skillfold library"],
+    ["skillfold search <query>", "find more published skills on npm"],
   ];
-  const add: [string, string][] = [
-    ["skillfold search <query>", "find published skills on npm"],
-    [`skillfold add${g} npm:skillfold/planning`, "break work into a plan before coding"],
-    [`skillfold add${g} npm:skillfold/code-review`, "review a diff before it ships"],
-    [`skillfold add${g} npm:skillfold/testing`, "write and run tests"],
-    [`skillfold add${g} npm:skillfold/github-workflow`, "branches, commits, and pull requests"],
-    [`skillfold add${g} github:owner/repo/path/to/skill`, "any skill directory in a GitHub repo"],
-  ];
-  const width = Math.max(...[...rows, ...add].map(([command]) => command.length));
-  const render = ([command, description]: [string, string]): string =>
-    `  ${command.padEnd(width)}  ${description}`;
+  const width = Math.max(...rows.map(([command]) => command.length));
   return [
     "next",
-    ...rows.map(render),
+    ...rows.map(([command, description]) => `  ${command.padEnd(width)}  ${description}`),
     "",
-    "add skills",
-    ...add.map(render),
+    `${MANIFEST_FILENAME} lists every command, source format, and starter skill in its header.`,
   ].join("\n");
 }
 

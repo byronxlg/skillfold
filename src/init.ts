@@ -4,25 +4,40 @@ import { join } from "node:path";
 import { ManifestError } from "./errors.js";
 import { MANIFEST_FILENAME } from "./manifest.js";
 
-const STARTER_MANIFEST = `# skillfold.yaml - declare the skills this project uses.
+const STARTER_MANIFEST = `# skillfold.yaml - declare the skills this project uses, then run
+# "skillfold install" to install them and pin exact revisions in skillfold.lock.
+# Commit both files: anyone who clones the repo gets byte-identical skills.
 #
-# Sources:
-#   ./skills/my-skill                          local directory
-#   github:owner/repo/path/to/skill@v1.2.0     GitHub repo (tag, branch, or commit)
-#   npm:package/skill-name@1.0.0               npm package
+# Commands (add -g to manage user-level config in ~/.config/skillfold instead):
 #
-# Run "skillfold install" (or "skillfold install -g" for user-level config)
-# to install everything into the selected agents' skill directories
-# and pin exact versions in skillfold.lock.
+#   skillfold install             install every declared skill, write the lockfile
+#   skillfold add <source>        add a skill to this file and install it
+#   skillfold remove <name>       remove a skill and uninstall it
+#   skillfold list                show declared skills and their status
+#   skillfold info <name>         show details for one skill
+#   skillfold check               verify manifest, lockfile, and installed skills agree
+#   skillfold update [name...]    re-resolve pinned refs to their latest revision
+#   skillfold search <query>      find published skills on npm
 #
-# Install targets - the agents that get these skills. Claude Code only when
-# unset. Uncomment and edit the line below to change it:
+# Install targets - the agents these skills are installed for. Claude Code only
+# when unset. Uncomment and edit the targets line below to change it:
 #
 #   claude  .claude/skills, .claude/rules
 #   codex   .agents/skills, a managed rules block in AGENTS.md
 #   cursor  .cursor/skills, .cursor/rules
 #
 # targets: [claude, codex, cursor]
+#
+# Sources:
+#   ./skills/my-skill                          local directory
+#   github:owner/repo/path/to/skill@v1.2.0     GitHub repo (tag, branch, or commit)
+#   npm:package/skill-name@1.0.0               npm package
+#
+# Skills worth starting with:
+#   skillfold add npm:skillfold/planning           break work into a plan before coding
+#   skillfold add npm:skillfold/code-review        review a diff before it ships
+#   skillfold add npm:skillfold/testing            write and run tests
+#   skillfold add npm:skillfold/github-workflow    branches, commits, and pull requests
 
 skills:
   hello-skillfold: ./skills/hello-skillfold
@@ -33,6 +48,11 @@ skills:
 #   reviewer:
 #     description: Review code and its tests together.
 #     use: [code-review, testing]
+
+# Rules are single markdown files, always-on instructions rather than skills:
+#
+# rules:
+#   style: ./rules/style.md
 `;
 
 const STARTER_SKILL = `---

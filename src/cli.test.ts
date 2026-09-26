@@ -73,7 +73,7 @@ describe("cli", () => {
     assert.match(logs.join("\n"), /hello-skillfold.*ok/);
   });
 
-  it("shows the active targets and a command tour on init", async () => {
+  it("shows the active targets and the next commands on init", async () => {
     const dir = newProject();
     await main(["init", "--dir", dir]);
     const out = logs.join("\n");
@@ -82,8 +82,21 @@ describe("cli", () => {
     assert.match(out, /rules {2}-> \.claude\/rules/);
     assert.match(out, /targets: \[claude, codex, cursor\]" in skillfold\.yaml/);
     assert.match(out, /skillfold install +install every declared skill/);
-    assert.match(out, /skillfold add npm:skillfold\/code-review/);
-    assert.match(out, /skillfold add github:owner\/repo\/path\/to\/skill/);
+    assert.match(out, /skillfold\.yaml lists every command/);
+  });
+
+  it("scaffolds a manifest documenting the commands, targets, and sources", async () => {
+    const dir = newProject();
+    await main(["init", "--dir", dir]);
+    const manifest = readFileSync(join(dir, "skillfold.yaml"), "utf-8");
+    for (const command of ["install", "add", "remove", "list", "info", "check", "update", "search"]) {
+      assert.match(manifest, new RegExp(`# {3}skillfold ${command}`));
+    }
+    assert.match(manifest, /# targets: \[claude, codex, cursor\]/);
+    assert.match(manifest, /codex +\.agents\/skills/);
+    assert.match(manifest, /github:owner\/repo\/path\/to\/skill@v1\.2\.0/);
+    assert.match(manifest, /skillfold add npm:skillfold\/code-review/);
+    assert.match(manifest, /# rules:/);
   });
 
   it("names the global install directories on init -g", async () => {

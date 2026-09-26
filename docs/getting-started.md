@@ -23,8 +23,10 @@ This creates:
 - `skillfold.yaml` - the manifest, with one example skill declared
 - `skills/hello-skillfold/SKILL.md` - the example skill's source
 
-and prints which agents the skills will be installed for, where each one writes,
-and the commands to run next:
+The manifest header comments list every skillfold command, the three source
+formats, and the install targets, so the reference stays in the file rather than
+in scrollback. `init` also prints which agents the skills will be installed for
+and where each one writes:
 
 ```console
 targets: claude
