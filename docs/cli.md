@@ -8,7 +8,7 @@ skillfold <command> [options]
 
 ### `skillfold init`
 
-Scaffold a starter `skillfold.yaml` and an example skill at `skills/hello-skillfold/`. Refuses to overwrite an existing manifest.
+Scaffold a starter `skillfold.yaml` and, at `skills/skillfold/`, a skill teaching an agent how to drive this CLI, so the agent in the project can manage the manifest for you. Refuses to overwrite an existing manifest.
 
 It then prints the active install targets with the directories they write to,
 how to change them, and the immediate next commands:
@@ -16,7 +16,7 @@ how to change them, and the immediate next commands:
 ```console
 $ skillfold init
 created skillfold.yaml
-created skills/hello-skillfold/SKILL.md
+created skills/skillfold/SKILL.md
 
 targets: claude
   skills -> .claude/skills

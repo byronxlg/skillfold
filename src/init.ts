@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { ManifestError } from "./errors.js";
@@ -40,7 +40,9 @@ const STARTER_MANIFEST = `# skillfold.yaml - declare the skills this project use
 #   skillfold add npm:skillfold/github-workflow    branches, commits, and pull requests
 
 skills:
-  hello-skillfold: ./skills/hello-skillfold
+  # How to drive the skillfold CLI, installed for your agent so it can manage
+  # this file for you. Remove it once you would rather read the docs yourself.
+  skillfold: ./skills/skillfold
 
 # Composed skills concatenate other skills into one:
 #
@@ -55,37 +57,57 @@ skills:
 #   style: ./rules/style.md
 `;
 
-const STARTER_SKILL = `---
-name: hello-skillfold
-description: Example skill scaffolded by skillfold init. Replace it with your own.
+/** Name the scaffolded skill is declared and installed under. */
+const STARTER_SKILL_NAME = "skillfold";
+
+/**
+ * The scaffolded skill teaches an agent to drive this CLI, so it is the
+ * library's skillfold-cli skill renamed. Reading the shipped copy keeps the
+ * two from drifting; the fallback covers an install missing library/.
+ */
+const FALLBACK_SKILL = `---
+name: ${STARTER_SKILL_NAME}
+description: Use the skillfold CLI to manage this project's agent skills. Declare them in skillfold.yaml, install them, and commit skillfold.lock.
 ---
 
-# Hello from skillfold
+# Skillfold
 
-This skill was created by \`skillfold init\`. Edit it, rename it, or remove it
-from skillfold.yaml. After any change, run:
+Skills for this project are declared in \`skillfold.yaml\` and pinned in
+\`skillfold.lock\`. Add one with \`skillfold add <source>\`, install everything
+with \`skillfold install\`, and commit both files. Never edit installed skills
+under the agent directories; edit the source and reinstall.
 
-\`\`\`sh
-skillfold install
-\`\`\`
+Full reference: https://byronxlg.com/skillfold/
 `;
+
+function starterSkill(): string {
+  try {
+    const library = readFileSync(
+      new URL("../library/skills/skillfold-cli/SKILL.md", import.meta.url),
+      "utf-8"
+    );
+    return library.replace(/^name: .*$/m, `name: ${STARTER_SKILL_NAME}`);
+  } catch {
+    return FALLBACK_SKILL;
+  }
+}
 
 export interface InitResult {
   manifestPath: string;
   skillPath: string;
 }
 
-/** Scaffold a starter manifest and example skill in `dir`. */
+/** Scaffold a starter manifest and the skillfold usage skill in `dir`. */
 export function initProject(dir: string): InitResult {
   const manifestPath = join(dir, MANIFEST_FILENAME);
   if (existsSync(manifestPath)) {
     throw new ManifestError(`${manifestPath} already exists`);
   }
-  const skillDir = join(dir, "skills", "hello-skillfold");
+  const skillDir = join(dir, "skills", STARTER_SKILL_NAME);
   mkdirSync(skillDir, { recursive: true });
   const skillPath = join(skillDir, "SKILL.md");
   if (!existsSync(skillPath)) {
-    writeFileSync(skillPath, STARTER_SKILL);
+    writeFileSync(skillPath, starterSkill());
   }
   writeFileSync(manifestPath, STARTER_MANIFEST);
   return { manifestPath, skillPath };

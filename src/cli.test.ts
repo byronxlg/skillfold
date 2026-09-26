@@ -59,10 +59,10 @@ describe("cli", () => {
     writeFile(dir, ".keep", "");
     await main(["init", "--dir", dir]);
     assert.ok(existsSync(join(dir, "skillfold.yaml")));
-    assert.ok(existsSync(join(dir, "skills", "hello-skillfold", "SKILL.md")));
+    assert.ok(existsSync(join(dir, "skills", "skillfold", "SKILL.md")));
 
     await main(["install", "--dir", dir]);
-    assert.ok(existsSync(join(dir, ".claude", "skills", "hello-skillfold", "SKILL.md")));
+    assert.ok(existsSync(join(dir, ".claude", "skills", "skillfold", "SKILL.md")));
     assert.ok(existsSync(join(dir, "skillfold.lock")));
 
     await main(["check", "--dir", dir]);
@@ -70,7 +70,7 @@ describe("cli", () => {
     assert.match(logs.join("\n"), /ok: 1 skill in sync/);
 
     await main(["list", "--dir", dir]);
-    assert.match(logs.join("\n"), /hello-skillfold.*ok/);
+    assert.match(logs.join("\n"), /skillfold.*ok/);
   });
 
   it("shows the active targets and the next commands on init", async () => {
@@ -118,7 +118,7 @@ describe("cli", () => {
     writeFile(dir, ".keep", "");
     await main(["init", "--dir", dir]);
     await main(["install", "--dir", dir]);
-    writeFile(dir, ".claude/skills/hello-skillfold/SKILL.md", "tampered");
+    writeFile(dir, ".claude/skills/skillfold/SKILL.md", "tampered");
     await main(["check", "--dir", dir]);
     assert.equal(process.exitCode, 1);
     assert.match(errors.join("\n"), /skillfold check failed/);
@@ -150,9 +150,9 @@ describe("cli", () => {
     const dir = newProject();
     await main(["init", "--dir", dir]);
     await main(["install", "--dir", dir]);
-    await main(["info", "hello-skillfold", "--dir", dir]);
+    await main(["info", "skillfold", "--dir", dir]);
     const out = logs.join("\n");
-    assert.match(out, /name: {6}hello-skillfold/);
+    assert.match(out, /name: {6}skillfold/);
     assert.match(out, /status: {4}ok/);
   });
 
@@ -466,11 +466,11 @@ describe("agent-independent global config", () => {
       await main(["init", "-g"]);
       const root = join(home, "xdg/skillfold");
       assert.ok(existsSync(join(root, "skillfold.yaml")));
-      writeFile(root, "skillfold.yaml", "targets: [claude, codex, cursor]\nskills:\n  hello-skillfold: ./skills/hello-skillfold\n");
+      writeFile(root, "skillfold.yaml", "targets: [claude, codex, cursor]\nskills:\n  skillfold: ./skills/skillfold\n");
       await main(["install", "-g"]);
-      assert.ok(existsSync(join(home, ".claude/skills/hello-skillfold/SKILL.md")));
-      assert.ok(existsSync(join(home, ".agents/skills/hello-skillfold/SKILL.md")));
-      assert.ok(existsSync(join(home, ".cursor/skills/hello-skillfold/SKILL.md")));
+      assert.ok(existsSync(join(home, ".claude/skills/skillfold/SKILL.md")));
+      assert.ok(existsSync(join(home, ".agents/skills/skillfold/SKILL.md")));
+      assert.ok(existsSync(join(home, ".cursor/skills/skillfold/SKILL.md")));
       assert.ok(!existsSync(join(home, ".claude/skillfold.yaml")));
       await main(["install", "-g", "--frozen"]);
       await main(["check", "-g"]);
