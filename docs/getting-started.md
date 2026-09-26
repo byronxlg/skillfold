@@ -54,7 +54,7 @@ Every declared skill is materialized into `.claude/skills/`, and `skillfold.lock
 
 ```console
 $ skillfold install
-  + skillfold-cli            npm:skillfold/skillfold-cli -> 2.7.0
+  + skillfold-cli            npm:skillfold/skillfold-cli -> 2.8.0
   + hello-skillfold          ./skills/hello-skillfold
 
 2 installed, 0 unchanged -> .claude/skills

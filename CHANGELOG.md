@@ -4,9 +4,12 @@ For the full release history with detailed notes, see [GitHub Releases](https://
 
 ## Unreleased
 
+## 2.8.0
+
 - npm sources accept `@installed` (`npm:skillfold/skillfold-cli@installed`) to follow the version of the package the project has installed, read from package-lock.json, npm-shrinkwrap.json, pnpm-lock.yaml, or node_modules (the global npm root in `-g` mode). `install` re-pins when the dependency moves; `check` and `install --frozen` fail on drift; `list` shows `stale`.
 - `init` declares the usage skill as `npm:skillfold/skillfold-cli@installed` when skillfold is a project dependency or in `-g` mode, so it tracks the CLI instead of whatever was latest on the day of `init`.
 - Global `install` and `check` warn when a skill from the skillfold package is pinned to a different version than the running CLI.
+- `init` declares the usage skill as `skillfold-cli`, the skill's own name, so it installs without being renamed.
 
 ## 2.7.0
 
