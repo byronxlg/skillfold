@@ -10,6 +10,37 @@ skillfold <command> [options]
 
 Scaffold a starter `skillfold.yaml` and an example skill at `skills/hello-skillfold/`. Refuses to overwrite an existing manifest.
 
+It then prints the active install targets with the directories they write to,
+how to change them, and the commands to run next:
+
+```console
+$ skillfold init
+created skillfold.yaml
+created skills/hello-skillfold/SKILL.md
+
+targets: claude
+  skills -> .claude/skills
+  rules  -> .claude/rules
+  set "targets: [claude, codex, cursor]" in skillfold.yaml to change this
+
+next
+  skillfold install                              install every declared skill, write skillfold.lock
+  skillfold list                                 show declared skills and their status
+  skillfold check                                verify manifest, lockfile, and installed skills agree
+  skillfold update                               re-resolve pinned refs to their latest revision
+
+add skills
+  skillfold search <query>                       find published skills on npm
+  skillfold add npm:skillfold/planning           break work into a plan before coding
+  skillfold add npm:skillfold/code-review        review a diff before it ships
+  skillfold add npm:skillfold/testing            write and run tests
+  skillfold add npm:skillfold/github-workflow    branches, commits, and pull requests
+  skillfold add github:owner/repo/path/to/skill  any skill directory in a GitHub repo
+```
+
+With `-g` the same listing names the user-level directories (`~/.claude/skills`)
+and every suggested command carries `-g`.
+
 ### `skillfold add <source> [--name <name>]`
 
 Fetch a skill, append it to the manifest, install it, and update the lockfile. The name defaults to the skill's frontmatter `name` (sanitized), falling back to the last path segment. Fails if the name is already taken.

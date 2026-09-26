@@ -32,7 +32,7 @@ import {
 } from "./resolve.js";
 import { renderSearchHits, searchSkills } from "./search.js";
 import { defaultSkillName, parseSource } from "./source.js";
-import { lockForTarget, ruleApplies, shadowedSkillWarnings, skillTargets, targetLayouts, type TargetLayout } from "./targets.js";
+import { displayPath, lockForTarget, ruleApplies, shadowedSkillWarnings, skillTargets, targetLayouts, type TargetLayout } from "./targets.js";
 
 const HELP = `skillfold - declarative skill manager for Claude config
 
@@ -436,11 +436,66 @@ function cmdInfo(paths: Paths, args: string[]): void {
   console.log(lines.join("\n"));
 }
 
+/** Project-relative inside the project, ~/... anywhere else. */
+function installPath(path: string, root: string): string {
+  const rel = relative(root, path);
+  return rel && !rel.startsWith("..") ? rel : displayPath(path);
+}
+
+/** Where each declared target installs skills and rules. */
+function renderTargets(layouts: TargetLayout[], root: string): string {
+  const lines = [`targets: ${layouts.map((layout) => layout.target).join(", ")}`];
+  for (const layout of layouts) {
+    const destinations = [`skills -> ${installPath(layout.skillsDir, root)}`];
+    if (layout.rulesDir) destinations.push(`rules  -> ${installPath(layout.rulesDir, root)}`);
+    if (layout.agentsMdPath) destinations.push(`rules  -> ${installPath(layout.agentsMdPath, root)} (managed block)`);
+    for (const [i, destination] of destinations.entries()) {
+      const label = layouts.length > 1 ? (i === 0 ? layout.target : "").padEnd(8) : "";
+      lines.push(`  ${label}${destination}`);
+    }
+  }
+  lines.push(
+    `  set "targets: [claude, codex, cursor]" in ${MANIFEST_FILENAME} to change this`
+  );
+  return lines.join("\n");
+}
+
+/** Command tour printed after init, so a fresh project knows what to run. */
+function renderGettingStarted(global: boolean): string {
+  const g = global ? " -g" : "";
+  const rows: [string, string][] = [
+    [`skillfold install${g}`, `install every declared skill, write ${LOCK_FILENAME}`],
+    [`skillfold list${g}`, "show declared skills and their status"],
+    [`skillfold check${g}`, "verify manifest, lockfile, and installed skills agree"],
+    [`skillfold update${g}`, "re-resolve pinned refs to their latest revision"],
+  ];
+  const add: [string, string][] = [
+    ["skillfold search <query>", "find published skills on npm"],
+    [`skillfold add${g} npm:skillfold/planning`, "break work into a plan before coding"],
+    [`skillfold add${g} npm:skillfold/code-review`, "review a diff before it ships"],
+    [`skillfold add${g} npm:skillfold/testing`, "write and run tests"],
+    [`skillfold add${g} npm:skillfold/github-workflow`, "branches, commits, and pull requests"],
+    [`skillfold add${g} github:owner/repo/path/to/skill`, "any skill directory in a GitHub repo"],
+  ];
+  const width = Math.max(...[...rows, ...add].map(([command]) => command.length));
+  const render = ([command, description]: [string, string]): string =>
+    `  ${command.padEnd(width)}  ${description}`;
+  return [
+    "next",
+    ...rows.map(render),
+    "",
+    "add skills",
+    ...add.map(render),
+  ].join("\n");
+}
+
 function cmdInit(paths: Paths): void {
   const result = initProject(paths.root);
   console.log(`created ${relative(paths.root, result.manifestPath) || MANIFEST_FILENAME}`);
   console.log(`created ${relative(paths.root, result.skillPath)}`);
-  console.log(`\nnext: run "skillfold install${paths.global ? " -g" : ""}"`);
+  const layouts = targetLayouts(loadManifest(paths.manifestPath), paths.root, paths.global);
+  console.log(`\n${renderTargets(layouts, paths.root)}`);
+  console.log(`\n${renderGettingStarted(paths.global)}`);
 }
 
 async function cmdSearch(args: string[]): Promise<void> {
