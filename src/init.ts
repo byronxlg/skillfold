@@ -14,6 +14,15 @@ const STARTER_MANIFEST = `# skillfold.yaml - declare the skills this project use
 # Run "skillfold install" (or "skillfold install -g" for user-level config)
 # to install everything into the selected agents' skill directories
 # and pin exact versions in skillfold.lock.
+#
+# Install targets - the agents that get these skills. Claude Code only when
+# unset. Uncomment and edit the line below to change it:
+#
+#   claude  .claude/skills, .claude/rules
+#   codex   .agents/skills, a managed rules block in AGENTS.md
+#   cursor  .cursor/skills, .cursor/rules
+#
+# targets: [claude, codex, cursor]
 
 skills:
   hello-skillfold: ./skills/hello-skillfold

@@ -91,7 +91,7 @@ export function targetLayouts(
 }
 
 /** Shorten a home-relative path to ~/... for display. */
-function displayPath(path: string): string {
+export function displayPath(path: string): string {
   const home = homedir();
   return path.startsWith(home) ? `~${path.slice(home.length)}` : path;
 }

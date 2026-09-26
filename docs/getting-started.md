@@ -23,6 +23,20 @@ This creates:
 - `skillfold.yaml` - the manifest, with one example skill declared
 - `skills/hello-skillfold/SKILL.md` - the example skill's source
 
+and prints which agents the skills will be installed for, where each one writes,
+and the commands to run next:
+
+```console
+targets: claude
+  skills -> .claude/skills
+  rules  -> .claude/rules
+  set "targets: [claude, codex, cursor]" in skillfold.yaml to change this
+```
+
+Claude Code is the default. Add `targets: [claude, codex, cursor]` to
+`skillfold.yaml` (the scaffolded file has it commented out) to install for Codex
+and Cursor too, then run `skillfold install` again.
+
 ## 2. Install
 
 ```sh

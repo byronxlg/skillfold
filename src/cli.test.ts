@@ -73,6 +73,33 @@ describe("cli", () => {
     assert.match(logs.join("\n"), /hello-skillfold.*ok/);
   });
 
+  it("shows the active targets and a command tour on init", async () => {
+    const dir = newProject();
+    await main(["init", "--dir", dir]);
+    const out = logs.join("\n");
+    assert.match(out, /targets: claude/);
+    assert.match(out, /skills -> \.claude\/skills/);
+    assert.match(out, /rules {2}-> \.claude\/rules/);
+    assert.match(out, /targets: \[claude, codex, cursor\]" in skillfold\.yaml/);
+    assert.match(out, /skillfold install +install every declared skill/);
+    assert.match(out, /skillfold add npm:skillfold\/code-review/);
+    assert.match(out, /skillfold add github:owner\/repo\/path\/to\/skill/);
+  });
+
+  it("names the global install directories on init -g", async () => {
+    const dir = newProject();
+    process.env.XDG_CONFIG_HOME = join(dir, "config");
+    try {
+      await main(["init", "-g"]);
+    } finally {
+      delete process.env.XDG_CONFIG_HOME;
+    }
+    const out = logs.join("\n");
+    assert.match(out, /skills -> ~\/\.claude\/skills/);
+    assert.match(out, /skillfold install -g/);
+    assert.match(out, /skillfold add -g npm:skillfold\/planning/);
+  });
+
   it("fails check with a nonzero exit on drift", async () => {
     const dir = newProject();
     writeFile(dir, ".keep", "");
