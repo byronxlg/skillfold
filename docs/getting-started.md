@@ -20,8 +20,8 @@ skillfold init
 
 This creates:
 
-- `skillfold.yaml` - the manifest, with one example skill declared
-- `skills/hello-skillfold/SKILL.md` - the example skill's source
+- `skillfold.yaml` - the manifest, with one skill declared
+- `skills/skillfold/SKILL.md` - a skill that teaches an agent how to use this CLI, so it can edit the manifest and run installs for you. Remove it from the manifest if you do not want it.
 
 The manifest header comments list every skillfold command, the three source
 formats, and the install targets, so the reference stays in the file rather than
@@ -49,7 +49,7 @@ Every declared skill is materialized into `.claude/skills/`, and `skillfold.lock
 
 ```console
 $ skillfold install
-  + hello-skillfold          ./skills/hello-skillfold
+  + skillfold                ./skills/skillfold
 
 1 installed, 0 unchanged -> .claude/skills
 lockfile: skillfold.lock
