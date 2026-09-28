@@ -74,6 +74,16 @@ here - they belong in `CHANGELOG.md`.
 Every published post lands here. `ecosystem` lines name the story so the
 repeat check can match it.
 
+- [x] A stolen credential, not a broken pipeline, put malware in an MCP
+  server package (story: the GHAPPIER npm loader - a stolen maintainer
+  credential for `@dforge-core/dforge-mcp` was used on 2026-09-09 to
+  self-modify the release workflow for unattended publishing and ship a
+  self-deleting four-stage loader as v0.2.21 for 35m38s, all carrying
+  valid npm provenance; per CloudSEK's 2026-09-20 writeup the wider
+  GHAPPIER operation spans 65 repos/73 files/22 accounts, with a second
+  payload tying to the DPRK-linked PolinRider campaign's blockchain-based
+  C2) - 2026-09-28,
+  site/blog/posts/2026-09-28-1-ghappier-mcp-npm-compromise.md
 - [x] A CLI's skill can now follow the version of the CLI you installed
   (rollout: the `@installed` npm ref, #587, merged 2026-09-26 on `main`,
   not yet in an npm release; latest release 2.7.0) - 2026-09-26,
