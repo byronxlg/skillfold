@@ -74,6 +74,14 @@ here - they belong in `CHANGELOG.md`.
 Every published post lands here. `ecosystem` lines name the story so the
 repeat check can match it.
 
+- [x] Clone a popular skill, wait, then poison it - what Zenity found on
+  skills.sh (story: Zenity Labs' Black Hat USA 2026 disclosure of cloned
+  skills on Vercel's skills.sh that stayed clean, then instructed agents to
+  hunt for SSH keys and cloud credentials; per Zenity's recap "well over a
+  million aggregate installs" before Vercel and GitHub removed the listings,
+  and one skill over 250,000 installs undetected for months per its research
+  page) - 2026-10-05,
+  site/blog/posts/2026-10-05-1-zenity-skills-sh-clone-then-poison.md
 - [x] A stolen credential, not a broken pipeline, put malware in an MCP
   server package (story: the GHAPPIER npm loader - a stolen maintainer
   credential for `@dforge-core/dforge-mcp` was used on 2026-09-09 to
