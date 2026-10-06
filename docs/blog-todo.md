@@ -48,11 +48,11 @@ Evergreen topics, ordered by value. Take the topmost unchecked one.
   "what skills do I have installed", "claude skills drift"
 - [ ] Sharing a skill set across a team without copying directories - intent:
   "share claude skills with team", "team claude code setup"
-- [ ] Rules vs skills: which instructions belong in which file - intent:
+- [x] Rules vs skills: which instructions belong in which file - intent:
   "claude rules vs skills", ".claude/rules explained"
 - [ ] Publishing a skill on npm so other people can install it by name -
   intent: "publish claude skill", "distribute agent skills", "agentskills map"
-- [ ] Keeping personal skills in your dotfiles with global mode - intent:
+- [x] Keeping personal skills in your dotfiles with global mode - intent:
   "sync claude skills across machines", "claude skills dotfiles"
 - [ ] Catching skill drift in CI before it reaches an agent - intent:
   "claude skills ci", "verify agent config in ci"
@@ -74,6 +74,10 @@ here - they belong in `CHANGELOG.md`.
 Every published post lands here. `ecosystem` lines name the story so the
 repeat check can match it.
 
+- [x] Where should this skill live? (evergreen layout post: skills repo +
+  global manifest in dotfiles, ./skills in the project, upstream unchanged;
+  covers the Queue items on dotfiles/global mode and rules vs skills) -
+  2026-10-06, site/blog/posts/2026-10-06-1-where-should-this-skill-live.md
 - [x] Clone a popular skill, wait, then poison it - what Zenity found on
   skills.sh (story: Zenity Labs' Black Hat USA 2026 disclosure of cloned
   skills on Vercel's skills.sh that stayed clean, then instructed agents to
