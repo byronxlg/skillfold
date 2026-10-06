@@ -6,61 +6,38 @@ tags: [workflow]
 ---
 
 <figure class="fig">
-<svg viewBox="0 0 640 336" role="img" aria-labelledby="fig1-t fig1-d" xmlns="http://www.w3.org/2000/svg">
-<title id="fig1-t">Three columns: source, selection, installed copy</title>
-<desc id="fig1-d">Two lanes run left to right. The personal lane goes from a skills repo on GitHub, through the global manifest kept in dotfiles, to the user-level directories of each agent. The project lane goes from skills and rules directories inside the repo, through the committed project manifest, to the gitignored .claude directories. An upstream row of third-party GitHub and npm sources sits between the lanes and feeds both manifests.</desc>
-<text x="136" y="18" text-anchor="middle" font-family="monospace" font-size="11" fill="#c9d3df">source</text>
-<text x="136" y="32" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#57626f">where it is edited</text>
-<text x="320" y="18" text-anchor="middle" font-family="monospace" font-size="11" fill="#c9d3df">selection</text>
-<text x="320" y="32" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#57626f">manifest + lock</text>
-<text x="530" y="18" text-anchor="middle" font-family="monospace" font-size="11" fill="#c9d3df">installed copy</text>
-<text x="530" y="32" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#57626f">generated, never edited</text>
-<path d="M4 42 H636" stroke="#29323f"/>
-<text x="4" y="86" font-family="monospace" font-size="11" fill="#4d8bf5">you</text>
-<rect x="56" y="64" width="160" height="56" rx="4" fill="#0d1219" stroke="#4d8bf5"/>
-<text x="136" y="84" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#c9d3df">github:you/skills</text>
-<text x="136" y="99" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#57626f">skills/  rules/</text>
-<text x="136" y="113" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#57626f">one repo, pushed</text>
-<path d="M216 92 H236" stroke="#57626f"/>
-<path d="M232 88 L238 92 L232 96" fill="none" stroke="#57626f"/>
-<rect x="240" y="64" width="160" height="56" rx="4" fill="#0d1219" stroke="#4d8bf5"/>
-<text x="320" y="84" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#c9d3df">~/.config/skillfold/</text>
-<text x="320" y="99" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#57626f">skillfold.yaml + .lock</text>
-<text x="320" y="113" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#57626f">kept in dotfiles</text>
-<path d="M400 92 H438" stroke="#57626f"/>
-<path d="M434 88 L440 92 L434 96" fill="none" stroke="#57626f"/>
-<rect x="442" y="64" width="176" height="56" rx="4" fill="#0d1219" stroke="#29323f"/>
-<text x="530" y="84" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#828f9e">~/.claude/{skills,rules}</text>
-<text x="530" y="99" text-anchor="middle" font-family="monospace" font-size="9" fill="#828f9e">~/.agents/skills, ~/.codex/AGENTS.md</text>
-<text x="530" y="113" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#57626f">install -g --frozen</text>
-<text x="4" y="176" font-family="monospace" font-size="11" fill="#828f9e">others</text>
-<rect x="56" y="154" width="160" height="44" rx="4" fill="#0d1219" stroke="#29323f" stroke-dasharray="3 3"/>
-<text x="136" y="172" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#828f9e">upstream, unchanged</text>
-<text x="136" y="187" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#57626f">github:org/repo  npm:pkg</text>
-<path d="M216 176 H226 V126 M226 176 V226" fill="none" stroke="#57626f" stroke-dasharray="3 3"/>
-<path d="M226 126 H236 M232 122 L238 126 L232 130" fill="none" stroke="#57626f" stroke-dasharray="3 3"/>
-<path d="M226 226 H236 M232 222 L238 226 L232 230" fill="none" stroke="#57626f" stroke-dasharray="3 3"/>
-<text x="4" y="266" font-family="monospace" font-size="11" fill="#d9a032">project</text>
-<rect x="56" y="232" width="160" height="56" rx="4" fill="#0d1219" stroke="#d9a032"/>
-<text x="136" y="252" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#c9d3df">./skills/  ./rules/</text>
-<text x="136" y="267" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#57626f">inside the repo</text>
-<text x="136" y="281" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#57626f">reviewed like code</text>
-<path d="M216 260 H236" stroke="#57626f"/>
-<path d="M232 256 L238 260 L232 264" fill="none" stroke="#57626f"/>
-<rect x="240" y="232" width="160" height="56" rx="4" fill="#0d1219" stroke="#d9a032"/>
-<text x="320" y="252" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#c9d3df">./skillfold.yaml</text>
-<text x="320" y="267" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#57626f">+ skillfold.lock</text>
-<text x="320" y="281" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#57626f">both committed</text>
-<path d="M400 260 H438" stroke="#57626f"/>
-<path d="M434 256 L440 260 L434 264" fill="none" stroke="#57626f"/>
-<rect x="442" y="232" width="176" height="56" rx="4" fill="#0d1219" stroke="#29323f"/>
-<text x="530" y="252" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#828f9e">.claude/{skills,rules}</text>
-<text x="530" y="267" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#57626f">gitignored</text>
-<text x="530" y="281" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#57626f">install --frozen in CI</text>
-<path d="M4 304 H636" stroke="#29323f"/>
-<text x="320" y="326" text-anchor="middle" font-family="monospace" font-size="9.5" fill="#57626f">the agent reads both lanes together at runtime; nothing here merges them</text>
+<svg viewBox="0 0 640 184" role="img" aria-labelledby="fig1-t fig1-d" xmlns="http://www.w3.org/2000/svg">
+<title id="fig1-t">Source, manifest, installed copy, at two levels</title>
+<desc id="fig1-d">Two rows of three boxes. The personal row goes from a skills repo on GitHub, through the global manifest, to the user-level skills directory. The project row goes from a skills directory inside the repo, through the committed project manifest, to the gitignored .claude directory.</desc>
+<text x="150" y="20" text-anchor="middle" font-family="monospace" font-size="11" fill="#c9d3df">source</text>
+<text x="330" y="20" text-anchor="middle" font-family="monospace" font-size="11" fill="#c9d3df">manifest</text>
+<text x="528" y="20" text-anchor="middle" font-family="monospace" font-size="11" fill="#c9d3df">installed copy</text>
+<path d="M4 32 H636" stroke="#29323f"/>
+<text x="4" y="78" font-family="monospace" font-size="11" fill="#4d8bf5">you</text>
+<rect x="66" y="56" width="168" height="36" rx="4" fill="#0d1219" stroke="#4d8bf5"/>
+<text x="150" y="78" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#c9d3df">github:you/skills</text>
+<path d="M234 74 H250" stroke="#57626f"/>
+<path d="M246 70 L252 74 L246 78" fill="none" stroke="#57626f"/>
+<rect x="254" y="56" width="152" height="36" rx="4" fill="#0d1219" stroke="#4d8bf5"/>
+<text x="330" y="78" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#c9d3df">~/.config/skillfold/</text>
+<path d="M406 74 H422" stroke="#57626f"/>
+<path d="M418 70 L424 74 L418 78" fill="none" stroke="#57626f"/>
+<rect x="426" y="56" width="204" height="36" rx="4" fill="#0d1219" stroke="#29323f"/>
+<text x="528" y="78" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#828f9e">~/.claude/skills</text>
+<text x="4" y="138" font-family="monospace" font-size="11" fill="#d9a032">project</text>
+<rect x="66" y="116" width="168" height="36" rx="4" fill="#0d1219" stroke="#d9a032"/>
+<text x="150" y="138" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#c9d3df">./skills/</text>
+<path d="M234 134 H250" stroke="#57626f"/>
+<path d="M246 130 L252 134 L246 138" fill="none" stroke="#57626f"/>
+<rect x="254" y="116" width="152" height="36" rx="4" fill="#0d1219" stroke="#d9a032"/>
+<text x="330" y="138" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#c9d3df">./skillfold.yaml</text>
+<path d="M406 134 H422" stroke="#57626f"/>
+<path d="M418 130 L424 134 L418 138" fill="none" stroke="#57626f"/>
+<rect x="426" y="116" width="204" height="36" rx="4" fill="#0d1219" stroke="#29323f"/>
+<text x="528" y="138" text-anchor="middle" font-family="monospace" font-size="10.5" fill="#828f9e">.claude/skills</text>
+<path d="M4 168 H636" stroke="#29323f"/>
 </svg>
-<figcaption>Every skill and rule has three homes: where you edit it, the manifest that selects and pins it, and the generated copy the agent reads. Upstream skills are selected from the same manifests and never copied in.</figcaption>
+<figcaption>Edit the source, let the manifest pin it, never touch the installed copy. The same shape at two levels: yours, and the project's.</figcaption>
 </figure>
 
 You wrote a skill and it works. Now it needs a home, and the obvious
