@@ -13,7 +13,7 @@ skills and rules, `skillfold.lock` pins them, `skillfold install` puts them in p
 as the npm package `skillfold`, a docs site with a weekly blog, and a composite GitHub Action
 (`byronxlg/skillfold@main`) that other repos run in CI. Tier 3: there is nothing to keep alive.
 "Live" means `npm view skillfold version` matches the latest `v*` tag and
-https://byronxlg.com/skillfold/ answers 200. If both hold, the project is healthy.
+https://skillfold.botsmith.dev/ answers 200. If both hold, the project is healthy.
 
 ## Where it runs
 
@@ -23,12 +23,18 @@ from `site/` by `docs.yml`, `build_type: workflow`), and every job runs on GitHu
 `CLAUDE_CODE_OAUTH_TOKEN`, a GitHub Actions secret in the repo used by `blog-post.yml`; npm
 publishing uses OIDC trusted publishing, so there is no npm token anywhere.
 
+The site's hostname is `skillfold.botsmith.dev` (since 2026-10-09, management D57): the Pages
+custom domain is set in the repo's Pages settings and pinned by `site/CNAME`; the DNS record
+(`skillfold_pages`, a DNS-only CNAME to `byronxlg.github.io`) lives in x402-services
+`infra/main.tf`, which owns the botsmith.dev zone, not here. The old
+`https://byronxlg.com/skillfold/` 301s to it, a redirect GitHub Pages does on its own.
+
 ## Objectives
 
 | Indicator | Target | Window | Measured by |
 | --- | --- | --- | --- |
 | A published GitHub release is on npm within 1 h | every release | per release | `npm view skillfold version` equals `git describe --tags --abbrev=0`; `publish.yml` run green |
-| https://byronxlg.com/skillfold/ returns 200 | 99% of checks | 30 days | `curl -s -o /dev/null -w '%{http_code}' https://byronxlg.com/skillfold/` |
+| https://skillfold.botsmith.dev/ returns 200 | 99% of checks | 30 days | `curl -s -o /dev/null -w '%{http_code}' https://skillfold.botsmith.dev/` |
 | The weekly blog post ran within 2x its cadence (14 days) | every fortnight | rolling | newest `blog-post.yml` run under 14 days old and not `failure` |
 
 Recovery targets: RTO 14 days (the `restore` SLA in `projects.yaml`). RPO not applicable: the

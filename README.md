@@ -8,9 +8,9 @@
 [![CI](https://img.shields.io/github/actions/workflow/status/byronxlg/skillfold/ci.yml?style=flat-square&label=CI)](https://github.com/byronxlg/skillfold/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue?style=flat-square)](LICENSE)
 
-[Website](https://byronxlg.com/skillfold/) &middot; [Blog](https://byronxlg.com/skillfold/blog/) &middot; [Getting Started](docs/getting-started.md) &middot; [Manifest](docs/manifest.md) &middot; [CLI](docs/cli.md)
+[Website](https://skillfold.botsmith.dev/) &middot; [Blog](https://skillfold.botsmith.dev/blog/) &middot; [Getting Started](docs/getting-started.md) &middot; [Manifest](docs/manifest.md) &middot; [CLI](docs/cli.md)
 
-[![Skillfold in 20 seconds](https://byronxlg.com/skillfold/assets/brag.jpg)](https://byronxlg.com/skillfold/assets/brag.mp4)
+[![Skillfold in 20 seconds](https://skillfold.botsmith.dev/assets/brag.jpg)](https://skillfold.botsmith.dev/assets/brag.mp4)
 
 <sub>Skillfold in 20 seconds: declare, install, commit the lockfile. Click for the video.</sub>
 

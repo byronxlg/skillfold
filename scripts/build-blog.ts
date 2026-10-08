@@ -21,7 +21,7 @@ const SITE = join(ROOT, "site");
 const POSTS_DIR = join(SITE, "blog", "posts");
 const BLOG_DIR = join(SITE, "blog");
 
-const SITE_URL = "https://byronxlg.com/skillfold/";
+const SITE_URL = "https://skillfold.botsmith.dev/";
 const BLOG_TITLE = "skillfold blog";
 const BLOG_DESC =
   "On agent configuration, skill distribution, and the supply chain underneath them: what is happening in the ecosystem and what it means in practice.";
