@@ -48,7 +48,7 @@
     "file-management": "./library/skills/file-management",
     "skillfold-cli": "./library/skills/skillfold-cli"
   },
-  "homepage": "https://byronxlg.com/skillfold/",
+  "homepage": "https://skillfold.botsmith.dev/",
   "bugs": "https://github.com/byronxlg/skillfold/issues",
   "repository": {
     "type": "git",
