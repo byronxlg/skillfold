@@ -42,7 +42,7 @@ Rules for using a beat:
 
 Evergreen topics, ordered by value. Take the topmost unchecked one.
 
-- [ ] Pin, update, and the difference between install and install --frozen -
+- [x] Pin, update, and the difference between install and install --frozen -
   intent: "lockfile skills", "reproducible claude skills", "npm ci equivalent"
 - [ ] Auditing what is actually in your .claude/skills directory - intent:
   "what skills do I have installed", "claude skills drift"
@@ -74,6 +74,10 @@ here - they belong in `CHANGELOG.md`.
 Every published post lands here. `ecosystem` lines name the story so the
 repeat check can match it.
 
+- [x] Install, update, and --frozen - which one moves your skills? (evergreen
+  post covering the Queue item on pin, update, and install --frozen; quiet
+  week, no news beat connected honestly) - 2026-10-12,
+  site/blog/posts/2026-10-12-1-install-update-frozen.md
 - [x] Where should this skill live? (evergreen layout post: skills repo +
   global manifest in dotfiles, ./skills in the project, upstream unchanged;
   covers the Queue items on dotfiles/global mode and rules vs skills) -
