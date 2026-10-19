@@ -74,6 +74,13 @@ here - they belong in `CHANGELOG.md`.
 Every published post lands here. `ecosystem` lines name the story so the
 repeat check can match it.
 
+- [x] Claude Code now refuses skills whose names hide characters (story:
+  Claude Code 2.1.299, shipped October 14, 2026 per the official changelog,
+  stopped offering skills and commands whose file or folder name has hidden,
+  direction-changing or blank-like characters, `<` or `>`, and ignores such
+  a `name:`; also ran `UserPromptSubmit` hooks before skill expansion) -
+  2026-10-19,
+  site/blog/posts/2026-10-19-1-claude-code-hidden-character-skill-names.md
 - [x] Install, update, and --frozen - which one moves your skills? (evergreen
   post covering the Queue item on pin, update, and install --frozen; quiet
   week, no news beat connected honestly) - 2026-10-12,
