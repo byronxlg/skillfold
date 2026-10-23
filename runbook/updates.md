@@ -58,6 +58,7 @@ local install.
 ```sh
 V=$(git describe --tags --abbrev=0 | sed 's/^v//')
 test "$(npm view skillfold version)" = "$V" && echo "npm serves $V"
+export npm_config_prefer_online=true   # a cached packument on this Mac said ETARGET for 2.9.0 minutes after publish
 npx --yes "skillfold@$V" --version
 cd "$(mktemp -d)" && npx --yes "skillfold@$V" init && npx --yes "skillfold@$V" install && npx --yes "skillfold@$V" check
 ```
