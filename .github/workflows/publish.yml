@@ -1,25 +1,61 @@
 name: Publish to npm
 
+# Every push to main publishes when package.json carries a version npm does not have yet,
+# then tags it and creates the GitHub release. A version already on npm is a no-op, so
+# docs-only merges and a manually created release do nothing. ci.yml's release check makes
+# sure a package change always comes with a new version.
 on:
+  push:
+    branches: [main]
   release:
     types: [published]
   workflow_dispatch:
+
+concurrency:
+  group: publish
+  cancel-in-progress: false
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - id: version
+        run: |
+          v=$(node -p "require('./package.json').version")
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          if [ "$(npm view "skillfold@$v" version 2>/dev/null)" = "$v" ]; then
+            echo "skillfold@$v is already on npm, nothing to publish"
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
       # Trusted publishing (OIDC) needs npm 11.5.1+; Node 22 ships npm 10.
-      - run: npm install -g npm@latest
-      - run: npm ci
-      - run: npx tsc --noEmit
-      - run: npm test
-      - run: npm run build
-      - run: npm publish --provenance --access public
+      - if: steps.version.outputs.publish == 'true'
+        run: npm install -g npm@latest
+      - if: steps.version.outputs.publish == 'true'
+        run: npm ci
+      - if: steps.version.outputs.publish == 'true'
+        run: npx tsc --noEmit
+      - if: steps.version.outputs.publish == 'true'
+        run: npm test
+      - if: steps.version.outputs.publish == 'true'
+        run: npm run build
+      - if: steps.version.outputs.publish == 'true'
+        run: npm publish --provenance --access public
+      - if: steps.version.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          V: ${{ steps.version.outputs.version }}
+        run: |
+          if gh release view "v$V" >/dev/null 2>&1; then
+            echo "release v$V already exists"
+          else
+            gh release create "v$V" --target "$GITHUB_SHA" --title "v$V" --generate-notes
+          fi
