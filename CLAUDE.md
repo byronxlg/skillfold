@@ -6,6 +6,7 @@ Declarative skill manager for Claude config. Declare skills and rules in `skillf
 
 - **Repo**: https://github.com/byronxlg/skillfold
 - Issues, PRs, releases, actions, and all other GitHub features are available for use
+- **Every package change ships**: a PR touching `src/**` (tests aside), `library/**` or `skillfold.schema.json` bumps `package.json` (semver, `CONTRIBUTING.md`) and adds the `## X.Y.Z` `CHANGELOG.md` section in the same PR. Merging publishes to npm and creates the release (`publish.yml`); CI's `release-check` fails the PR otherwise. Work on the package is not done until `npm view skillfold version` shows it.
 
 ## Operations
 

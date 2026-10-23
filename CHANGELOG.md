@@ -2,7 +2,7 @@
 
 For the full release history with detailed notes, see [GitHub Releases](https://github.com/byronxlg/skillfold/releases).
 
-## Unreleased
+## 2.9.0
 
 - Private GitHub sources work with an existing sign-in: when `GITHUB_TOKEN` and `GH_TOKEN` are unset, skillfold uses `gh auth token`, then `git credential fill` for github.com. The token variables still take precedence. The token is sent only to `api.github.com` and `raw.githubusercontent.com` (previously to any download URL). A 404 with no token now says the repo may be private and suggests `gh auth login` or `GITHUB_TOKEN` (#597).
 

@@ -7,17 +7,21 @@ rollback_minutes: 15
 
 # Updates
 
-Two things ship and they ship differently. The npm package ships only when a GitHub release is
-published: merging to `main` never publishes, so `main` can run ahead of npm for weeks (it did
-between 2.0.0 and 2.3.0). The docs site ships on every merge that touches `site/`, plus a
-manual dispatch after each blog run. The GitHub Action (`action.yml`) is consumed by other
-repos at `@main`, so it is live the moment it merges, with no release step at all.
+Two things ship and they ship differently. The npm package ships on the merge that bumps
+`version` in `package.json`: `publish.yml` runs on every push to `main`, publishes when npm does
+not have that version yet, then tags `vX.Y.Z` and creates the GitHub release. CI's
+`release-check` job fails a PR that changes `src/**` (tests aside), `library/**` or
+`skillfold.schema.json` without a version bump and a matching `CHANGELOG.md` section, so `main`
+cannot run ahead of npm (it did between 2.0.0 and 2.3.0, and again for #597 before 2.9.0). The
+docs site ships on every merge that touches `site/`, plus a manual dispatch after each blog run.
+The GitHub Action (`action.yml`) is consumed by other repos at `@main`, so it is live the moment
+it merges, with no release step at all.
 
 ## How a change reaches production
 
 | Change to | Pipeline | Trigger | Lands in prod when | Evidence |
 | --- | --- | --- | --- | --- |
-| `src/**`, `library/**`, `skillfold.schema.json` (the package) | `publish.yml`: `npm ci`, typecheck, tests, build, `npm publish --provenance` | GitHub release published (`gh release create vX.Y.Z --generate-notes`) | the publish step finishes, usually under 5 min | `npm view skillfold version`; provenance badge on npmjs.com; the run log |
+| `src/**`, `library/**`, `skillfold.schema.json` (the package) | `publish.yml`: `npm ci`, typecheck, tests, build, `npm publish --provenance` | push to `main` with a `package.json` version npm does not have; the workflow tags and creates the release | the publish step finishes, usually under 5 min | `npm view skillfold version`; provenance badge on npmjs.com; the run log |
 | `site/**`, `scripts/build-blog.ts` | `docs.yml`: `npm run build:blog`, upload `site/`, `deploy-pages` | push to `main` on those paths; `workflow_dispatch` | Pages deployment finishes, 1 to 2 min | `docs.yml` run green; `curl -sI https://skillfold.botsmith.dev/` |
 | `site/blog/posts/*.md` written by the bot | `blog-post.yml` merges its own PR, then `gh workflow run docs.yml` | Monday cron | the dispatched `docs.yml` run finishes | new post at `/blog/`; `docs/blog-todo.md` shipped log |
 | `action.yml` | none | merge to `main` | immediately, for every repo using `byronxlg/skillfold@main` | consumer repos' next CI run |
@@ -25,12 +29,17 @@ repos at `@main`, so it is live the moment it merges, with no release step at al
 
 Release procedure, in order:
 
-1. Bump `version` in `package.json` (and `package-lock.json` via `npm install`), add a
-   `CHANGELOG.md` section, open a PR titled `Release X.Y.Z`, merge when CI is green.
-2. `gh release create vX.Y.Z --generate-notes` on the merge commit. Publishing the release is
-   the deploy; a draft release does nothing.
-3. Watch `gh run watch` for `publish.yml`. Semver rules are in `CONTRIBUTING.md`: a manifest,
-   lockfile or CLI break is a major.
+1. In the PR that changes the package: bump `version` in `package.json` (and
+   `package-lock.json`: `npm version X.Y.Z --no-git-tag-version`) and move the changelog lines
+   under a `## X.Y.Z` heading (no `## Unreleased` left). Semver rules are in `CONTRIBUTING.md`:
+   a manifest, lockfile or CLI break is a major. `scripts/release-check.sh origin/main` runs the
+   CI check locally.
+2. Merge when CI is green. The merge is the deploy: `publish.yml` publishes, tags and releases.
+3. `gh run watch` the `publish.yml` run for the merge commit, then the smoke test below.
+
+If `publish.yml` fails after a version is on `main`, fix forward and rerun it
+(`gh workflow run publish.yml`); it publishes whatever version `main` carries and skips one that
+is already on npm.
 
 ## Launch video
 

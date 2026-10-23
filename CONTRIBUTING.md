@@ -56,7 +56,7 @@ This project follows [Semantic Versioning](https://semver.org/):
 - **Minor** (e.g., 2.1.0): New features that are backwards compatible
 - **Major** (e.g., 3.0.0): Breaking changes to the manifest format, lockfile format, or CLI interface
 
-Version bumps happen in `package.json` before tagging a release. The publish workflow (`.github/workflows/publish.yml`) is triggered by GitHub releases and publishes to npm with provenance.
+Every PR that changes what ships in the package (`src/**` except tests, `library/**`, `skillfold.schema.json`) bumps `version` in `package.json` and adds a matching `## X.Y.Z` section to `CHANGELOG.md`; CI's `release-check` job enforces it. Merging publishes: `.github/workflows/publish.yml` runs on every push to `main`, publishes a version npm does not have yet with provenance, and creates the `vX.Y.Z` tag and GitHub release.
 
 ## Pull Requests
 
