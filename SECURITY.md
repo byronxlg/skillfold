@@ -30,7 +30,7 @@ Single runtime dependency: [`yaml`](https://github.com/eemeli/yaml) (YAML parser
 
 Network access happens only during `install`/`add`/`update` for remote sources, and is limited to:
 
-- **GitHub sources**: `api.github.com` (ref resolution, file listing) and `raw.githubusercontent.com` (file download). Private repos use the `GITHUB_TOKEN` / `GH_TOKEN` environment variable.
+- **GitHub sources**: `api.github.com` (ref resolution, file listing) and `raw.githubusercontent.com` (file download). Private repos use the `GITHUB_TOKEN` / `GH_TOKEN` environment variable, or when neither is set, the token from `gh auth token` or `git credential fill` for github.com. The token is sent only to those two hosts and is held in memory, never logged or cached.
 - **npm sources**: `registry.npmjs.org` (version resolution and tarball download via `npm pack`).
 - **`skillfold search`**: queries the npm registry over HTTPS.
 

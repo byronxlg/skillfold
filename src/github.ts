@@ -1,4 +1,5 @@
 import { Buffer } from "node:buffer";
+import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
@@ -23,12 +24,71 @@ export interface GitHubOptions {
   env?: NodeJS.ProcessEnv;
 }
 
-function apiHeaders(env: NodeJS.ProcessEnv): Record<string, string> {
+/** Hosts that may receive the token. Never sent anywhere else. */
+const AUTH_HOSTS = new Set(["api.github.com", "raw.githubusercontent.com"]);
+
+/** Runs a credential command, returning trimmed stdout or undefined. */
+function runCredentialCommand(
+  cmd: string,
+  args: string[],
+  env: NodeJS.ProcessEnv,
+  input?: string
+): string | undefined {
+  const result = spawnSync(cmd, args, {
+    env: { ...env, GIT_TERMINAL_PROMPT: "0", GCM_INTERACTIVE: "never" },
+    input,
+    encoding: "utf8",
+    stdio: ["pipe", "pipe", "ignore"],
+    timeout: 10_000,
+  });
+  if (result.error || result.status !== 0) return undefined;
+  return result.stdout.trim() || undefined;
+}
+
+/**
+ * Token from an existing GitHub sign-in: `gh auth token`, then
+ * `git credential fill` (keychain, Git Credential Manager, .netrc). Commands
+ * are looked up on env.PATH, so an env without PATH finds nothing.
+ */
+export function ambientGitHubToken(env: NodeJS.ProcessEnv): string | undefined {
+  if (!env.PATH) return undefined;
+  const gh = runCredentialCommand("gh", ["auth", "token", "--hostname", "github.com"], env);
+  if (gh) return gh;
+  const filled = runCredentialCommand(
+    "git",
+    ["credential", "fill"],
+    env,
+    "protocol=https\nhost=github.com\n\n"
+  );
+  const password = filled
+    ?.split("\n")
+    .find((line) => line.startsWith("password="))
+    ?.slice("password=".length);
+  return password || undefined;
+}
+
+// Looked up once per env object, in memory only.
+const tokens = new WeakMap<NodeJS.ProcessEnv, { token?: string; ambient: boolean }>();
+
+function githubToken(env: NodeJS.ProcessEnv): { token?: string; ambient: boolean } {
+  let entry = tokens.get(env);
+  if (!entry) {
+    const explicit = env.GITHUB_TOKEN ?? env.GH_TOKEN;
+    entry = explicit
+      ? { token: explicit, ambient: false }
+      : { token: ambientGitHubToken(env), ambient: true };
+    tokens.set(env, entry);
+  }
+  return entry;
+}
+
+function apiHeaders(url: string, env: NodeJS.ProcessEnv): Record<string, string> {
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
     "User-Agent": "skillfold",
   };
-  const token = env.GITHUB_TOKEN ?? env.GH_TOKEN;
+  if (!AUTH_HOSTS.has(new URL(url).hostname)) return headers;
+  const { token } = githubToken(env);
   if (token) headers.Authorization = `Bearer ${token}`;
   return headers;
 }
@@ -41,7 +101,7 @@ async function apiGet(
 ): Promise<unknown> {
   let response: Response;
   try {
-    response = await fetcher(url, { headers: apiHeaders(env) });
+    response = await fetcher(url, { headers: apiHeaders(url, env) });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new ResolveError(skillName, `network error fetching ${url}: ${msg}`);
@@ -50,6 +110,13 @@ async function apiGet(
     throw new ResolveError(
       skillName,
       `GitHub API rate limit hit (${url}). Set GITHUB_TOKEN to raise the limit.`
+    );
+  }
+  if (response.status === 404 && !githubToken(env).token) {
+    throw new ResolveError(
+      skillName,
+      `GitHub API returned 404 for ${url}. If the repo is private, sign in with ` +
+        "`gh auth login` or set GITHUB_TOKEN."
     );
   }
   if (!response.ok) {
@@ -126,10 +193,17 @@ async function downloadFile(
 ): Promise<Buffer> {
   let response: Response;
   try {
-    response = await fetcher(url, { headers: apiHeaders(env) });
+    response = await fetcher(url, { headers: apiHeaders(url, env) });
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new ResolveError(skillName, `network error downloading ${url}: ${msg}`);
+  }
+  if (response.status === 404 && !githubToken(env).token) {
+    throw new ResolveError(
+      skillName,
+      `download failed (404) for ${url}. If the repo is private, sign in with ` +
+        "`gh auth login` or set GITHUB_TOKEN."
+    );
   }
   if (!response.ok) {
     throw new ResolveError(skillName, `download failed (${response.status}) for ${url}`);

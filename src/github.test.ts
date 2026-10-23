@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
-import { existsSync, readdirSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { after, describe, it } from "node:test";
 
 import { ResolveError } from "./errors.js";
-import { fetchGitHubFile, fetchGitHubSkill, resolveGitHubRef } from "./github.js";
+import {
+  ambientGitHubToken,
+  fetchGitHubFile,
+  fetchGitHubSkill,
+  resolveGitHubRef,
+} from "./github.js";
 import { parseSource, type GitHubSource } from "./source.js";
 import { makeFetcher, makeTmpDir } from "./testutil.js";
 
@@ -182,6 +187,90 @@ describe("fetchGitHubFile", () => {
     await assert.rejects(
       fetchGitHubFile(bare, SHA, "style", { fetcher, env }),
       /point at a file/
+    );
+  });
+});
+
+describe("ambient GitHub auth", () => {
+  /** A PATH holding fake gh/git scripts, so no real sign-in is touched. */
+  function fakeBin(name: string, scripts: Record<string, string>): string {
+    const dir = join(tmp.path, name);
+    mkdirSync(dir, { recursive: true });
+    for (const [cmd, body] of Object.entries(scripts)) {
+      const file = join(dir, cmd);
+      writeFileSync(file, `#!/bin/sh\n${body}\n`);
+      chmodSync(file, 0o755);
+    }
+    return dir;
+  }
+
+  function authFetcher(status = 200) {
+    const seen: Array<{ url: string; auth: string | null }> = [];
+    const fetcher = (async (input: string | URL | Request, init?: RequestInit) => {
+      seen.push({ url: String(input), auth: new Headers(init?.headers).get("Authorization") });
+      return status === 200
+        ? new Response(JSON.stringify({ sha: SHA }), { status })
+        : new Response("not found", { status });
+    }) as typeof fetch;
+    return { fetcher, seen };
+  }
+
+  it("uses gh auth token when no token variable is set", async () => {
+    const PATH = fakeBin("gh-only", { gh: 'echo "ghtok"' });
+    const { fetcher, seen } = authFetcher();
+    await resolveGitHubRef(source, "foo", { fetcher, env: { PATH } });
+    assert.equal(seen[0].auth, "Bearer ghtok");
+  });
+
+  it("falls back to git credential fill", () => {
+    const PATH = fakeBin("git-only", {
+      gh: "exit 1",
+      git: 'while read -r l && [ -n \"$l\" ]; do :; done\nprintf "protocol=https\\nhost=github.com\\nusername=x\\npassword=gittok\\n"',
+    });
+    assert.equal(ambientGitHubToken({ PATH }), "gittok");
+  });
+
+  it("finds nothing without PATH or a sign-in", () => {
+    assert.equal(ambientGitHubToken({}), undefined);
+    const PATH = fakeBin("signed-out", { gh: "exit 1", git: "while read -r l && [ -n \"$l\" ]; do :; done\nexit 1" });
+    assert.equal(ambientGitHubToken({ PATH }), undefined);
+  });
+
+  it("lets GITHUB_TOKEN and GH_TOKEN take precedence", async () => {
+    const PATH = fakeBin("gh-ignored", { gh: 'echo "ghtok"' });
+    for (const env of [{ PATH, GITHUB_TOKEN: "envtok" }, { PATH, GH_TOKEN: "envtok" }]) {
+      const { fetcher, seen } = authFetcher();
+      await resolveGitHubRef(source, "foo", { fetcher, env });
+      assert.equal(seen[0].auth, "Bearer envtok");
+    }
+  });
+
+  it("sends the token only to GitHub hosts", async () => {
+    const env = { SKILLFOLD_CACHE: join(tmp.path, "acache1"), GITHUB_TOKEN: "tok123" };
+    const { fetcher } = makeFetcher(githubRoutes());
+    const auth: Record<string, string | null> = {};
+    const spy = (async (input: string | URL | Request, init?: RequestInit) => {
+      auth[new URL(String(input)).hostname] = new Headers(init?.headers).get("Authorization");
+      return fetcher(input, init);
+    }) as typeof fetch;
+    await fetchGitHubSkill(source, SHA, "foo", { fetcher: spy, env });
+    assert.equal(auth["api.github.com"], "Bearer tok123");
+    assert.equal(auth["raw.test"], null);
+  });
+
+  it("hints at signing in on a 404 with no token", async () => {
+    const { fetcher } = authFetcher(404);
+    await assert.rejects(
+      resolveGitHubRef(source, "foo", { fetcher, env: {} }),
+      /private.*gh auth login.*GITHUB_TOKEN/
+    );
+  });
+
+  it("keeps the plain 404 when a token was sent", async () => {
+    const { fetcher } = authFetcher(404);
+    await assert.rejects(
+      resolveGitHubRef(source, "foo", { fetcher, env: { GITHUB_TOKEN: "tok" } }),
+      (err: Error) => /returned 404/.test(err.message) && !/gh auth login/.test(err.message)
     );
   });
 });

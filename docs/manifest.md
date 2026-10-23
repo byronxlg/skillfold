@@ -59,7 +59,7 @@ skills:
 - In global mode (`-g`) there is no project, so `@installed` follows the globally installed package (`npm root -g`), and for `skillfold` itself falls back to the running CLI.
 - The package must be a dependency; otherwise resolution fails and asks you to install it or pin a version. `@installed` is npm-only.
 
-Private GitHub repos work with a `GITHUB_TOKEN` (or `GH_TOKEN`) environment variable.
+Private GitHub repos work for anyone signed in to GitHub. skillfold uses `GITHUB_TOKEN` or `GH_TOKEN` when set, otherwise `gh auth token`, otherwise `git credential fill` for github.com (macOS keychain, Git Credential Manager, `.netrc`). The token goes only to `api.github.com` and `raw.githubusercontent.com` and is never logged or cached. SSH-only setups need a token variable.
 
 The manifest name is the installed directory name. When it differs from the skill's frontmatter `name`, the installed `SKILL.md` gets its `name` rewritten to match (only that line changes; everything else is byte-identical).
 
