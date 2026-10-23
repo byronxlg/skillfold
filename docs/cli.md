@@ -177,7 +177,7 @@ and remove the old manifest and lockfile links.
 | Variable | Effect |
 | --- | --- |
 | `XDG_CONFIG_HOME` | Absolute config base; global config lives in its `skillfold/` subdirectory (default `~/.config`) |
-| `GITHUB_TOKEN` / `GH_TOKEN` | Auth for GitHub sources (private repos, higher rate limits) |
+| `GITHUB_TOKEN` / `GH_TOKEN` | Auth for GitHub sources (private repos, higher rate limits). When unset, skillfold falls back to `gh auth token`, then `git credential fill` |
 | `SKILLFOLD_HOST` | Override the exact hostname used by rule `hosts` selectors (default Node `os.hostname()`) |
 | `SKILLFOLD_CACHE` | Override the download cache location (default `~/.cache/skillfold`) |
 

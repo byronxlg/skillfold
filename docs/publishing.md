@@ -20,7 +20,7 @@ git tag v1.0.0 && git push --tags
 skillfold add github:you/your-repo/skills/tdd@v1.0.0
 ```
 
-Private repos work too - consumers set `GITHUB_TOKEN`.
+Private repos work too - consumers signed in with `gh auth login` or a git credential helper need nothing else; otherwise they set `GITHUB_TOKEN`.
 
 ## Via npm (versioned, discoverable)
 

@@ -4,6 +4,8 @@ For the full release history with detailed notes, see [GitHub Releases](https://
 
 ## Unreleased
 
+- Private GitHub sources work with an existing sign-in: when `GITHUB_TOKEN` and `GH_TOKEN` are unset, skillfold uses `gh auth token`, then `git credential fill` for github.com. The token variables still take precedence. The token is sent only to `api.github.com` and `raw.githubusercontent.com` (previously to any download URL). A 404 with no token now says the repo may be private and suggests `gh auth login` or `GITHUB_TOKEN` (#597).
+
 ## 2.8.0
 
 - npm sources accept `@installed` (`npm:skillfold/skillfold-cli@installed`) to follow the version of the package the project has installed, read from package-lock.json, npm-shrinkwrap.json, pnpm-lock.yaml, or node_modules (the global npm root in `-g` mode). `install` re-pins when the dependency moves; `check` and `install --frozen` fail on drift; `list` shows `stale`.
