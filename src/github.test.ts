@@ -225,14 +225,14 @@ describe("ambient GitHub auth", () => {
   it("falls back to git credential fill", () => {
     const PATH = fakeBin("git-only", {
       gh: "exit 1",
-      git: 'cat >/dev/null\nprintf "protocol=https\\nhost=github.com\\nusername=x\\npassword=gittok\\n"',
+      git: 'while read -r l && [ -n \"$l\" ]; do :; done\nprintf "protocol=https\\nhost=github.com\\nusername=x\\npassword=gittok\\n"',
     });
     assert.equal(ambientGitHubToken({ PATH }), "gittok");
   });
 
   it("finds nothing without PATH or a sign-in", () => {
     assert.equal(ambientGitHubToken({}), undefined);
-    const PATH = fakeBin("signed-out", { gh: "exit 1", git: "cat >/dev/null\nexit 1" });
+    const PATH = fakeBin("signed-out", { gh: "exit 1", git: "while read -r l && [ -n \"$l\" ]; do :; done\nexit 1" });
     assert.equal(ambientGitHubToken({ PATH }), undefined);
   });
 
