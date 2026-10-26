@@ -44,7 +44,7 @@ Evergreen topics, ordered by value. Take the topmost unchecked one.
 
 - [x] Pin, update, and the difference between install and install --frozen -
   intent: "lockfile skills", "reproducible claude skills", "npm ci equivalent"
-- [ ] Auditing what is actually in your .claude/skills directory - intent:
+- [x] Auditing what is actually in your .claude/skills directory - intent:
   "what skills do I have installed", "claude skills drift"
 - [ ] Sharing a skill set across a team without copying directories - intent:
   "share claude skills with team", "team claude code setup"
@@ -74,6 +74,10 @@ here - they belong in `CHANGELOG.md`.
 Every published post lands here. `ecosystem` lines name the story so the
 repeat check can match it.
 
+- [x] How to audit what is actually in your .claude/skills directory
+  (evergreen workflow post covering the Queue item on auditing; quiet week,
+  no news beat connected honestly) - 2026-10-26,
+  site/blog/posts/2026-10-26-1-auditing-your-skills-directory.md
 - [x] Claude Code now refuses skills whose names hide characters (story:
   Claude Code 2.1.299, shipped October 14, 2026 per the official changelog,
   stopped offering skills and commands whose file or folder name has hidden,
