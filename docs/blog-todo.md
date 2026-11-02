@@ -46,7 +46,7 @@ Evergreen topics, ordered by value. Take the topmost unchecked one.
   intent: "lockfile skills", "reproducible claude skills", "npm ci equivalent"
 - [x] Auditing what is actually in your .claude/skills directory - intent:
   "what skills do I have installed", "claude skills drift"
-- [ ] Sharing a skill set across a team without copying directories - intent:
+- [x] Sharing a skill set across a team without copying directories - intent:
   "share claude skills with team", "team claude code setup"
 - [x] Rules vs skills: which instructions belong in which file - intent:
   "claude rules vs skills", ".claude/rules explained"
@@ -74,6 +74,10 @@ here - they belong in `CHANGELOG.md`.
 Every published post lands here. `ecosystem` lines name the story so the
 repeat check can match it.
 
+- [x] How to share one set of agent skills across a team without copying
+  directories (evergreen workflow post covering the Queue item on team
+  sharing; quiet week, no news beat connected honestly) - 2026-11-02,
+  site/blog/posts/2026-11-02-1-sharing-skills-across-a-team.md
 - [x] How to audit what is actually in your .claude/skills directory
   (evergreen workflow post covering the Queue item on auditing; quiet week,
   no news beat connected honestly) - 2026-10-26,
