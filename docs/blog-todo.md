@@ -50,7 +50,7 @@ Evergreen topics, ordered by value. Take the topmost unchecked one.
   "share claude skills with team", "team claude code setup"
 - [x] Rules vs skills: which instructions belong in which file - intent:
   "claude rules vs skills", ".claude/rules explained"
-- [ ] Publishing a skill on npm so other people can install it by name -
+- [x] Publishing a skill on npm so other people can install it by name -
   intent: "publish claude skill", "distribute agent skills", "agentskills map"
 - [x] Keeping personal skills in your dotfiles with global mode - intent:
   "sync claude skills across machines", "claude skills dotfiles"
@@ -74,6 +74,10 @@ here - they belong in `CHANGELOG.md`.
 Every published post lands here. `ecosystem` lines name the story so the
 repeat check can match it.
 
+- [x] How to publish an agent skill on npm so people can install it by name
+  (evergreen workflow post covering the Queue item on npm publishing; quiet
+  week, no news beat connected honestly) - 2026-11-09,
+  site/blog/posts/2026-11-09-1-publishing-a-skill-on-npm.md
 - [x] How to share one set of agent skills across a team without copying
   directories (evergreen workflow post covering the Queue item on team
   sharing; quiet week, no news beat connected honestly) - 2026-11-02,
