@@ -74,6 +74,13 @@ here - they belong in `CHANGELOG.md`.
 Every published post lands here. `ecosystem` lines name the story so the
 repeat check can match it.
 
+- [x] Claude Code now pins marketplaces to a commit and fences off its own
+  skills folder (story: Claude Code 2.1.325 let marketplace `ref` take a full
+  commit ID and made the sandbox refuse writes to `.claude` skills, hooks and
+  settings in added directories; 2.1.323 made marketplace/plugin installs fail
+  on a git submodule off its recorded commit; the changelog is undated, so
+  cited by version) - 2026-11-16,
+  site/blog/posts/2026-11-16-1-claude-code-pins-and-protects-config.md
 - [x] How to publish an agent skill on npm so people can install it by name
   (evergreen workflow post covering the Queue item on npm publishing; quiet
   week, no news beat connected honestly) - 2026-11-09,
