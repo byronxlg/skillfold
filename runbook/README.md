@@ -64,6 +64,7 @@ above by hand.
 | Question | File |
 | --- | --- |
 | How do changes reach npm and the site, how do I roll back? | [updates.md](updates.md) |
+| What may the blog agent do, and how is it stopped? | [loops.md](loops.md) |
 
 Tier 3 does not carry `health.md`, `recovery.md`, `dependencies.md` or `incidents/`; the
 objectives table above is the whole health check, and rollback lives in `updates.md`.
