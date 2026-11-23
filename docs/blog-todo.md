@@ -74,6 +74,12 @@ here - they belong in `CHANGELOG.md`.
 Every published post lands here. `ecosystem` lines name the story so the
 repeat check can match it.
 
+- [x] Claude Code now tells you which config files are broken. It cannot tell
+  you which are stale. (story: Claude Code 2.1.327 added a `/status` list of
+  broken agent, skill, command and output style files plus hook matchers that
+  never match; 2.1.329 added a trust dialog warning saying where a folder's
+  hooks are declared; changelog undated, cited by version) - 2026-11-23,
+  site/blog/posts/2026-11-23-1-claude-code-status-lists-broken-config.md
 - [x] Claude Code now pins marketplaces to a commit and fences off its own
   skills folder (story: Claude Code 2.1.325 let marketplace `ref` take a full
   commit ID and made the sandbox refuse writes to `.claude` skills, hooks and
