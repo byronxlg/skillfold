@@ -1,6 +1,6 @@
 ---
 project: skillfold
-reviewed: 2026-11-21
+reviewed: 2026-11-26
 loops: [L-blog]
 kill_switch: "gh workflow disable blog-post.yml -R byronxlg/skillfold (not yet exercised)"
 ---
@@ -51,6 +51,27 @@ Guards. Method and scales: management `docs/standard.md` "Agent loops".
 | L-blog | bump `package.json` on `main`, then `gh workflow run publish.yml` (npm publish with provenance) | G3 | O1 | nothing; `actions: write` allows the dispatch and `publish.yml` publishes any version npm lacks | an npm release cannot be unpublished cleanly; should be O6 |
 | L-blog | create releases, tags, issues, comments via `gh` | G2 | O1 | nothing beyond token scope | visible, undo by hand |
 | L-blog | send data out (HTTP to any host, including repo contents) | G3 | O1 | nothing; Bash and network are unrestricted | the repo is public, so the loss is limited to the run's tokens; `GITHUB_TOKEN` expires with the job, the OAuth token does not |
+
+## Calibration
+
+The pairing an agent follows in this repo, for L-blog and for a session a person starts here
+(management `docs/standard.md` "Calibration"). The Actions table above records what holds each
+action today; the rows below are what an agent does.
+
+Default pairing: G0 at O0-O1, G1 at O1-O2, G2 at O3-O4, G3 at O4-O5, or O6 when a person could
+not catch the mistake in time. An action with no row below takes the default.
+
+| Action | Grade | Default | Here | Direction | Enforced by | Why | Granted |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| L-blog: squash-merge its own post-only PR (post, generated block in `site/index.html`, `docs/blog-todo.md`), then dispatch `docs.yml` | G2 | O3-O4 | O2 | looser | prompt only; nothing checks the diff | the PR is the record; revert commit plus redeploy is the undo | standing approval as committed in skillfold#547 (2026-07-25), workflow header: "Post-only PRs are merged by the run itself"; no quoted words on record |
+| Session: open a PR and merge it once `ci.yml` is green | G2 | O3-O4 | O2 | looser | `ci.yml` on the PR (not required: `main` is unprotected) | revert PR is the undo | Byron, 2026-10-08, "you can merge freely" |
+| Session: merge a package-change PR that carries its version bump and changelog section, which publishes to npm | G3 | O4-O5 | O2 | looser | `release-check` in `ci.yml`; `publish.yml` (OIDC, provenance) | an unreleased package change is unfinished work; a bad release is fixed forward with a patch, never unpublished | Byron, 2026-10-23, "Publish it", "Make sure the workflow includes publishing always" (skillfold#599) |
+| Any: push straight to `main`, or force-push | G2 | O3-O4 | O6: go through a PR | tighter | instruction only; `main` is unprotected | `action.yml` on `main` runs at once in every repo using `byronxlg/skillfold@main` | reason only |
+| L-blog: merge or push a diff that touches anything outside the post files | G3 | O4-O5 | O6: leave the PR open and say why | tighter | prompt only (G146) | same reach as above, and nobody watches the run | reason only |
+| L-blog: bump `package.json`, dispatch `publish.yml`, or otherwise cause an npm release | G3 | O4-O5 | O6 | tighter | prompt only; the token holds `actions: write` (G146) | an npm release cannot be taken back; the loop writes posts | reason only |
+| L-blog: create releases, tags, issues or comments beyond its own PR | G2 | O3-O4 | O6 | tighter | nothing beyond token scope | the loop has nobody to ask and no need | reason only |
+| L-blog: send repo contents, tokens or anything else to an outside host (reading pages is G0) | G3 | O4-O5 | O6 | tighter | nothing; Bash and network are open (G146) | the OAuth token outlives the job | reason only |
+| Any: create, rotate, revoke or delete a credential or repo secret (`CLAUDE_CODE_OAUTH_TOKEN`, `NPM_TOKEN`, npm trusted publisher) | G3 | O4-O5 | O6 | tighter | instruction only | irreversible; may be in use elsewhere | house rule; reason only |
 
 ## Guards
 
