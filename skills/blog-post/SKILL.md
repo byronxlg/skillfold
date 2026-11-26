@@ -257,7 +257,10 @@ If the diff touches anything else - the workflow, this skill, `scripts/`,
 `src/`, the manifest - leave the PR open for review and say why in a comment.
 That boundary is the whole safety model for unattended runs; do not widen it.
 
-When merging from inside a GitHub Actions run, dispatch the deploy afterwards:
+Inside the weekly GitHub Actions run (`blog-post.yml`), do neither: stop once
+the PR is open. The workflow's `ship` job checks the diff, merges a post-only
+PR and dispatches the deploy; the run's own token cannot. When merging from a
+session with only `GITHUB_TOKEN`, dispatch the deploy afterwards:
 
 ```sh
 gh workflow run docs.yml
